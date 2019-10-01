@@ -1,0 +1,5 @@
+sphinx>=2.0.0
+sphinxcontrib-napoleon
+sphinx-autodoc-typehints
+sphinx_rtd_theme
+http://github.com/decompositional-semantics-initiative/decomp/tarball/master#egg=decomp
