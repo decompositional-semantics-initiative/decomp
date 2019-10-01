@@ -322,12 +322,16 @@ class UDSGraph:
         self.graph = graph
 
         self._add_performative_nodes()
-        
-    @memoized_property
+
+    @property
     def rdf(self) -> Graph:
         """The graph as RDF"""
 
-        return RDFConverter.networkx_to_rdf(self.graph)
+        if hasattr(self, '_rdf'):
+            return self._rdf
+        else:
+            self._rdf = RDFConverter.networkx_to_rdf(self.graph)
+            return self._rdf
 
     @memoized_property
     def rootid(self):
@@ -449,7 +453,7 @@ class UDSGraph:
             raise ValueError(errmsg)
 
         if not cache_rdf:
-            delattr(self, 'rdf')
+            delattr(self, '_rdf')
         
         return results
 
