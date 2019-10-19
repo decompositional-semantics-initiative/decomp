@@ -466,7 +466,6 @@ class UDSGraph:
                                        cache_query=cache_query)]
 
         try:
-            print(results)
             return {nodeid: self.graph.nodes[nodeid] for nodeid in results}
         except KeyError:
             errmsg = 'invalid node query: your query must be guaranteed ' +\
@@ -834,11 +833,18 @@ class UDSGraph:
                 self.graph.add_node(node,
                                     **{k: v
                                        for k, v in attrs.items()
-                                       if k != 'headof'})
+                                       if k not in ['headof',
+                                                    'head',
+                                                    'span']})
                 self.graph.add_edge(*edge, domain='semantics', type='head')
 
-                instedge = (node, node.replace('semantics-subarg', 'syntax'))
+                instedge = (node, attrs['head'])
                 self.graph.add_edge(*instedge, domain='interface', type='head')
+
+                # for nonhead in attrs['span']:
+                #     if nonhead != attrs['head']:
+                #         instedge = (node, nonhead)
+                #         self.graph.add_edge(*instedge, domain='interface', type='head')
 
         elif 'subargof' in attrs and attrs['subargof'] in self.graph.nodes:
             edge = (attrs['subargof'], node)
