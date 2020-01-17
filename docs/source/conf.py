@@ -18,11 +18,11 @@ sys.path.insert(0, os.path.abspath('../../decomp/'))
 # -- Project information -----------------------------------------------------
 
 project = 'Decomp'
-copyright = '2019, Aaron Steven White'
+copyright = '2020, Aaron Steven White'
 author = 'Aaron Steven White'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.1'
+release = '0.1.2'
 
 # Changes root document from contents.rst to index.rst
 master_doc = 'index'
