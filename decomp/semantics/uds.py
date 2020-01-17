@@ -73,26 +73,26 @@ class UDSCorpus(PredPattCorpus):
             errmsg = 'split must be "train", "dev", or "test"'
             raise ValueError(errmsg)
 
-        if graphs is None and self._corpus_paths:
-            self._graphs = {}
+        all_built = all(s in self._corpus_paths
+                        for s in ['train', 'dev', 'test'])
 
-            if split is not None:
-                fpath = self._corpus_paths[split]
+        self._graphs = {}
+        
+        if graphs is None and split in self._corpus_paths:
+            fpath = self._corpus_paths[split]
+            corp_split = self.__class__.from_json(fpath)
+            self._graphs.update(corp_split._graphs)
+
+        elif graphs is None and split is None and all_built:
+            for fpath in self._corpus_paths.values():
                 corp_split = self.__class__.from_json(fpath)
                 self._graphs.update(corp_split._graphs)
-
-            else:
-                for fpath in self._corpus_paths.values():
-                    corp_split = self.__class__.from_json(fpath)
-                    self._graphs.update(corp_split._graphs)
 
         elif graphs is None:
             url = 'https://github.com/UniversalDependencies/' +\
                   'UD_English-EWT/archive/r1.2.zip'
 
             udewt = requests.get(url).content
-
-            self._graphs = {}
 
             with ZipFile(BytesIO(udewt)) as zf:
                 conll_names = [fname for fname in zf.namelist()
