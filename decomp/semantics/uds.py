@@ -942,6 +942,38 @@ class UDSGraph:
             warning(warnmsg)
             self.graph.add_edges_from([(edge[0], edge[1], attrs)])
 
+    @classmethod
+    def get_digraph_root(cls, digraph: DiGraph) -> str:
+        """Return the unique root (source) node of a digraph
+
+        Find and return the unique root (source) node of a digraph.  If
+        the digraph has no source nodes, or more than one source node,
+        raise an Exception.
+
+        Parameters
+        ----------
+        digraph
+            digraph to search
+        """
+
+        root_candidates = [node for (node, degree) in digraph.in_degree() if degree == 0]
+        if len(root_candidates) != 1:
+            raise Exception('no unique root of digraph {}'.format(digraph.name))
+        return root_candidates[0]
+
+    @memoized_property
+    def document_id(self) -> str:
+        """Document ID from Universal Dependencies"""
+        syntax_root = self.get_digraph_root(self.syntax_subgraph)
+        return self.syntax_nodes[syntax_root]['document_id']
+
+    @memoized_property
+    def sentence_id(self) -> str:
+        """Sentence ID from Universal Dependencies"""
+        syntax_root = self.get_digraph_root(self.syntax_subgraph)
+        return self.syntax_nodes[syntax_root]['sentence_id']
+
+
 
 class UDSDataset:
     """A Universal Decompositional Semantics dataset
