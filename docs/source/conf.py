@@ -22,7 +22,7 @@ copyright = '2020, Aaron Steven White'
 author = 'Aaron Steven White'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.2'
+release = '0.1.3'
 
 # Changes root document from contents.rst to index.rst
 master_doc = 'index'
