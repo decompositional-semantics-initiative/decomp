@@ -452,7 +452,7 @@ class UDSGraph:
             errmsg = 'invalid SPARQL 1.1 query'
             raise ValueError(errmsg)
 
-        if not cache_rdf:
+        if not cache_rdf and hasattr(self, '_rdf'):
             delattr(self, '_rdf')
         
         return results
