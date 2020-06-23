@@ -981,7 +981,8 @@ class UDSDataset:
     Parameters
     ----------
     annotation
-        mapping from node ids or pairs of node ids separated by %% to
+        mapping from node ids (for node annotations) or pairs 
+        of node ids separated by %% (for edge annotations) to
         attribute-value pairs; node ids must not contain %%
     """
 
@@ -1035,6 +1036,20 @@ class UDSDataset:
              ...
             }
 
+        for node annotations. Edge annotations should be of the form:
+
+        ::
+
+            {GRAPHID_1: {NODEID_1_1%%NODEID_1_2: {ATTRIBUTE_I: VALUE,
+                                                  ATTRIBUTE_J: VALUE,
+                                                  ...},
+                         ...},
+             GRAPHID_2: {NODEID_2_1%%NODEID_2_2: {ATTRIBUTE_K: VALUE,
+                                                  ATTRIBUTE_L: VALUE,
+                                                  ...},
+                         ...},
+             ...
+            }
 
         Graph and node identifiers must match the graph and node
         identifiers of the predpatt graphs to which the annotations
