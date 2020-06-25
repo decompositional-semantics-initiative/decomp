@@ -113,6 +113,12 @@ class RDFConverter:
         c = self.__class__
         
         if isinstance(val, dict) and subspaceid is not None:
+            # We currently do not support querying on raw UDS
+            # annotations, all of which have dict-valued 'value'
+            # and 'confidence' fields.
+            if isinstance(val['value'], dict) or isinstance(val['confidence'], dict):
+                raise TypeError('Attempted query of graph with raw properties. Querying '\
+                                'graphs with raw properties is prohibited.')
             triples = c._construct_subspace(subspaceid, propid)        
             triples += [(self.nodes[nodeid],
                          c.PROPERTIES[propid],

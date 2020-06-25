@@ -44,29 +44,36 @@ Adding annotations
 ------------------
    
 Additional annotations beyond the standard UDS annotations can be
-added using this method by passing a list of `UDSDataset`_
-objects. ``UDSDataset`` objects are loaded from JSON-formatted
-files (see `from_json`_ for formatting guidelines). For example, if
-you have some additional annotations in a file
+added using this method by passing a list of `UDSAnnotation`_
+objects. These come in two varieties, ``RawUDSDataset`` and
+``NormalizedUDSDataset``. The former may have multiple annotations
+for the same node or edge attribute, while the latter must have only
+a single annotation. Both are loaded from JSON-formatted files,
+but differ in the expected format (see the `from_json`_ methods of
+each class for formatting guidelines). For example, if
+you have some additional *normalized* annotations in a file
 ``new_annotations.json``, those can be added to the existing UDS
 annotations using:
 
-.. _UDSDataset: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSDataset
-.. _from_json: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSDataset.from_json
+.. _NormalizedUDSDataset: ../package/decomp.semantics.uds.html#decomp.semantics.uds.NormalizedUDSDataset
+.. _from_json: ../package/decomp.semantics.uds.html#decomp.semantics.uds.NormalizedUDSDataset.from_json
 
 .. code-block:: python
 
-   from decomp import UDSDataset
+   from decomp import NormalizedUDSDataset
 		
    # read annotations
-   new_annotations = [UDSDataset.from_json("new_annotations.json")]
+   new_annotations = [NormalizedUDSDataset.from_json("new_annotations.json")]
 
    # read the train split of the UDS corpus and append new annotations
    uds_train_plus = UDSCorpus(split='train', annotations=new_annotations)
 
-Importantly, these annotations are added *in addition* to the existing
-UDS annotations that ship with the toolkit. You do not need to add
-these manually.
+If instead you wished to add *raw* annotations, you would simply replace
+``NormalizedUDSDataset`` with ``RawUDSDataset`` in the example code
+above. Importantly, these annotations are added *in addition* to the
+existing UDS annotations that ship with the toolkit. You do not need to
+add these manually. Finally, it should be noted that querying is
+currently **not** supported for graphs with raw annotations.
 
 Reading from an alternative location
 ------------------------------------

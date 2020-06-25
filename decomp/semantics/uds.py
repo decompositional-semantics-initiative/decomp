@@ -14,6 +14,9 @@ from pkg_resources import resource_filename
 from os.path import basename, splitext
 from glob import glob
 from logging import info, warning
+from collections import defaultdict
+from abc import ABC, abstractmethod
+from overrides import overrides
 from functools import lru_cache
 from typing import Union, Optional, Any, TextIO
 from typing import Dict, List, Tuple, Set
@@ -41,6 +44,8 @@ class UDSCorpus(PredPattCorpus):
         additional annotations to associate with predpatt nodes; in
         most cases, no such annotations will be passed, since the
         standard UDS annotations are automatically loaded
+    version
+        the version of UDS datasets to use
     split
         the split to load: "train", "dev", or "test"
     """
@@ -49,7 +54,7 @@ class UDSCorpus(PredPattCorpus):
 
     def __init__(self,
                  graphs: Optional[PredPattCorpus] = None,
-                 annotations: List['UDSDataset'] = [],
+                 annotations: List['UDSAnnotation'] = [],
                  version: str = '1.0',
                  split: Optional[str] = None):
 
@@ -68,7 +73,10 @@ class UDSCorpus(PredPattCorpus):
         self._annotation_paths = glob(os.path.join(self._annotation_dir,
                                                    '*.json'))
 
-        
+        # Currently, all annotations in the 'annotations/' directory are normalized.
+        # If this changes, this line will have to be modified appropriately.
+        self._annotation_paths = {'normalized': self._annotation_paths}
+
         if not (split is None or split in ['train', 'dev', 'test']):
             errmsg = 'split must be "train", "dev", or "test"'
             raise ValueError(errmsg)
@@ -97,7 +105,6 @@ class UDSCorpus(PredPattCorpus):
             with ZipFile(BytesIO(udewt)) as zf:
                 conll_names = [fname for fname in zf.namelist()
                                if splitext(fname)[-1] == '.conllu']
-
                 for fn in conll_names:
                     with zf.open(fn) as conll:
                         conll_str = conll.read().decode('utf-8')
@@ -124,19 +131,17 @@ class UDSCorpus(PredPattCorpus):
                                                      json_name)
                             spl.to_json(json_path)
                             self._graphs.update(spl._graphs)
-
                             self._corpus_paths[sname] = json_path
 
         else:
             self._graphs = graphs
-
             for ann in annotations:
                 self.add_annotation(ann)
 
     @classmethod
     def from_conll(cls,
                    corpus: Union[str, TextIO],
-                   annotations: List[Union[str, TextIO]] = [],
+                   annotations: Dict[str, List[Union[str, TextIO]]] = {},
                    name: str = 'ewt') -> 'UDSCorpus':
         """Load UDS graph corpus from CoNLL (dependencies) and JSON (annotations)
 
@@ -150,18 +155,31 @@ class UDSCorpus(PredPattCorpus):
         corpus
             (path to) Universal Dependencies corpus in conllu format
         annotations
-            (paths to) annotations in JSON
+            dictionary whose keys are paths to JSON files containing annotations
+            and whose values indicate the type of UDSAnnotation ('raw' or
+            'normalized').
         name
             corpus name to be appended to the beginning of graph ids
         """
-
         predpatt_corpus = PredPattCorpus.from_conll(corpus, name=name)
         predpatt_graphs = {name: UDSGraph(g, name)
                            for name, g in predpatt_corpus.items()}
 
-        annotations = [UDSDataset.from_json(ann) for ann in annotations]
+        # Although neither RawUDSDataset nor NormalizedUDSDataset currently
+        # modifies the from_json method of the abstract base class, we don't
+        # want to assume this, and users should be deliberate in specifying
+        # the annotation type.
+        processed_annotations = []
+        for ann_path, ann_type in annotations.items():
+            if ann_type == 'raw':
+                processed_annotations.append(RawUDSDataset.from_json(ann_path))
+            elif ann_type == 'normalized':
+                processed_annotations.append(NormalizedUDSDataset.from_json(ann_path))
+            else:
+                raise ValueError('Unrecognized annotation type {0} '\
+                                 'for annotation {1}.'.format(ann_type, ann_path))
 
-        return cls(predpatt_graphs, annotations)
+        return cls(predpatt_graphs, processed_annotations)
 
     @classmethod
     def from_json(cls, jsonfile: Union[str, TextIO]) -> 'UDSCorpus':
@@ -175,7 +193,6 @@ class UDSCorpus(PredPattCorpus):
             file containing Universal Decompositional Semantics corpus
             in JSON format
         """
-
         ext = splitext(basename(jsonfile))[-1]
 
         if isinstance(jsonfile, str) and ext == '.json':
@@ -193,7 +210,7 @@ class UDSCorpus(PredPattCorpus):
 
         return cls(graphs)
 
-    def add_annotation(self, annotation: 'UDSDataset') -> None:
+    def add_annotation(self, annotation: 'UDSAnnotation') -> None:
         """Add annotations to UDS graphs in the corpus
 
         Parameters
@@ -201,7 +218,6 @@ class UDSCorpus(PredPattCorpus):
         annotation
             the annotations to add to the graphs in the corpus
         """
-
         for gname, (node_attrs, edge_attrs) in annotation.items():
             if gname in self._graphs:
                 self._graphs[gname].add_annotation(node_attrs, edge_attrs)
@@ -244,7 +260,7 @@ class UDSCorpus(PredPattCorpus):
             a SPARQL 1.1 query
         query_type
             whether this is a 'node' query or 'edge' query. If set to
-            None (default), a Results objects will be returned. The
+            None (default), a Results object will be returned. The
             main reason to use this option is to automatically format
             the output of a custom query, since Results objects
             require additional postprocessing.
@@ -312,7 +328,10 @@ class UDSGraph:
     Parameters
     ----------
     graph
+        the NetworkX DiGraph from which the UDS graph is to be
+        constructed
     name
+        the name of the graph
     """
 
     QUERIES = {}
@@ -326,7 +345,6 @@ class UDSGraph:
     @property
     def rdf(self) -> Graph:
         """The graph as RDF"""
-
         if hasattr(self, '_rdf'):
             return self._rdf
         else:
@@ -336,7 +354,6 @@ class UDSGraph:
     @memoized_property
     def rootid(self):
         """The ID of the graph's root node"""
-
         candidates = [nid for nid, attrs
                       in self.graph.nodes.items()
                       if attrs['type'] == 'root']
@@ -417,7 +434,7 @@ class UDSGraph:
             a SPARQL 1.1 query
         query_type
             whether this is a 'node' query or 'edge' query. If set to
-            None (default), a Results objects will be returned. The
+            None (default), a Results object will be returned. The
             main reason to use this option is to automatically format
             the output of a custom query, since Results objects
             require additional postprocessing.
@@ -798,7 +815,6 @@ class UDSGraph:
         add_subpreds
         add_orphans
         """
-
         for node, attrs in node_attrs.items():
             self._add_node_annotation(node, attrs,
                                       add_heads, add_subargs,
@@ -974,19 +990,13 @@ class UDSGraph:
         return self.syntax_nodes[syntax_root]['sentence_id']
 
 
-
-class UDSDataset:
-    """A Universal Decompositional Semantics dataset
-
-    Parameters
-    ----------
-    annotation
-        mapping from node ids or pairs of node ids separated by %% to
-        attribute-value pairs; node ids must not contain %%
+class UDSAnnotation(ABC):
+    """Abstract base class for all Universal Decompositional Semantics datasets.
     """
 
     CACHE = {}
 
+    @abstractmethod
     def __init__(self, annotation: Dict[str, Dict[str, Any]]):
         self.annotation = annotation
 
@@ -1000,65 +1010,10 @@ class UDSDataset:
                                         if '%%' in edge}
                                 for gname, attrs in self.annotation.items()}
 
-    def __getitem__(self, k):
-        node_attrs = self.node_attributes[k]
-        edge_attrs = self.edge_attributes[k]
-
-        return node_attrs, edge_attrs
-
-    def items(self):
-        """Dictionary-like items generator for attributes
-
-        Yields node_attributes for a node as well as the attributes for
-        all edges that touch it
-        """
-
-        for name, node_attrs in self.node_attributes.items():
-            yield name, (node_attrs, self.edge_attributes[name])
-
     @classmethod
-    def from_json(cls, jsonfile: Union[str, TextIO]) -> 'UDSDataset':
+    @abstractmethod
+    def from_json(cls, jsonfile: Union[str, TextIO]) -> 'UDSAnnotation':
         """Load Universal Decompositional Semantics dataset from JSON
-
-        The format of the JSON passed to this class method must be:
-
-        ::
-
-            {GRAPHID_1: {NODEID_1_1: {ATTRIBUTE_I: VALUE,
-                                      ATTRIBUTE_J: VALUE,
-                                      ...},
-                         ...},
-             GRAPHID_2: {NODEID_2_1: {ATTRIBUTE_K: VALUE,
-                                      ATTRIBUTE_L: VALUE,
-                                      ...},
-                         ...},
-             ...
-            }
-
-
-        Graph and node identifiers must match the graph and node
-        identifiers of the predpatt graphs to which the annotations
-        will be added.
-
-        VALUE in the above may be anything, but if it is
-        dictionary-valued, it is assumed to have the following
-        structure:
-
-        ::
-
-            {SUBSPACE_1: {PROP_1_1: {VER_1_1_1: {'value': VALUE,
-                                                 'confidence': VALUE},
-                                     VER_1_1_2: {'value': VALUE,
-                                                 'confidence': VALUE},
-                                      ...},
-                         ...},
-             SUBSPACE_2: {PROP_2_1: {VER_2_1_1: {'value': VALUE,
-                                                 'confidence': VALUE},
-                                     VER_2_1_2: {'value': VALUE,
-                                                 'confidence': VALUE},
-                                      ...},
-                         ...},
-            }
 
         Parameters
         ----------
@@ -1084,3 +1039,247 @@ class UDSDataset:
         cls.CACHE[jsonfile] = cls(annotation)
 
         return cls.CACHE[jsonfile]
+
+    @abstractmethod
+    def items(self):
+        """Dictionary-like items generator for attributes
+
+        Yields node_attributes for a node as well as the attributes for
+        all edges that touch it
+        """
+
+        for name, node_attrs in self.node_attributes.items():
+            yield name, (node_attrs, self.edge_attributes[name])
+
+    @abstractmethod
+    def __getitem__(self, k):
+        node_attrs = self.node_attributes[k]
+        edge_attrs = self.edge_attributes[k]
+
+        return node_attrs, edge_attrs
+
+class NormalizedUDSDataset(UDSAnnotation):
+    """A normalized Universal Decompositional Semantics dataset
+
+    Attributes in a NormalizedUDSDataset may have only a single
+    annotation.
+
+    Parameters
+    ----------
+    annotation
+        mapping from node ids or pairs of node ids separated by %% to
+        attribute-value pairs; node ids must not contain %%
+    """
+
+    @overrides
+    def __init__(self, annotation: Dict[str, Dict[str, Any]]):
+        super().__init__(annotation)
+
+    @classmethod
+    @overrides
+    def from_json(cls, jsonfile: Union[str, TextIO]) -> 'NormalizedUDSDataset':
+        """Generates a dataset of normalized annotations from a JSON file
+
+        The format of the JSON passed to this class method must be:
+
+        ::
+
+            {GRAPHID_1: {NODEID_1_1: {ATTRIBUTE_I: VALUE,
+                                      ATTRIBUTE_J: VALUE,
+                                      ...},
+                         ...},
+             GRAPHID_2: {NODEID_2_1: {ATTRIBUTE_K: VALUE,
+                                      ATTRIBUTE_L: VALUE,
+                                      ...},
+                         ...},
+             ...
+            }
+
+
+        Graph and node identifiers must match the graph and node
+        identifiers of the predpatt graphs to which the annotations
+        will be added.
+
+        VALUE in the above may be anything, but if it is
+        dictionary-valued, it is assumed to have the following
+        structure (in the case of a NormalizedUDSAnnotation):
+
+        ::
+
+            {SUBSPACE_1: {PROP_1_1: {'value': VALUE,
+                                    'confidence': VALUE},
+                         ...},
+             SUBSPACE_2: {PROP_2_1: {'value': VALUE,
+                                     'confidence': VALUE},
+                         ...},
+            }
+
+        For details on the structure of RawUDSAnnotation, see the
+        docstring for that class.
+        """
+        return super().from_json(jsonfile)
+
+    @overrides
+    def items(self):
+        return super().items()
+
+    @overrides
+    def __getitem__(self, k):
+        return super().__getitem__(k)
+
+class RawUDSDataset(UDSAnnotation):
+    """A raw Universal Decompositional Semantics dataset
+
+    Unlike NormalizedUDSDataset, RawUDSDataset may have multiple
+    annotations for a particular attribute. Each annotation is
+    associated with an annotator ID, and different annotators may
+    have annotated different numbers of items.
+
+    Parameters
+    ----------
+    annotation
+        mapping from node ids (for node annotations) or pairs 
+        of node ids separated by %% (for edge annotations) to
+        attribute-value pairs, with values having the structure
+        described above.
+    """
+    @overrides
+    def __init__(self, annotation: Dict[str, Dict[str, Any]]):
+
+        super().__init__(annotation)
+
+        # Node attributes by annotator
+        self.node_attributes_for_annotator = self.__class__._nested_defaultdict(5)
+
+        # Edge attributes by annotator
+        self.edge_attributes_for_annotator = self.__class__._nested_defaultdict(5)
+
+        # Set of all annotator IDs
+        self.annotator_ids = set()
+
+        # Construct dict of node attributes for each annotator from the
+        # node_attributes dictionary, initialized in the base constructor
+        for graph, node_attrs in self.node_attributes.items():
+            for node, subspaces in node_attrs.items():
+                for subspace, properties in subspaces.items():
+                    for prop, annotation in properties.items():
+                        values = sorted(annotation['value'].items())
+                        confidences = sorted(annotation['confidence'].items())
+                        for ((conf_anno_id, conf), (val_anno_id, val)) in zip(values, confidences):
+                            self.annotator_ids.add(val_anno_id)
+                            self.node_attributes_for_annotator[val_anno_id][graph][node][subspace][prop] = \
+                                {'confidence': conf, 'value': val}
+
+        # Construct dict of edge attributes for each annotator from the
+        # edge_attributes dictionary, initialized in the base constructor
+        for graph, edge_attrs in self.edge_attributes.items():
+            for edge, subspaces in edge_attrs.items():
+                for subspace, properties in subspaces.items():
+                    for prop, annotation in properties.items():
+                        values = sorted(annotation['value'].items())
+                        confidences = sorted(annotation['confidence'].items())
+                        for ((conf_anno_id, conf), (val_anno_id, val)) in zip(values, confidences):
+                            self.annotator_ids.add(val_anno_id)
+                            self.node_attributes_for_annotator[val_anno_id][graph][edge][subspace][prop] = \
+                                {'confidence': conf, 'value': val}
+
+    @classmethod
+    @overrides
+    def from_json(cls, jsonfile: Union[str, TextIO]) -> 'RawUDSDataset':
+        """Generates a dataset for raw annotations from a JSON file
+
+        Although this class does not override the parent from_json
+        class method, the constructor does expect a particular JSON format.
+        Specifically, it is expected to have the following structure:
+
+               ::
+
+            {SUBSPACE_1: {PROP_1_1: {'value': {
+                                        ANNOTATOR1: VALUE1, 
+                                        ANNOTATOR2: VALUE2,
+                                        ...
+                                              },
+                                     'confidence': {
+                                        ANNOTATOR1: CONF1,
+                                        ANNOTATOR2: CONF2,
+                                        ...
+                                                   }
+                                    },
+                          PROP_1_2: {'value': {
+                                        ANNOTATOR1: VALUE1,
+                                        ANNOTATOR2: VALUE2,
+                                        ...
+                                              },
+                                     'confidence': {
+                                        ANNOTATOR1: CONF1,
+                                        ANNOTATOR2: CONF2,
+                                        ...
+                                                   }
+                                    },
+                          ...},
+             SUBSPACE_2: {PROP_2_1: {'value': {
+                                        ANNOTATOR3: VALUE1,
+                                        ANNOTATOR4: VALUE2,
+                                        ...
+                                              },
+                                     'confidence': {
+                                        ANNOTATOR3: CONF1,
+                                        ANNOTATOR4: CONF2,
+                                        ...
+                                                   }
+                                    },
+                         ...},
+            ...}
+
+        Where all ANNOTATOR keys should share the same prefix (though this
+        is not enforced).
+        """
+        return super().from_json(jsonfile)
+
+    @overrides
+    def items(self):
+        return super().items()
+
+    @overrides
+    def __getitem__(self, k):
+        return super().__getitem__(k)
+
+    def annotators(self):
+        """Generator for all annotator IDs associated with the dataset
+        """
+        for annotator_id in self.annotator_ids:
+            yield annotator_id
+
+    def items_for_annotator(self, annotator_id: str):
+        """items generator for attribute annotations by a particular annotator
+
+        This method behaves exactly like UDSAnnotation.items, except that
+        it generates only items annotated by the specified annotator.
+
+        Parameters
+        ----------
+        annotator_id
+            The annotator whose annotations will be returned by the generator
+        """
+
+        for name, node_attrs in self.node_attributes_for_annotator[annotator_id].items():
+            yield name, (node_attrs, self.edge_attributes_for_annotator[annotator_id][name])
+
+    @classmethod
+    def _nested_defaultdict(cls, depth: int) -> Union[dict, defaultdict]:
+        """Constructs a nested defaultdict
+        
+        The lowest nesting level is a normal dictionary
+
+        Parameters
+        ----------
+        depth
+            The depth of the nesting   
+        """
+        if depth < 0:
+            raise ValueError('depth must be a nonnegative int')
+        
+        if not depth:
+            return dict
+        else:
+            return defaultdict(lambda: cls._nested_defaultdict(depth-1))
