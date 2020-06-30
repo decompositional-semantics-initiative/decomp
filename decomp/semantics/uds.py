@@ -1095,6 +1095,20 @@ class NormalizedUDSDataset(UDSAnnotation):
              ...
             }
 
+        for node annotations. Edge annotations should be of the form:
+
+        ::
+
+            {GRAPHID_1: {NODEID_1_1%%NODEID_1_2: {ATTRIBUTE_I: VALUE,
+                                                  ATTRIBUTE_J: VALUE,
+                                                  ...},
+                         ...},
+             GRAPHID_2: {NODEID_2_1%%NODEID_2_2: {ATTRIBUTE_K: VALUE,
+                                                  ATTRIBUTE_L: VALUE,
+                                                  ...},
+                         ...},
+             ...
+            }
 
         Graph and node identifiers must match the graph and node
         identifiers of the predpatt graphs to which the annotations
