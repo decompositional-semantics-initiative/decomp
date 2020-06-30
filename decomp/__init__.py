@@ -8,4 +8,4 @@ basicConfig(filename=os.path.join(DATA_DIR, 'build.log'),
             filemode='w',
             level=DEBUG)
 
-from .semantics.uds import UDSCorpus, UDSDataset
+from .semantics.uds import UDSCorpus, NormalizedUDSDataset, RawUDSDataset
