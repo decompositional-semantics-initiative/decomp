@@ -733,6 +733,34 @@ def test_raw_uds_annotation():
                                          '"tree1-semantics-pred-20": {"subspace": {"property": '\
                                          '{"confidence": 0.0, "value": 0.55}}}}'
         assert json.dumps(edge_attrs) == '{}'
+
+    # verify that node attribute-only generator works
+    for name, node_attrs in raw_node_ann.node_attrs_for_annotator('annotator2'):
+        assert name == 'tree1'
+        assert json.dumps(node_attrs) == '{"tree1-semantics-pred-11": {"subspace": {"property": '\
+                                    '{"confidence": 0.0, "value": 0.55}}}, '\
+                                 '"tree1-semantics-pred-20": {"subspace": {"property": '\
+                                 '{"confidence": 0.0, "value": 0.55}}}}'
+
+    # generator for edge attributes for the node attribute-only annotation
+    # should yield empty results for the graph
+    for name, edge_attrs in raw_node_ann.edge_attrs_for_annotator('annotator2'):
+        assert len(edge_attrs) == 0
+
+    # verify that edge attribute-only generator works
+    for name, edge_attrs in raw_edge_ann.edge_attrs_for_annotator('annotator2'):
+        assert name == 'tree1'
+        assert json.dumps({n1 + '%%' + n2: anno for (n1, n2), anno in edge_attrs.items()}) == \
+            '{"tree1-semantics-pred-11%%tree1-semantics-arg-15": {"subspace": {"property": '\
+                    '{"confidence": 0.0, "value": 0.55}}}, '\
+            '"tree1-semantics-pred-7%%tree1-semantics-arg-3": {"subspace": {"property": '\
+                    '{"confidence": 0.0, "value": 0.55}}}}'
+
+    # generator for node attributes for the edge attribute-only annotation
+    # should yield empty results for the graph
+    for name, node_attrs in raw_edge_ann.node_attrs_for_annotator('annotator2'):
+        assert len(node_attrs) == 0
+
     
 def test_normalized_uds_graph():
     graph = setup_graph(normalized=True)
