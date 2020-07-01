@@ -1194,7 +1194,7 @@ class RawUDSDataset(UDSAnnotation):
                         confidences = sorted(annotation['confidence'].items())
                         for ((conf_anno_id, conf), (val_anno_id, val)) in zip(values, confidences):
                             self.annotator_ids.add(val_anno_id)
-                            self.node_attributes_for_annotator[val_anno_id][graph][edge][subspace][prop] = \
+                            self.edge_attributes_for_annotator[val_anno_id][graph][edge][subspace][prop] = \
                                 {'confidence': conf, 'value': val}
 
     @classmethod
@@ -1278,6 +1278,30 @@ class RawUDSDataset(UDSAnnotation):
 
         for name, node_attrs in self.node_attributes_for_annotator[annotator_id].items():
             yield name, (node_attrs, self.edge_attributes_for_annotator[annotator_id][name])
+
+    def node_attrs_for_annotator(self, annotator_id: str):
+        """generator for node attribute annotations for a particular annotator
+
+        Parameters
+        ----------
+        annotator_id
+            The annotator whose node attribute annotations will be returned
+            by the generator
+        """
+        for name, node_attrs in self.node_attributes_for_annotator[annotator_id].items():
+            yield name, node_attrs
+
+    def edge_attrs_for_annotator(self, annotator_id: str):
+        """generator for edge attribute annotations for a particular annotator
+
+        Parameters
+        ----------
+        annotator_id
+            The annotator whose edge attribute annotations will be returned
+            by the generator
+        """
+        for name, edge_attrs in self.edge_attributes_for_annotator[annotator_id].items():
+            yield name, edge_attrs
 
     @classmethod
     def _nested_defaultdict(cls, depth: int) -> Union[dict, defaultdict]:
