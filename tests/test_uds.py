@@ -635,6 +635,8 @@ normalized_edge_annotation = '{"tree1": {"tree1-semantics-pred-11%%tree1-semanti
 raw_node_annotation = '{"tree1": {"tree1-semantics-pred-7": {"subspace": {"property": {"confidence": {"annotator1": 0.12}, "value": {"annotator1": 0.0}}}}, "tree1-semantics-pred-11": {"subspace": {"property": {"confidence": {"annotator2": 0.55, "annotator3": 0.07}, "value": {"annotator2": 0.0, "annotator3": 0.0}}}}, "tree1-semantics-pred-20": {"subspace": {"property": {"confidence": {"annotator2": 0.55}, "value": {"annotator2": 0.0}}}}}}'
 raw_edge_annotation = '{"tree1": {"tree1-semantics-pred-11%%tree1-semantics-arg-13": {"subspace": {"property": {"confidence": {"annotator1": 0.12}, "value": {"annotator1": 0.0}}}}, "tree1-semantics-pred-11%%tree1-semantics-arg-15": {"subspace": {"property": {"confidence": {"annotator2": 0.55, "annotator3": 0.07}, "value": {"annotator2": 0.0, "annotator3": 0.0}}}}, "tree1-semantics-pred-7%%tree1-semantics-arg-3": {"subspace": {"property": {"confidence": {"annotator2": 0.55}, "value": {"annotator2": 0.0}}}}}}'
 
+DATA_DIR = resource_filename('decomp', 'data/')
+
 def setup_normalized_annotations():
     norm_node_ann = NormalizedUDSDataset(json.loads(normalized_node_annotation))
     norm_edge_ann = NormalizedUDSDataset(json.loads(normalized_edge_annotation))
@@ -668,6 +670,15 @@ def setup_graph(normalized=True):
     graph.add_annotation(*edge_ann['tree1'])
     
     return graph
+
+def test_uds_corpus_first_load():
+    # Remove cached graphs
+    annotation_path = os.path.join(DATA_DIR, '1.0')
+    cmd = 'rm ' + annotation_path + '/*.json'
+    ret = os.system(cmd)
+
+    # Load the UDSCorpus without any options
+    uds = UDSCorpus()
 
 def test_constructing_rdf_for_graph_with_raw_annotations_fails():
     graph = setup_graph(normalized=False)
