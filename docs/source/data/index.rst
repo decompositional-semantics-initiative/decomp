@@ -10,6 +10,7 @@ The Universal Decompositional Semantics (UDS) dataset consists of three layers o
    syntactic-graphs
    semantic-graphs
    semantic-types
+   document-graphs
    
 .. _English Web Treebank: https://catalog.ldc.upenn.edu/LDC2012T13
 

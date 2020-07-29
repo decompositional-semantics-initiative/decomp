@@ -3,7 +3,7 @@
 To build the documentation, you will need Sphinx and three Sphinx extensions:
 
 ```bash
-pip install --user sphinx==2.1.2 sphinxcontrib-napoleon sphinx-autodoc-typehints sphinx_rtd_theme
+pip install --user sphinx==3.1.2 sphinxcontrib-napoleon sphinx-autodoc-typehints sphinx_rtd_theme
 ```
 
 Then, while in this directory, use:
