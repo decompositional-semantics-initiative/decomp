@@ -73,16 +73,11 @@ class DependencyGraphBuilder:
         depgraph.add_nodes_from([cls._conll_node_attrs(treeid, row, spec)
                                  for row in conll])
 
-        # add root node attributes
-        id_word = {nodeattr['position']-1: nodeattr['form']
-                   for nodeid, nodeattr in depgraph.nodes.items()}
-        sentence = [id_word[i] for i in range(max(list(id_word.keys()))+1)]
-
+        # add the root
         depgraph.add_node(treeid+'root-0',
                           position=0,
                           domain='root',
-                          type='root',
-                          sentence=' '.join(sentence))
+                          type='root')
 
         # connect nodes
         depgraph.add_edges_from([cls._conll_edge_attrs(treeid, row, spec)

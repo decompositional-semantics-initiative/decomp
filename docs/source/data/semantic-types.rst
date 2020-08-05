@@ -18,7 +18,11 @@ There is currently one edge type subspace.
 
   - `Semantic Proto-Roles`_ (``protoroles``)
 
-Each subspace key lies at the same level as the ``type`` attribute and map to a dictionary value. This dictionary maps from attribute keys (see *Attributes* in each section below) to dictionaries that always have two keys ``value`` and ``confidence``. See the below paper for information on how the these are derived from the underlying dataset.
+Each subspace key lies at the same level as the ``type`` attribute and maps to a dictionary value. This dictionary maps from attribute keys (see *Attributes* in each section below) to dictionaries that always have two keys ``value`` and ``confidence``. See the below paper for information on how the these are derived from the underlying dataset.
+
+We provide two versions of each of these datasets: one containing the raw annotator data (``"raw"``) and the other containing normalized data (``"normalized"``). In the former case, both the ``value`` and ``confidence`` fields described above map to dictionaries keyed on (anonymized) annotator IDs, where the corresponding value contains that annotator's response (for the ``value`` dictionary) or confidence (for the ``confidence`` dictionary). In the latter case, the ``value`` and ``confidence`` fields map to single, normalized value and confidence scores, resptively. For more information on the dataset formats, please see `UDSAnnotation`_.
+
+.. _UDSAnnotation: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSAnnotation
 
 White, A.S., E. Stengel-Eskin, S. Vashishtha, V. Govindarajan, D. Reisinger, T. Vieira, K. Sakaguchi, S. Zhang, F. Ferraro, R. Rudinger, K. Rawlins, B. Van Durme. 2019. The Universal Decompositional Semantics Dataset and Decomp Toolkit.
     
@@ -63,9 +67,19 @@ Time
 
 **Attributes**
 
-``dur-hours``, ``dur-instant``, ``dur-forever``, ``dur-weeks``, ``dur-days``, ``supersense-noun.time``, ``dur-months``, ``dur-years``, ``dur-centuries``, ``dur-seconds``, ``dur-minutes``, ``dur-decades``
+normalized:
+
+``dur-hours``, ``dur-instant``, ``dur-forever``, ``dur-weeks``, ``dur-days``, ``dur-months``, ``dur-years``, ``dur-centuries``, ``dur-seconds``, ``dur-minutes``, ``dur-decades``
+
+raw:
+
+``duration``
 
 **References**
+
+**Note**
+
+The Time dataset has different formats for raw and normalized annotations. The duration attributes from the normalized version are each assigned an ordinal value in the raw version (in ascending order of duration), which is assigned to the single attribute ``duration``.
 
 Vashishtha, S., B. Van Durme, & A.S. White. 2019. Fine-Grained Temporal Relation Extraction. To appear in Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics (ACL 2019), Florence, Italy, July 29-31, 2019.
 

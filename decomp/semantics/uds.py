@@ -4,9 +4,10 @@
 # pylint: disable=W0231
 # pylint: disable=W0640
 # pylint: disable=C0103
-"""Module for containing representing UDS graphs"""
+"""Module for representing UDS graphs"""
 
 import os
+import re
 import json
 import requests
 
@@ -15,6 +16,7 @@ from os.path import basename, splitext
 from glob import glob
 from logging import info, warning
 from collections import defaultdict
+from random import sample
 from abc import ABC, abstractmethod
 from overrides import overrides
 from functools import lru_cache
@@ -38,65 +40,133 @@ class UDSCorpus(PredPattCorpus):
 
     Parameters
     ----------
-    graphs
-        the predpatt graphs to associate the annotations with
-    annotations
-        additional annotations to associate with predpatt nodes; in
-        most cases, no such annotations will be passed, since the
-        standard UDS annotations are automatically loaded
+    sentences
+        the predpatt sentence graphs to associate the annotations with
+    documents
+        the documents associated with the predpatt sentence graphs
+    sentence_annotations
+        additional annotations to associate with predpatt nodes on
+        sentence-level graphs; in most cases, no such annotations
+        will be passed, since the standard UDS annotations are 
+        automatically loaded
+    document_annotations
+        additional annotations to associate with predpatt nodes on
+        document-level graphs
     version
         the version of UDS datasets to use
     split
         the split to load: "train", "dev", or "test"
+    annotation_format
+        which annotation type to load ("raw" or "normalized")
     """
 
     DATA_DIR = resource_filename('decomp', 'data/')
 
     def __init__(self,
-                 graphs: Optional[PredPattCorpus] = None,
-                 annotations: List['UDSAnnotation'] = [],
-                 version: str = '1.0',
-                 split: Optional[str] = None):
+                 sentences: Optional[PredPattCorpus] = None,
+                 documents: Optional[Dict[str, 'UDSDocument']] = None,
+                 sentence_annotations: List['UDSAnnotation'] = [],
+                 document_annotations: List['UDSAnnotation'] = [],
+                 version: str = '2.0',
+                 split: Optional[str] = None,
+                 annotation_format: str = 'normalized'):
 
         self.version = version
+        self.annotation_format = annotation_format
 
-        self._corpus_paths = {splitext(basename(p))[0].split('-')[-1]: p
+        self._sentences_paths = {splitext(basename(p))[0].split('-')[-1]: p
                               for p
                               in glob(os.path.join(self.__class__.DATA_DIR,
                                                    version,
+                                                   annotation_format,
+                                                   'sentence'
                                                    '*.json'))}
 
+        self._documents_paths = {splitext(basename(p))[0].split('-')[-1]: p
+                              for p
+                              in glob(os.path.join(self.__class__.DATA_DIR,
+                                                   version,
+                                                   annotation_format,
+                                                   'document'
+                                                   '*.json'))}
         
-        self._annotation_dir = os.path.join(self.__class__.DATA_DIR,
+        self._sentences_annotation_dir = os.path.join(self.__class__.DATA_DIR,
                                             version,
-                                            'annotations/')
-        self._annotation_paths = glob(os.path.join(self._annotation_dir,
-                                                   '*.json'))
+                                            annotation_format,
+                                            'sentence',
+                                            'annotations')
 
-        # Currently, all annotations in the 'annotations/' directory are normalized.
-        # If this changes, this line will have to be modified appropriately.
-        self._annotation_paths = {'normalized': self._annotation_paths}
+        self._documents_annotation_dir = os.path.join(self.__class__.DATA_DIR,
+                                            version,
+                                            annotation_format,
+                                            'document',
+                                            'annotations')
+
+        """
+            Currently, annotation paths are specified as singleton dictionaries.
+            This is a holdover from when we were allowing normalized and raw
+            annotations to be loaded together. I have kept it this way so that 
+            we can easily being allowing that again should we wish. This also
+            allows for relatively easy addition of new annotation formats.
+        """
+        if annotation_format in ['raw', 'normalized']:
+            # Out of the box, the annotations are stored as zip files and the
+            # JSON they contain must be extracted
+            zipped_sentence_annotations = glob(os.path.join(self._sentences_annotation_dir, '*.zip'))
+            zipped_document_annotations = glob(os.path.join(self._documents_annotation_dir, '*.zip'))
+            for zipped in zipped_sentence_annotations:
+                ZipFile(zipped).extractall(path=self._sentences_annotation_dir)
+            for zipped in zipped_document_annotations:
+                ZipFile(zipped).extractall(path=self._documents_annotation_dir)
+
+            sentence_paths = glob(os.path.join(self._sentences_annotation_dir, '*.json'))
+            document_paths = glob(os.path.join(self._documents_annotation_dir, '*.json'))
+            self._sentence_annotation_paths = {annotation_format: sentence_paths}
+            self._document_annotation_paths = {annotation_format: document_paths}
+        else:
+            errmsg = f'Unrecognized annotation type {annotation_format}. The annotation '\
+                     f'type must be either "raw" or "normalized".'
+            raise ValueError(errmsg)
 
         if not (split is None or split in ['train', 'dev', 'test']):
             errmsg = 'split must be "train", "dev", or "test"'
             raise ValueError(errmsg)
 
-        all_built = all(s in self._corpus_paths
-                        for s in ['train', 'dev', 'test'])
+        # Check whether the sentence- and document-level graphs have already
+        # been built.
+        sentences_built = self._sentences_paths and \
+                        all(s in self._sentences_paths for s in ['train', 'dev', 'test'])
+        documents_built = self._documents_paths and \
+                        all(s in self._documents_paths for s in ['train', 'dev', 'test'])
+        all_built = sentences_built and documents_built
 
-        self._graphs = {}
+        self._sentences = {}
+        self._documents = {}
         
-        if graphs is None and split in self._corpus_paths:
-            fpath = self._corpus_paths[split]
-            corp_split = self.__class__.from_json(fpath)
-            self._graphs.update(corp_split._graphs)
+        # Neither documents nor graphs should be supplied to the constructor
+        # without the other
+        if sentences is None and documents is not None:
+            raise ValueError('UDS documents were provided without sentences.'\
+                        'Cannot construct corpus.')
+        elif sentences is not None and documents is None:
+            raise ValueError('UDS sentences were provided without documents.'\
+                        'Cannot construct corpus.')
 
-        elif graphs is None and split is None and all_built:
-            for fpath in self._corpus_paths.values():
-                corp_split = self.__class__.from_json(fpath)
-                self._graphs.update(corp_split._graphs)
+        if sentences is None and split in self._sentences_paths:
+            sentence_fpath = self._sentences_paths[split]
+            doc_fpath = self._documents_paths[split]
+            split = self.__class__.from_json(sentence_fpath, doc_fpath)
+            self._sentences.update(split._sentences)
+            self._documents.update(split._documents)
 
-        elif graphs is None:
+        elif sentences is None and split is None and all_built:
+            for sentence_fpath, doc_fpath in zip(sorted(self._sentences_paths.values()),\
+                                             sorted(self._documents_paths.values())):
+                split = self.__class__.from_json(sentence_fpath, doc_fpath)
+                self._sentences.update(split._sentences)
+                self._documents.update(split._documents)
+
+        elif sentences is None:
             url = 'https://github.com/UniversalDependencies/' +\
                   'UD_English-EWT/archive/r1.2.zip'
 
@@ -110,7 +180,8 @@ class UDSCorpus(PredPattCorpus):
                         conll_str = conll.read().decode('utf-8')
                         sname = splitext(basename(fn))[0].split('-')[-1]
                         spl = self.__class__.from_conll(conll_str,
-                                                        self._annotation_paths,
+                                                        self._sentence_annotation_paths,
+                                                        self._document_annotation_paths,
                                                         name='ewt-'+sname)
 
                         # in case additional annotations are passed;
@@ -121,27 +192,52 @@ class UDSCorpus(PredPattCorpus):
                         # the dataset, they could in principle try to
                         # pass annotations, so we want to do something
                         # reasonable here
-                        for ann in annotations:
-                            spl.add_annotation(ann)
+                        for ann in sentence_annotations:
+                            spl.add_annotation(ann, is_document_level=False)
+                        for ann in document_annotations:
+                            spl.add_annotation(ann, is_document_level=True)
 
                         if sname == split or split is None:
-                            json_name = 'uds-ewt-'+sname+'.json'
-                            json_path = os.path.join(self.__class__.DATA_DIR,
+                            # Prepare sentences
+                            sentences_json_name = '-'.join(['uds', 'ewt', 'sentences', sname, annotation_format]) + '.json'
+                            sentences_json_path = os.path.join(self.__class__.DATA_DIR,
                                                      version,
-                                                     json_name)
-                            spl.to_json(json_path)
-                            self._graphs.update(spl._graphs)
-                            self._corpus_paths[sname] = json_path
+                                                     annotation_format,
+                                                     'sentence',
+                                                     sentences_json_name)
+                            self._sentences.update(spl._sentences)
+                            self._sentences_paths[sname] = sentences_json_path
+
+                            # Prepare documents
+                            documents_json_name = '-'.join(['uds', 'ewt', 'documents', sname, annotation_format]) + '.json'
+                            documents_json_path = os.path.join(self.__class__.DATA_DIR,
+                                                   version,
+                                                   annotation_format,
+                                                   'document',
+                                                   documents_json_name)
+                            self._documents.update(spl._documents)
+                            self._documents_paths[sname] = documents_json_path
+
+                            # Serialize both
+                            spl.to_json(sentences_json_path, documents_json_path)
 
         else:
-            self._graphs = graphs
-            for ann in annotations:
-                self.add_annotation(ann)
+            self._sentences = sentences
+            for ann in sentence_annotations:
+                self.add_annotation(ann, is_document_level=False)
+            self._documents = documents
+            for ann in document_annotations:
+                self.add_annotation(ann, is_document_level=True)
+
+        # Methods inherited from Corpus that reference the self._graphs
+        # attribute will operate on sentence-level graphs only
+        self._graphs = self._sentences
 
     @classmethod
     def from_conll(cls,
                    corpus: Union[str, TextIO],
-                   annotations: Dict[str, List[Union[str, TextIO]]] = {},
+                   sentence_annotations: Dict[str, List[Union[str, TextIO]]] = {},
+                   document_annotations: Dict[str, List[Union[str, TextIO]]] = {},
                    name: str = 'ewt') -> 'UDSCorpus':
         """Load UDS graph corpus from CoNLL (dependencies) and JSON (annotations)
 
@@ -154,98 +250,203 @@ class UDSCorpus(PredPattCorpus):
         ----------
         corpus
             (path to) Universal Dependencies corpus in conllu format
-        annotations
-            dictionary whose keys are paths to JSON files containing annotations
-            and whose values indicate the type of UDSAnnotation ('raw' or
-            'normalized').
+        sentence_annotations
+            a dictionary whose keys indicate whether the annotation is in raw
+            or normalized form and whose values are paths to JSON files containing
+            sentence-level annotations
+        document_annotations
+            a dictionary whose keys indicate whether the annotation is in raw
+            or normalized form and whose values are paths to JSON files containing
+            document-level annotations
         name
             corpus name to be appended to the beginning of graph ids
         """
         predpatt_corpus = PredPattCorpus.from_conll(corpus, name=name)
-        predpatt_graphs = {name: UDSGraph(g, name)
+        predpatt_sentence_graphs = {name: UDSSentenceGraph(g, name)
                            for name, g in predpatt_corpus.items()}
+        predpatt_documents = cls._initialize_documents(predpatt_sentence_graphs)
 
-        # Although neither RawUDSDataset nor NormalizedUDSDataset currently
-        # modifies the from_json method of the abstract base class, we don't
-        # want to assume this, and users should be deliberate in specifying
-        # the annotation type.
-        processed_annotations = []
-        for ann_type, ann_path in annotations.items():
+        # Process sentence-level graph annotations
+        processed_sentence_annotations = []
+        for ann_type, ann_path in sentence_annotations.items():
             if ann_type == 'raw':
                 for anno in ann_path:
-                    processed_annotations.append(RawUDSDataset.from_json(anno))
+                    processed_sentence_annotations.append(RawUDSDataset.from_json(anno))
             elif ann_type == 'normalized':
                 for anno in ann_path:
-                    processed_annotations.append(NormalizedUDSDataset.from_json(anno))
+                    processed_sentence_annotations.append(NormalizedUDSDataset.from_json(anno))
             else:
                 raise ValueError('Unrecognized annotation type {0} '\
-                                 'for annotation {1}.'.format(ann_type, ann_path))
+                                 'for sentence annotation {1}.'.format(ann_type, ann_path))
 
-        return cls(predpatt_graphs, processed_annotations)
+        # Process document-level graph annotations
+        processed_document_annotations = []
+        for ann_type, ann_path in document_annotations.items():
+            if ann_type == 'raw':
+                for anno in ann_path:
+                    processed_document_annotations.append(RawUDSDataset.from_json(anno))
+            elif ann_type == 'normalized':
+                for anno in ann_path:
+                    processed_document_annotations.append(NormalizedUDSDataset.from_json(anno))
+            else:
+                raise ValueError('Unrecognized annotation type {0} '\
+                                 'for document annotation {1}.'.format(ann_type, ann_path))
+
+        return cls(predpatt_sentence_graphs, predpatt_documents, 
+                   processed_sentence_annotations, processed_document_annotations)
 
     @classmethod
-    def from_json(cls, jsonfile: Union[str, TextIO]) -> 'UDSCorpus':
+    def _load_ud_ids(cls, sentence_ids_only: bool = False) -> Dict[str, Dict[str, str]]:
+
+        # Load in the document and sentence IDs for each sentence-level graph
+        ud_ids_path = os.path.join(cls.DATA_DIR, 'ud_ids.json')
+        with open(ud_ids_path) as ud_ids_file:
+            ud_ids = json.load(ud_ids_file)
+            if sentence_ids_only:
+                return {k: v['sentence_id'] for k, v in ud_ids.items()}
+            else:
+                return ud_ids
+
+    @classmethod
+    def from_json(cls, sentences_jsonfile: Union[str, TextIO],
+                       documents_jsonfile: Union[str, TextIO]) -> 'UDSCorpus':
         """Load annotated UDS graph corpus (including annotations) from JSON
 
         This is the suggested method for loading the UDS corpus.
 
         Parameters
         ----------
-        jsonfile
+        sentences_jsonfile
             file containing Universal Decompositional Semantics corpus
-            in JSON format
+            sentence-level graphs in JSON format
+        documents_jsonfile
+            file containing Universal Decompositional Semantics corpus
+            document-level graphs in JSON format
         """
-        ext = splitext(basename(jsonfile))[-1]
+        sentences_ext = splitext(basename(sentences_jsonfile))[-1]
+        documents_ext = splitext(basename(documents_jsonfile))[-1]
+        sent_ids = cls._load_ud_ids(sentence_ids_only=True)
 
-        if isinstance(jsonfile, str) and ext == '.json':
-            with open(jsonfile) as infile:
+        # Process sentence-level graphs
+        if isinstance(sentences_jsonfile, str) and sentences_ext == '.json':
+            with open(sentences_jsonfile) as infile:
                 graphs_json = json.load(infile)
 
-        elif isinstance(jsonfile, str):
-            graphs_json = json.loads(jsonfile)
+        elif isinstance(sentences_jsonfile, str):
+            graphs_json = json.loads(sentences_jsonfile)
 
         else:
-            graphs_json = json.load(jsonfile)
+            graphs_json = json.load(sentences_jsonfile)
 
-        graphs = {name: UDSGraph.from_dict(g_json, name)
+        graphs = {name: UDSSentenceGraph.from_dict(g_json, name)
                   for name, g_json in graphs_json.items()}
 
-        return cls(graphs)
+        # Process document-level graphs
+        if isinstance(documents_jsonfile, str) and documents_ext == '.json':
+            with open(documents_jsonfile) as infile:
+                documents_json = json.load(infile)
 
-    def add_annotation(self, annotation: 'UDSAnnotation') -> None:
-        """Add annotations to UDS graphs in the corpus
+        elif isinstance(documents_jsonfile, str):
+            documents_json = json.loads(documents_jsonfile)
+
+        else:
+            documents_json = json.load(documents_jsonfile)
+
+        documents = {name: UDSDocument.from_dict(d_json, graphs, sent_ids, name)
+                for name, d_json in documents_json.items()}
+
+        return cls(graphs, documents)
+
+    def add_annotation(self, annotation: 'UDSAnnotation',
+                       is_document_level: bool = False) -> None:
+        """Add annotations to UDS graphs or documents in the corpus
 
         Parameters
         ----------
         annotation
             the annotations to add to the graphs in the corpus
+        is_document_level
+            indicates whether this is a sentence- or document-level annotation
         """
-        for gname, (node_attrs, edge_attrs) in annotation.items():
-            if gname in self._graphs:
-                self._graphs[gname].add_annotation(node_attrs, edge_attrs)
+        if is_document_level:
+            for dname, (node_attrs, edge_attrs) in annotation.items():
+                if dname in self._documents:
+                    self._documents[dname].add_annotation(node_attrs, edge_attrs)
+        else:
+            for gname, (node_attrs, edge_attrs) in annotation.items():
+                if gname in self._sentences:
+                    self._sentences[gname].add_annotation(node_attrs, edge_attrs)
+
+
+    @classmethod
+    def _initialize_documents(cls, graphs: Dict[str, 'UDSSentenceGraph']) -> Dict[str, 'UDSDocument']:
+
+        # Load the UD document and sentence IDs
+        ud_ids = cls._load_ud_ids()
+
+        # Add each graph to the appropriate document
+        documents = {}
+        for name, graph in graphs.items():
+            doc_id = ud_ids[name]['document_id']
+            sent_id = ud_ids[name]['sentence_id']
+            graph.document_id = doc_id
+            graph.sentence_id = sent_id
+
+            # Add the graph to an existing document
+            if doc_id in documents:
+                documents[doc_id].add_sentence_graphs({name: graph}, {name: sent_id})
+            # Create a new document
+            else:
+                genre = doc_id.split('-')[0]
+                timestamp = UDSDocument._get_timestamp_from_document_name(doc_id)
+                documents[doc_id] =\
+                    UDSDocument({name: graph}, {name: sent_id}, doc_id, genre, timestamp)
+
+        return documents
 
     def to_json(self,
-                outfile: Optional[Union[str, TextIO]] = None) -> Optional[str]:
+                sentences_outfile: Optional[Union[str, TextIO]] = None,
+                documents_outfile: Optional[Union[str, TextIO]] = None) -> Optional[str]:
         """Serialize corpus to json
 
         Parameters
         ----------
-        outfile
-            file to write corpus to
+        sentences_outfile
+            file to serialize sentence-level graphs to
+        documents_outfile
+            file to serialize document-level graphs to
         """
 
-        graphs_serializable = {name: graph.to_dict()
+        # Serialize graphs
+        sentences_serializable = {name: graph.to_dict()
                                for name, graph in self.graphs.items()}
 
-        if outfile is None:
-            return json.dumps(graphs_serializable)
+        if sentences_outfile is None:
+            return json.dumps(sentences_serializable)
 
-        elif isinstance(outfile, str):
-            with open(outfile, 'w') as out:
-                json.dump(graphs_serializable, out)
+        elif isinstance(sentences_outfile, str):
+            with open(sentences_outfile, 'w') as out:
+                json.dump(sentences_serializable, out)
 
         else:
-            json.dump(graphs_serializable, outfile)
+            json.dump(sentences_serializable, sentences_outfile)
+
+
+        # Serialize documents (Note: we serialize only the *graphs*
+        # for each document — not the metadata, which is loaded by
+        # other means when calling UDSDocument.from_dict)
+        documents_serializable = {name: doc.document_graph.to_dict()
+                             for name, doc in self._documents.items()}
+
+        if documents_outfile is None:
+            return json.dumps(documents_serializable)
+
+        elif isinstance(documents_outfile, str):
+            with open(documents_outfile, 'w') as out:
+                json.dump(documents_serializable, out)
+
+        else:
+            json.dump(documents_serializable, documents_outfile)
 
     @lru_cache(maxsize=128)
     def query(self, query: Union[str, Query],
@@ -280,12 +481,40 @@ class UDSCorpus(PredPattCorpus):
                                  cache_query, cache_rdf)
                 for gid, graph in self.items()}
             
+    @property
+    def documents(self) -> Dict[str, 'UDSDocument']:
+        """The documents in the corpus"""
+        return self._documents
+
+    @property
+    def documentids(self):
+        """The document ID for each document in the corpus"""
+        return list(self._documents)
+
+    @property
+    def ndocuments(self):
+        """The number of IDs in the corpus"""
+        return len(self._documents)
+
+    def sample_documents(self, k: int) -> Dict[str, 'UDSDocument']:
+        """Sample k documents without replacement
+
+        Parameters
+        ----------
+        k
+            the number of documents to sample
+        """
+        
+        return {doc_id: self._documents[doc_id]
+                for doc_id
+                in sample(self._documents.keys(), k=k)}
+    
     @memoized_property
     def semantic_node_type_subspaces(self) -> Dict[str, Set[str]]:
         """The UDS node type subspaces in the corpus"""
 
         tups = set((k, frozenset(v))
-                   for g in self._graphs.values()
+                   for g in self._sentences.values()
                    for _, attrs in g.semantics_nodes.items()
                    for k, v in attrs.items()
                    if isinstance(v, dict))
@@ -303,7 +532,7 @@ class UDSCorpus(PredPattCorpus):
         """The UDS edge type subspaces in the corpus"""
 
         tups = set((k, frozenset(v))
-                   for g in self._graphs.values()
+                   for g in self._sentences.values()
                    for _, attrs in g.semantics_edges().items()
                    for k, v in attrs.items()
                    if isinstance(v, dict))
@@ -323,25 +552,74 @@ class UDSCorpus(PredPattCorpus):
         return dict(self.semantic_node_type_subspaces,
                     **self.semantic_edge_type_subspaces)
 
+class UDSGraph(ABC):
+    """Abstract base class for sentence- and document-level graphs
 
-class UDSGraph:
-    """A Universal Decompositional Semantics graph
-
-    Parameters
-    ----------
-    graph
-        the NetworkX DiGraph from which the UDS graph is to be
-        constructed
-    name
-        the name of the graph
+        Parameters
+        ----------
+        graph
+            a NetworkX DiGraph
+        name
+            a unique identifier for the graph
     """
 
-    QUERIES = {}
-
+    @abstractmethod
     def __init__(self, graph: DiGraph, name: str):
         self.name = name
         self.graph = graph
 
+    @property
+    def nodes(self):
+        """All the nodes in the graph"""
+        return self.graph.nodes
+
+    @property
+    def edges(self):
+        """All the edges in the graph"""
+        return self.graph.edges
+
+    def to_dict(self) -> Dict:
+        """Convert the graph to a dictionary"""
+
+        return adjacency_data(self.graph)
+
+    @classmethod
+    def from_dict(cls, graph: Dict[str, Any], name: str = 'UDS') -> 'UDSGraph':
+        """Construct a UDSGraph from a dictionary
+
+        Parameters
+        ----------
+        graph
+            a dictionary constructed by networkx.adjacency_data
+        name
+            identifier to append to the beginning of node ids
+        """
+        return cls(adjacency_graph(graph), name)
+
+class UDSSentenceGraph(UDSGraph):
+    """A Universal Decompositional Semantics sentence-level graph
+
+    Parameters
+    ----------
+    graph
+        the NetworkX DiGraph from which the sentence-level graph
+        is to be constructed
+    name
+        the name of the graph
+    sentence_id
+        the UD identifier for the sentence associated with this graph
+    document_id
+        the UD identifier for the document associated with this graph
+    """
+
+    QUERIES = {}
+
+    @overrides
+    def __init__(self, graph: DiGraph, name: str, sentence_id: Optional[str] = None,
+                 document_id: Optional[str] = None):
+        super().__init__(graph, name)
+        self.sentence_id = sentence_id
+        self.document_id = document_id
         self._add_performative_nodes()
 
     @property
@@ -508,12 +786,6 @@ class UDSGraph:
                      'to capture only edges, but it appears to also ' +\
                      'capture nodes and/or properties'
             raise ValueError(errmsg)
-
-    @property
-    def sentence(self) -> str:
-        """The sentence the graph annotates"""
-
-        return self.graph.nodes[self.rootid]['sentence']
 
     @property
     def syntax_nodes(self) -> Dict[str, Dict[str, Any]]:
@@ -769,36 +1041,6 @@ class UDSGraph:
                        if e[1] in nodeids
                        if nid in e)]
 
-    def to_dict(self) -> Dict:
-        """Convert the graph to a dictionary"""
-
-        return adjacency_data(self.graph)
-
-    @property
-    def nodes(self):
-        """All the nodes in the graph"""
-        
-        return self.graph.nodes
-
-    @property
-    def edges(self):
-        """All the edges in the graph"""        
-        return self.graph.edges
-    
-    @classmethod
-    def from_dict(cls, graph: Dict, name: str = 'UDS') -> 'UDSGraph':
-        """Construct a UDSGraph from a dictionary
-
-        Parameters
-        ----------
-        graph
-            a dictionary constructed by networkx.adjacency_data
-        name
-            identifier to append to the beginning of node ids
-        """
-
-        return cls(adjacency_graph(graph), name)
-
     def add_annotation(self,
                        node_attrs: Dict[str, Dict[str, Any]],
                        edge_attrs: Dict[str, Dict[str, Any]],
@@ -960,37 +1202,212 @@ class UDSGraph:
             warning(warnmsg)
             self.graph.add_edges_from([(edge[0], edge[1], attrs)])
 
-    @classmethod
-    def get_digraph_root(cls, digraph: DiGraph) -> str:
-        """Return the unique root (source) node of a digraph
+    @memoized_property
+    def sentence(self) -> str:
+        """The sentence annotated by this graph"""
+        id_word = {nodeattr['position']-1: nodeattr['form']
+                   for nodeid, nodeattr in self.syntax_nodes.items()}
+        return ' '.join([id_word[i] for i in range(max(list(id_word.keys()))+1)])
 
-        Find and return the unique root (source) node of a digraph.  If
-        the digraph has no source nodes, or more than one source node,
-        raise an Exception.
+
+class UDSDocumentGraph(UDSGraph):
+    """A Universal Decompositional Semantics document-level graph
+
+    Parameters
+    ----------
+    graph
+        the NetworkX DiGraph from which the document-level graph
+        is to be constructed
+    name
+        the name of the graph
+    """
+    @overrides
+    def __init__(self, graph: DiGraph, name: str):
+        super().__init__(graph, name)
+
+    def add_annotation(self,
+                   node_attrs: Dict[str, Dict[str, Any]],
+                   edge_attrs: Dict[str, Dict[str, Any]]) -> None:
+        """Add node and or edge annotations to the graph
 
         Parameters
         ----------
-        digraph
-            digraph to search
+        node_attrs
+            the node annotations to be added
+        edge_attrs
+            the edge annotations to be added
         """
+        for node, attrs in node_attrs.items():
+            self._add_node_annotation(node, attrs)
 
-        root_candidates = [node for (node, degree) in digraph.in_degree() if degree == 0]
-        if len(root_candidates) != 1:
-            raise Exception('no unique root of digraph {}'.format(digraph.name))
-        return root_candidates[0]
+        for edge, attrs in edge_attrs.items():
+            self._add_edge_annotation(edge, attrs)
+
+    def _add_edge_annotation(self, edge, attrs):
+        if edge in self.graph.edges:
+            self.graph.edges[edge].update(attrs)
+        else:
+            # This will create edges dynamically
+            attrs = dict(attrs, **{'domain': 'document',
+                            'type': 'relation',
+                            'frompredpatt': False,
+                            'id': edge[1]})
+        self.graph.add_edges_from([(edge[0], edge[1], attrs)])
+
+    def _add_node_annotation(self, node, attrs):
+        # We do not currently have a use case for document node annotations,
+        # but it is included for completeness.
+        if node in self.graph.nodes:
+            warnmsg = f'Attempting to add a node annotation to node {node} '\
+                      f'in document graph {self.name}. Document-level '\
+                      'annotations should likely be edge attributes.'
+            warning(warnmsg)
+            self.graph.nodes[node].update(attrs)
+        else:
+            warnmsg = f'Attempting to add annotation to unknown node {node} '\
+                      f'in document graph {self.name}'
+            warning(warnmsg)
+
+
+class UDSDocument:
+    """A Universal Decompositional Semantics document
+
+    Parameters
+    ----------
+    sentence_graphs
+        the UDSSentenceGraphs associated with each sentence in the document
+    sentence_ids
+        the UD sentence IDs for each graph
+    name
+        the name of the document (i.e. the UD document ID)
+    genre
+        the genre of the document (e.g. `weblog`)
+    timestamp
+        the timestamp of the UD document on which this UDSDocument is based
+    doc_graph
+        the NetworkX DiGraph for the document. If not provided, this will be
+        initialized without edges from sentence_graphs
+    """
+    def __init__(self, sentence_graphs: Dict[str, UDSSentenceGraph],
+                 sentence_ids: Dict[str, str], name: str, genre: str,
+                 timestamp: Optional[str] = None, doc_graph: Optional[UDSDocumentGraph] = None):
+        self.sentence_graphs = {}
+        self.sentence_ids = {}
+        self.name = name
+        self.genre = genre
+        self.timestamp = timestamp
+
+        # Initialize the document-level graph
+        if doc_graph:
+            self.document_graph = doc_graph
+        else:
+            self.document_graph = UDSDocumentGraph(DiGraph(), name)
+        
+        # Initialize the sentence-level graphs
+        self.add_sentence_graphs(sentence_graphs, sentence_ids)
+
+    def to_dict(self) -> Dict:
+        """Convert the graph to a dictionary"""
+        return self.document_graph.to_dict()
+
+    @classmethod
+    def from_dict(cls, document: Dict[str, Dict], sentence_graphs: Dict[str, UDSSentenceGraph], 
+                       sentence_ids: Dict[str, str], name: str = 'UDS') -> 'UDSDocument':
+        """Construct a UDSDocument from a dictionary
+
+        Since only the document graphs are serialized, the sentence
+        graphs must also be provided to this method call in order
+        to properly associate them with their documents.
+
+        Parameters
+        ----------
+        document
+            a dictionary constructed by networkx.adjacency_data,
+            containing the graph for the document
+        sentence_graphs
+            a dictionary containing (possibly a superset of) the
+            sentence-level graphs for the sentences in the document
+        sentence_ids
+            a dictionary containing (possibly a superset of) the
+            UD sentence IDs for each graph
+        name
+            identifier to append to the beginning of node ids
+        """
+        document_graph = UDSDocumentGraph.from_dict(document, name)
+        sent_graph_names = set(map(lambda node: node['semantics']['graph'], document['nodes']))
+        sent_graphs = {}
+        sent_ids = {}
+        for gname in sent_graph_names:
+            sentence_graphs[gname].document_id = name
+            sentence_graphs[gname].sentence_id = sentence_ids[gname]
+            sent_graphs[gname] = sentence_graphs[gname]
+            sent_ids[gname] = sentence_ids[gname]
+        genre = name.split('-')[0]
+        timestamp = cls._get_timestamp_from_document_name(name)
+        return cls(sent_graphs, sent_ids, name, genre, timestamp, document_graph)
+
+    @staticmethod
+    def _get_timestamp_from_document_name(document_name):
+        timestamp = re.search('\d{8}_?\d{6}', document_name)
+        return timestamp[0] if timestamp else None
+
+    def add_sentence_graphs(self, sentence_graphs: Dict[str, UDSSentenceGraph], 
+                                  sentence_ids: Dict[str, str]) -> None:
+        """Add additional sentences to a document
+
+        Parameters
+        ----------
+        sentence_graphs
+            a dictionary containing the sentence-level graphs
+            for the sentences in the document
+        sentence_ids
+            a dictionary containing the UD sentence IDs for each graph
+        name
+            identifier to append to the beginning of node ids
+        """
+        for gname, graph in sentence_graphs.items():
+            sentence_graphs[gname].sentence_id = sentence_ids[gname]
+            sentence_graphs[gname].document_id = self.name
+            self.sentence_graphs[gname] = graph
+            self.sentence_ids[gname] = sentence_ids[gname]
+            for node_name, node in graph.semantics_nodes.items():
+                semantics = {'graph': gname, 'node': node_name}
+                document_node_name = node_name.replace('semantics', 'document')
+                self.document_graph.graph.add_node(document_node_name,
+                            domain='document', type=node['type'],
+                            frompredpatt=False, semantics=semantics)
+
+    def add_annotation(self, node_attrs: Dict[str, Dict[str, Any]],
+                             edge_attrs: Dict[str, Dict[str, Any]]) -> None:
+        """Add node or edge annotations to the document-level graph
+
+        Parameters
+        ----------
+        node_attrs
+            the node annotations to be added
+        edge_attrs
+            the edge annotations to be added
+        """
+        self.document_graph.add_annotation(node_attrs, edge_attrs)
+
+    def semantics_node(self, document_node: str) -> Dict[str, Dict]:
+        """The semantics node for a given document node
+
+        Parameters
+        ----------
+        document_node
+            the document domain node whose semantics node is to be
+            retrieved
+        """
+        semantics = self.document_graph.nodes[document_node]['semantics']
+        semantics_node = self.sentence_graphs[semantics['graph']].semantics_nodes[semantics['node']]
+        return {semantics['node']: semantics_node}
 
     @memoized_property
-    def document_id(self) -> str:
-        """Document ID from Universal Dependencies"""
-        syntax_root = self.get_digraph_root(self.syntax_subgraph)
-        return self.syntax_nodes[syntax_root]['document_id']
-
-    @memoized_property
-    def sentence_id(self) -> str:
-        """Sentence ID from Universal Dependencies"""
-        syntax_root = self.get_digraph_root(self.syntax_subgraph)
-        return self.syntax_nodes[syntax_root]['sentence_id']
-
+    def text(self) -> str:
+        """The document text"""
+        return ' '.join([sent_graph.sentence for gname, sent_graph in sorted(self.sentence_graphs.items())])
+        
 
 class UDSAnnotation(ABC):
     """Abstract base class for all Universal Decompositional Semantics datasets.
@@ -1130,7 +1547,7 @@ class NormalizedUDSDataset(UDSAnnotation):
                          ...},
             }
 
-        For details on the structure of RawUDSAnnotation, see the
+        For details on the structure of RawUDSDataset, see the
         docstring for that class.
         """
         return super().from_json(jsonfile)
@@ -1178,7 +1595,17 @@ class RawUDSDataset(UDSAnnotation):
         for graph, node_attrs in self.node_attributes.items():
             for node, subspaces in node_attrs.items():
                 for subspace, properties in subspaces.items():
+                    """
+                    Properties not obeying the structure defined in the docstring
+                    will be safely added by the parent class constructor, and are
+                    not annotator specific, so we skip over them here (and similarly)
+                    for edge attributes in the next block
+                    """
+                    if isinstance(properties, str):
+                        continue
                     for prop, annotation in properties.items():
+                        if isinstance(annotation, str):
+                            continue
                         values = sorted(annotation['value'].items())
                         confidences = sorted(annotation['confidence'].items())
                         for ((conf_anno_id, conf), (val_anno_id, val)) in zip(values, confidences):
@@ -1191,7 +1618,11 @@ class RawUDSDataset(UDSAnnotation):
         for graph, edge_attrs in self.edge_attributes.items():
             for edge, subspaces in edge_attrs.items():
                 for subspace, properties in subspaces.items():
+                    if isinstance(properties, str):
+                        continue
                     for prop, annotation in properties.items():
+                        if isinstance(annotation, str):
+                            continue
                         values = sorted(annotation['value'].items())
                         confidences = sorted(annotation['confidence'].items())
                         for ((conf_anno_id, conf), (val_anno_id, val)) in zip(values, confidences):
