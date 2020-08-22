@@ -7,3 +7,6 @@ setuptools==41.0.1
 numpy==1.16.4
 pyparsing==2.2.0
 http://github.com/hltcoe/PredPatt/tarball/master#egg=predpatt
+jsonpickle==1.4.1
+dash==1.9.1
+matplotlib==3.2.1

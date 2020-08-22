@@ -195,7 +195,10 @@ class UDSVisualization:
             
         for attr in onto:
             try:
-                val = choose_from[node][attr]
+                split_attr = attr.split("-")
+                attr_type = split_attr[0]
+                attr_subtype = "-".join(split_attr[1:])
+                val = choose_from[node][attr_type][attr_subtype]["value"]
             except KeyError:
                 continue
             val = np.round(val, 2)
@@ -358,7 +361,10 @@ class UDSVisualization:
                     node_idx, __ = self.graph.head(node)
                 except (ValueError, KeyError, IndexError) as e:
                     # addressee, root, speaker nodes
-                    if "root" not in node and "speaker" not in node and "addressee" not in node:
+                    if ("root" not in node and 
+                        "speaker" not in node and 
+                        "author" not in node and 
+                        "addressee" not in node):
                         # arg node 
                         try:
                             node_idx = int(node.split("-")[-1])
@@ -534,7 +540,7 @@ class UDSVisualization:
                     continue
 
                 x0,y0,x1,y1 = self._get_xy_from_edge(node_0, node_1)
-            except (KeyError, IndexError, TypeError) as e:
+            except (ValueError, KeyError, IndexError, TypeError) as e:
                 continue
 
             edge_trace = go.Scatter(x=tuple([x0, x1]), y=tuple([y0,y1]),
@@ -583,6 +589,9 @@ class UDSVisualization:
 
     def prepare_graph(self) -> Dict:
         # Convert a UDS graph into a Dash-ready layout
+        # clear 
+        self.trace_list = []
+        # redo 
         self._add_semantics_nodes()
         self._add_semantics_edges()
         
