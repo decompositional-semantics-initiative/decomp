@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Tuple, Optional
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -12,34 +12,83 @@ import jsonpickle
 
 from .. import UDSCorpus
 from ..semantics.uds import UDSGraph
-from decomp.vis.ontology import NODE_ONTOLOGY, EDGE_ONTOLOGY
+
+def get_ontologies() -> Tuple[List]:
+    """
+    collect node and edge ontologies from existing UDS corpus 
+    """
+    corpus = UDSCorpus(split="dev") 
+    node_ontology = corpus.semantic_node_type_subspaces
+    edge_ontology = corpus.semantic_edge_type_subspaces
+    node_ontology = sorted([f"{k}-{v_val}" for k, v in node_ontology.items() for v_val in v])
+    edge_ontology = sorted([f"{k}-{v_val}" for k, v in edge_ontology.items() for v_val in v])
+    return node_ontology, edge_ontology
+
 
 class StringList:
-    def __init__(self, text):
+    """
+    Wrapper class for indexing into text,
+    which is needed for ordering nodes when
+    parsing from a new sentence in API mode.
+
+    Parameters
+    ---------
+    text
+        input sentence 
+    """
+    def __init__(self, text: str):
         self.text_list = text.split(" ")
 
-    def index(self, item):
+    def index(self, item: str) -> int:
         try:
             return self.text_list.index(item)
         except ValueError:
             return 1000
 
-    def __str__(self):
+    def __str__(self) -> str:
         return " ".join(self.text_list) 
 
 
 class UDSVisualization:
+    """A toolkit for serving Dash-based visualizations 
+    of UDSGraphs in the browser.
+
+    Parameters
+    ---------
+    graph
+        the UDSGraph instance to visualize
+    add_span_edges
+        whether to add edges from semantic nodes to the syntactic nodes 
+        included in their spans
+    add_syntax_edges
+        whether to add UD edges between syntactic nodes 
+    from_prediction
+        flag which indicates whether UDSGraph instance was generated
+        by a parser when true
+    sentence
+        input sentence, provided when using predicted graph 
+    syntax_y
+        height of syntax nodes 
+    semantics_y
+        height of semantics nodes
+    node_offset
+        separation between semantics nodes 
+    width
+        visualization width
+    height 
+        visualization height 
+    """
     def __init__(self,
                  graph: UDSGraph, 
                  add_span_edges: bool = True,
                  add_syntax_edges: bool = False,
                  from_prediction: bool = False,
-                 sentence: str = None,
+                 sentence: Optional[str] = None,
                  syntax_y: float = 0.0,
                  semantics_y: float = 10.0,
                  node_offset: float = 7.0,
                  width: float = 1000,
-                 height: float = 400) -> None:
+                 height: float = 400):
 
         if graph is None:
             graph = UDSCorpus(split="dev")['ewt-dev-1']
@@ -71,8 +120,7 @@ class UDSVisualization:
         self.add_span_edges = add_span_edges
         self.add_syntax_edges = add_syntax_edges
         
-        self.node_ontology_orig = NODE_ONTOLOGY
-        self.edge_ontology_orig = EDGE_ONTOLOGY
+        self.node_ontology_orig, self.edge_ontology_orig = get_ontologies()
         self.node_ontology = [x for x in self.node_ontology_orig]
         self.edge_ontology = [x for x in self.edge_ontology_orig]
         
@@ -588,7 +636,8 @@ class UDSVisualization:
 
 
     def prepare_graph(self) -> Dict:
-        # Convert a UDS graph into a Dash-ready layout
+        """Converts a UDS graph into a Dash-ready layout"""
+
         # clear 
         self.trace_list = []
         # redo 
@@ -632,7 +681,8 @@ class UDSVisualization:
         self.edge_ontology = [x for x in self.edge_ontology_orig if x.split("-")[0] in subspaces] 
         
     def serve(self):
-        # serve graph to locally-hosted site 
+        """serve graph to locally-hosted site to port 8050 with no parser""" 
+
         external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
         app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
         app.title = self.graph.name
@@ -667,21 +717,28 @@ class UDSVisualization:
         
         @app.callback(dash.dependencies.Output('my-graph', 'figure'),
                   [dash.dependencies.Input('subspace-list', 'value')])
-        def update_output(value):
-            # update ontology based on which subspaces are checked 
+        def update_output(value: List[str]):
+            """Callback to update ontology based on which subspaces are checked
+            
+            Parameters
+            ----------
+            value
+                list of selected subspaces 
+            """
             self._update_ontology(value)
             return self.prepare_graph()
 
         app.run_server(debug=False)
         
     def show(self):
-        # show in-browser, usuable in jupyter notebooks 
+        """show in-browser, usuable in jupyter notebooks"""
+
         figure = self.prepare_graph()
         fig = go.Figure(figure)
         fig.show()
 
-    def toJSON(self):
-        # serialize visualization object, required for callback 
+    def to_json(self) -> str:
+        """serialize visualization object, required for callback"""
         self.sentence = str(self.sentence)
         graph = self.graph.to_dict()
         json_str = jsonpickle.encode(self, unpicklable=False)
@@ -691,8 +748,14 @@ class UDSVisualization:
         return jsonpickle.encode(json_dict)
 
     @classmethod
-    def from_json(cls, data):
-        # load serialized visualization object 
+    def from_json(cls, data: Dict) -> 'UDSVisualization':
+        """ load serialized visualization object 
+
+        Parameters
+        ---------
+        data
+            json dict representation of the current visualization 
+        """
         uds_graph = data['graph']
         miso_graph = UDSGraph.from_dict(uds_graph, 'test-graph') 
 
@@ -704,12 +767,19 @@ class UDSVisualization:
                 setattr(vis, k, v)
         return vis
 
-def serve_parser(parser, with_syntax=False):
-    # wrapper for serving from MISO parser 
+def serve_parser(parser, with_syntax: bool =False):
+    """wrapper for serving from MISO parser
+
+    Parameters
+    ---------
+    with_syntax
+        flag to show or hide syntactic edges
+    """
+
     graph = UDSCorpus(split="dev")['ewt-dev-1']
     vis = UDSVisualization(graph, sentence = graph.sentence, from_prediction = False, add_syntax_edges=with_syntax)
 
-    vis_json = vis.toJSON() 
+    vis_json = vis.to_json() 
 
     external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
     app = dash.Dash(__name__ + "_parser", external_stylesheets=external_stylesheets)
@@ -759,7 +829,20 @@ def serve_parser(parser, with_syntax=False):
     @app.callback(dash.dependencies.Output('vis-hidden', 'children'),
                   [dash.dependencies.Input('submit-button', 'n_clicks')],
               [dash.dependencies.State('input_text', 'value'), dash.dependencies.State('vis-hidden', 'children')])
-    def parse_new_sentence(n_clicks, text_value, vis_data):
+    def parse_new_sentence(n_clicks:int, text_value: str, vis_data: List[str]) -> List[str]:
+        """Dash callback to link the submit button with a change in state to the input text,
+        executes upon click of submit button and parses new sentence, updating the visualziation
+
+        Parameters
+        ---------
+        n_clicks
+            submit button counter
+        text_value
+            input value inside text form 
+        vis_data
+            serialized current visualization 
+        """
+
         vis = UDSVisualization.from_json(jsonpickle.decode(vis_data[0]))
         sent = str(vis.sentence)
         # make sure box clicked and it's actually a new sentence 
@@ -772,12 +855,22 @@ def serve_parser(parser, with_syntax=False):
             vis.sentence = StringList(text_value)
             vis.add_syntax_edges = with_syntax
             vis.from_prediction = True
-        return [vis.toJSON()]
+        return [vis.to_json()]
 
     @app.callback(dash.dependencies.Output("my-graph", "figure"), 
             [dash.dependencies.Input('vis-hidden', 'children'), 
              dash.dependencies.Input('subspace-list', 'value')])
-    def update_graph_from_vis(vis_data, subspace_list):
+    def update_graph_from_vis(vis_data: List[str], subspace_list: List[str]) -> Dict: 
+        """Callback to update the visualization when subspaces are 
+        selected or deselected 
+
+        Parameters
+        ----------
+        vis_data
+            serialized version of the current visualization
+        subspace_list
+            list of selected subspaces 
+        """
         vis = UDSVisualization.from_json(jsonpickle.decode(vis_data[0]))
         vis._update_ontology(subspace_list)
 
