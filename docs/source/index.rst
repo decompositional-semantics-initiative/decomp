@@ -23,17 +23,32 @@ Semantics Initiative`_.
 
 If you use either UDS or Decomp in your research, we ask that you cite the following paper:
 
-  White, A.S., E. Stengel-Eskin, S. Vashishtha, V. Govindarajan, D. Reisinger, T. Vieira, K. Sakaguchi, S. Zhang, F. Ferraro, R. Rudinger, K. Rawlins, B. Van Durme. 2019. `The Universal Decompositional Semantics Dataset and Decomp Toolkit`_. arXiv:1909.13851 [cs.CL]
+  White, Aaron Steven, Elias Stengel-Eskin, Siddharth Vashishtha, Venkata Subrahmanyan Govindarajan, Dee Ann Reisinger, Tim Vieira, Keisuke Sakaguchi, et al. 2020. `The Universal Decompositional Semantics Dataset and Decomp Toolkit`_. In Proceedings of The 12th Language Resources and Evaluation Conference, 5698–5707. Marseille, France: European Language Resources Association.
 
 .. code-block:: latex
 
-  @misc{white2019universal,
-      title={The Universal Decompositional Semantics Dataset and Decomp Toolkit},
-      author={Aaron Steven White and Elias Stengel-Eskin and Siddharth Vashishtha and Venkata Govindarajan and Dee Ann Reisinger and Tim Vieira and Keisuke Sakaguchi and Sheng Zhang and Francis Ferraro and Rachel Rudinger and Kyle Rawlins and Benjamin Van Durme},
-      year={2019},
-      eprint={1909.13851},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL}
+  @inproceedings{white-etal-2020-universal,
+      title = "The Universal Decompositional Semantics Dataset and Decomp Toolkit",
+      author = "White, Aaron Steven  and
+        Stengel-Eskin, Elias  and
+        Vashishtha, Siddharth  and
+        Govindarajan, Venkata Subrahmanyan  and
+        Reisinger, Dee Ann  and
+        Vieira, Tim  and
+        Sakaguchi, Keisuke  and
+        Zhang, Sheng  and
+        Ferraro, Francis  and
+        Rudinger, Rachel  and
+        Rawlins, Kyle  and
+        Van Durme, Benjamin",
+      booktitle = "Proceedings of The 12th Language Resources and Evaluation Conference",
+      month = may,
+      year = "2020",
+      address = "Marseille, France",
+      publisher = "European Language Resources Association",
+      url = "https://www.aclweb.org/anthology/2020.lrec-1.699",
+      pages = "5698--5707",
+      ISBN = "979-10-95546-34-4",
   }
 
 
@@ -50,7 +65,7 @@ If you use either UDS or Decomp in your research, we ask that you cite the follo
 .. _JSON-LD: https://json-ld.org/
 .. _Aaron Steven White: http://aaronstevenwhite.io/
 .. _Decompositional Semantics Initiative: http://decomp.io/
-.. _The Universal Decompositional Semantics Dataset and Decomp Toolkit: https://arxiv.org/abs/1909.13851
+.. _The Universal Decompositional Semantics Dataset and Decomp Toolkit: https://www.aclweb.org/anthology/2020.lrec-1.699/
 
 .. toctree::
    :maxdepth: 2
