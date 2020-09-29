@@ -79,6 +79,9 @@ contained in that directory.
 
 # Installation
 
+:warning: Currently there is a bug when installing with conda (see #15).
+It is recommended to use the Docker setup.
+
 The most painless way to get started quickly is to use the included
 barebones Python 3.6-based Dockerfile. To build the image and start a
 python interactive prompt, use:
