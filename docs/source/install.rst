@@ -4,11 +4,6 @@
 Installation
 ============
 
-.. warning::
-   Currently there is an issue with installing from conda (see `#15
-   <https://github.com/decompositional-semantics-initiative/decomp/issues/15/>`_).
-   
-
 The most painless way to get started quickly is to use the included
 barebones Python 3.6-based Dockerfile. To build the image and start a
 python interactive prompt, use:
