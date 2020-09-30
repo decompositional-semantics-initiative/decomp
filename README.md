@@ -79,7 +79,7 @@ contained in that directory.
 
 # Installation
 
-:warning: Currently there is a bug when installing with conda (see #15).
+:warning: Currently there is a bug when installing with conda (see [#15](https://github.com/decompositional-semantics-initiative/decomp/issues/15)).
 It is recommended to use the Docker setup.
 
 The most painless way to get started quickly is to use the included
