@@ -27,6 +27,7 @@ from .document import UDSDocument
 from .annotation import UDSAnnotation
 from .annotation import RawUDSAnnotation
 from .annotation import NormalizedUDSAnnotation
+from .graph import UDSSentenceGraph
 from .metadata import UDSAnnotationMetadata
 from .metadata import UDSPropertyMetadata
 
