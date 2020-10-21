@@ -70,7 +70,7 @@ class UDSCorpus(PredPattCorpus):
         self.version = version
         self.annotation_format = annotation_format
 
-        self._sentences_paths = {splitext(basename(p))[0].split('-')[-1]: p
+        self._sentences_paths = {splitext(basename(p))[0].split('-')[-2]: p
                                  for p
                                  in glob(os.path.join(self.__class__.DATA_DIR,
                                                       version,
@@ -78,7 +78,7 @@ class UDSCorpus(PredPattCorpus):
                                                       'sentence'
                                                       '*.json'))}
 
-        self._documents_paths = {splitext(basename(p))[0].split('-')[-1]: p
+        self._documents_paths = {splitext(basename(p))[0].split('-')[-2]: p
                                  for p
                                  in glob(os.path.join(self.__class__.DATA_DIR,
                                                       version,

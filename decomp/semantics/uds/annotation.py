@@ -91,12 +91,12 @@ class UDSAnnotation(ABC):
                                  for gid, attrs in data.items()}
 
         # Some attributes are not property subspaces and are thus excluded
-        excluded_attributes = {'subpredof', 'subargof', 'headof', 'span', 'head'}
+        self._excluded_attributes = {'subpredof', 'subargof', 'headof', 'span', 'head'}
         self._node_subspaces = {ss for gid, nodedict
                                 in self._node_attributes.items()
                                 for nid, subspaces in nodedict.items()
                                 for ss in subspaces}
-        self._node_subspaces = self._node_subspaces - excluded_attributes
+        self._node_subspaces = self._node_subspaces - self._excluded_attributes
 
     def _process_edge_data(self, data):
         self._edge_attributes = {gid: {tuple(edge.split('%%')): a
@@ -403,8 +403,12 @@ class RawUDSAnnotation(UDSAnnotation):
 
         for gid, attrs in self.node_attributes.items():
             for nid, subspaces in attrs.items():
-                for subspace, properties in subspaces.items():                    
+                for subspace, properties in subspaces.items():
+                    if subspace in self._excluded_attributes:
+                        continue                  
                     for prop, annotation in properties.items():
+                        if prop in self._excluded_attributes:
+                            continue
                         for annid, val in annotation['value'].items():
                             conf = annotation['confidence'][annid]
                             self.node_attributes_by_annotator[annid][gid][nid][subspace][prop] = \
