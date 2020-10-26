@@ -228,8 +228,7 @@ class TestUDSAnnotationMetadata:
             self.metadata['protoroles', 'awareness', 'value']
 
     def test_add(self):
-        with pytest.raises(ValueError):
-            self.metadata + self.metadata
+        assert self.metadata == self.metadata + self.metadata
 
         metadatadict1 = {'protoroles': {'awareness': sentence_metadata_example['protoroles']['awareness']}}
         metadatadict2 = {'protoroles': {'change_of_location': sentence_metadata_example['protoroles']['change_of_location']}}
@@ -274,6 +273,7 @@ class TestUDSAnnotationMetadata:
         assert self.metadata.has_annotators('protoroles')
         assert self.metadata.has_annotators('protoroles', 'awareness')
         assert not self.metadata_noann.has_annotators()
+
 
 class TestUDSCorpusMetadata:
 

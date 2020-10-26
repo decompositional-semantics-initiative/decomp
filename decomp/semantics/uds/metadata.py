@@ -259,16 +259,64 @@ class UDSPropertyMetadata:
         self._confidence = confidence
         self._annotators = annotators
 
+    def __eq__(self, other: 'UDSPropertyMetadata') -> bool:
+        """Whether the value and confidence datatypes match and annotators are equal
+
+        Parameters
+        ----------
+        other
+            the other UDSDatatype
+        """
+        return self.value == other.value and\
+            self.confidence == other.confidence and\
+            self.annotators == other.annotators
+
+    def __add__(self, other: 'UDSPropertyMetadata') -> 'UDSPropertyMetadata':
+        """A UDSPropertyMetadata with the union of annotators
+
+        If the value and confidence datatypes don't match, this raises
+        an error
+
+        Parameters
+        ----------
+        other
+            the other UDSDatatype
+
+        Raises
+        ------
+        ValueError
+            Raised if the value and confidence datatypes don't match
+        """
+        if self.value != other.value or self.confidence != other.confidence:
+            errmsg = 'Cannot add metadata whose value and confidence '\
+                     'datatypes are not equal'
+            raise ValueError(errmsg)
+
+        if self.annotators is None and other.annotators is None:
+            return self
+
+        elif self.annotators is None:
+            return UDSPropertyMetadata(self.value, self.confidence,
+                                       other.annotators)
+
+        elif other.annotators is None:
+            return UDSPropertyMetadata(self.value, self.confidence,
+                                       self.annotators)
+
+        else:
+            return UDSPropertyMetadata(self.value, self.confidence,
+                                       self.annotators | other.annotators)
+
     @property
-    def value(self):
+    def value(self) -> UDSDataType:
         return self._value
 
     @property
-    def confidence(self):
+    def confidence(self) -> UDSDataType:
         return self._confidence
 
     @property
-    def annotators(self):
+    def annotators(self) -> Optional[Set[str]]:
         return self._annotators
 
     @classmethod
@@ -338,6 +386,20 @@ class UDSAnnotationMetadata:
 
             return out
 
+    def __eq__(self, other: 'UDSAnnotationMetadata') -> bool:
+        if self.subspaces != other.subspaces:
+            return False
+
+        for ss in self.subspaces:
+            if self.properties(ss) != other.properties(ss):
+                return False
+
+            for prop in self.properties(ss):
+                if self[ss, prop] != other[ss, prop]:
+                    return False
+
+        return True
+
     def __add__(self,
                 other: 'UDSAnnotationMetadata') -> 'UDSAnnotationMetadata':
         new_metadata = defaultdict(dict, self.metadata)
@@ -345,12 +407,9 @@ class UDSAnnotationMetadata:
         for subspace, propdict in other.metadata.items():
             for prop, md in propdict.items():
                 if prop in new_metadata[subspace]:
-                    errmsg = 'both instances of UDSAnnotationMetadata are ' +\
-                             'specified for property {} '.format(prop) +\
-                             'in subspace {}'.format(subspace)
-                    raise ValueError(errmsg)
-
-                new_metadata[subspace][prop] = md
+                    new_metadata[subspace][prop] += md
+                else:
+                    new_metadata[subspace][prop] = md
 
         return UDSAnnotationMetadata(new_metadata)
 
