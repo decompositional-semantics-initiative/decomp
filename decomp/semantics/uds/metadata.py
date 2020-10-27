@@ -14,6 +14,7 @@ PropertyMetadataDict = Dict[str,
 AnnotationMetadataDict = Dict[str,
                               Dict[str, PropertyMetadataDict]]
 
+
 def _dtype(name: str) -> Type:
     """Convert string to a type
 

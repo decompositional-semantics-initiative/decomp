@@ -231,6 +231,9 @@ class UDSCorpus(PredPattCorpus):
                                                     name='ewt-'+sname)
 
                     if sname == split or split is None:
+                        # add metadata
+                        self._metadata += spl.metadata
+
                         # prepare sentences
                         sentences_json_name = '-'.join(['uds', 'ewt', 'sentences',
                                                         sname, self.annotation_format]) +\
@@ -482,8 +485,6 @@ class UDSCorpus(PredPattCorpus):
         """
         metadata_serializable = self._metadata.to_dict()
 
-        print(metadata_serializable.keys())
-        
         # convert graphs to dictionaries
         sentences_serializable = {'metadata': metadata_serializable['sentence_metadata'],
                                   'data': {name: graph.to_dict()

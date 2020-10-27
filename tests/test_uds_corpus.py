@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 import pytest
 
 from glob import glob
@@ -101,16 +102,19 @@ def _assert_document_annotation(uds, raw):
         node_ann, edge_ann = setup_raw_document_annotations()
     else:
         node_ann, edge_ann = setup_normalized_document_annotations()
+
     document = list(node_ann.node_attributes.keys())[0]
 
-    # Assert node annotations
+    # assert node annotations
     node_ann_attrs = dict(list(node_ann.node_attributes.values())[0])
+
     for doc_node, node_annotation in node_ann_attrs.items():
         for k, v in node_annotation.items():
             assert uds.documents[document].document_graph.nodes[doc_node][k] == v
 
-    # Assert edge annotations
+    # assert edge annotations
     edge_ann_attrs = dict(list(edge_ann.edge_attributes.values())[0])
+
     for doc_edge, edge_annotation in edge_ann_attrs.items():
         for k, v in edge_annotation.items():
             assert uds.documents[document].document_graph.edges[doc_edge][k] == v
@@ -118,7 +122,9 @@ def _assert_document_annotation(uds, raw):
 class TestUDSCorpus:
 
     @pytest.mark.slow
-    def test_load_v1_normalized(self, tmp_path):
+    def test_load_v1_normalized(self, tmp_path, caplog):
+        caplog.set_level(logging.WARNING)
+
         uds = _load_corpus(tmp_path, '1.0', 'normalized')
 
         raw = False
@@ -135,7 +141,9 @@ class TestUDSCorpus:
 
 
     @pytest.mark.slow        
-    def test_load_v2_normalized(self, tmp_path):
+    def test_load_v2_normalized(self, tmp_path, caplog):
+        caplog.set_level(logging.WARNING)
+        
         uds = _load_corpus(tmp_path, '2.0', 'normalized')
 
         raw = False
@@ -151,7 +159,9 @@ class TestUDSCorpus:
         #_assert_document_annotation(uds_cached, raw)
 
     @pytest.mark.slow        
-    def test_load_v1_raw(self, tmp_path):
+    def test_load_v1_raw(self, tmp_path, caplog):
+        caplog.set_level(logging.WARNING)
+
         uds = _load_corpus(tmp_path, '1.0', 'raw')
 
         raw = True
@@ -167,7 +177,9 @@ class TestUDSCorpus:
         #_assert_document_annotation(uds_cached, raw)
 
     @pytest.mark.slow        
-    def test_load_v2_raw(self, tmp_path):        
+    def test_load_v2_raw(self, tmp_path, caplog):
+        caplog.set_level(logging.WARNING)
+
         uds = _load_corpus(tmp_path, '2.0', 'raw')
 
         raw = True

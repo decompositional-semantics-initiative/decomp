@@ -4,6 +4,7 @@ import os, json
 
 from pprint import pprint
 
+from decomp.semantics.uds.metadata import UDSAnnotationMetadata
 from decomp.semantics.uds.annotation import UDSAnnotation
 from decomp.semantics.uds.annotation import NormalizedUDSAnnotation
 from decomp.semantics.uds.annotation import RawUDSAnnotation
@@ -21,20 +22,23 @@ class TestNormalizedUDSAnnotation:
                        normalized_edge_sentence_annotation,
                        normalized_sentence_annotations):
         norm_node_ann, norm_edge_ann = normalized_sentence_annotations
-        norm_node_ann_direct = json.loads(normalized_node_sentence_annotation)['data']['tree1']
-        norm_edge_ann_direct = json.loads(normalized_edge_sentence_annotation)['data']['tree1']
+        norm_node_ann_direct = json.loads(normalized_node_sentence_annotation)
+        norm_edge_ann_direct = json.loads(normalized_edge_sentence_annotation)
+
+        assert norm_node_ann.metadata == UDSAnnotationMetadata.from_dict(norm_node_ann_direct['metadata'])
+        assert norm_edge_ann.metadata == UDSAnnotationMetadata.from_dict(norm_edge_ann_direct['metadata'])
 
         assert all([not edge_attrs
                     for n, (node_attrs, edge_attrs) in norm_node_ann.items()])
 
-        assert all([norm_node_ann_direct[k] == v
+        assert all([norm_node_ann_direct['data']['tree1'][k] == v
                     for n, (node_attrs, edge_attrs) in norm_node_ann.items()
                     for k, v in node_attrs.items()])
 
         assert all([not node_attrs
                     for n, (node_attrs, edge_attrs) in norm_edge_ann.items()])
 
-        assert all([norm_edge_ann_direct['%%'.join(k)] == v
+        assert all([norm_edge_ann_direct['data']['tree1']['%%'.join(k)] == v
                     for n, (node_attrs, edge_attrs) in norm_edge_ann.items()
                     for k, v in edge_attrs.items()])
 
@@ -45,21 +49,23 @@ class TestRawUDSAnnotation:
                        raw_edge_sentence_annotation,
                        raw_sentence_annotations):
         raw_node_ann, raw_edge_ann = raw_sentence_annotations
-        raw_node_ann_direct = json.loads(raw_node_sentence_annotation)['data']['tree1']
-        raw_edge_ann_direct = json.loads(raw_edge_sentence_annotation)['data']['tree1']
+        raw_node_ann_direct = json.loads(raw_node_sentence_annotation)
+        raw_edge_ann_direct = json.loads(raw_edge_sentence_annotation)
 
+        assert raw_node_ann.metadata == UDSAnnotationMetadata.from_dict(raw_node_ann_direct['metadata'])
+        assert raw_edge_ann.metadata == UDSAnnotationMetadata.from_dict(raw_edge_ann_direct['metadata'])
 
         assert all([not edge_attrs
                     for n, (node_attrs, edge_attrs) in raw_node_ann.items()])
 
-        assert all([raw_node_ann_direct[k] == v
+        assert all([raw_node_ann_direct['data']['tree1'][k] == v
                     for n, (node_attrs, edge_attrs) in raw_node_ann.items()
                     for k, v in node_attrs.items()])
 
         assert all([not node_attrs
                     for n, (node_attrs, edge_attrs) in raw_edge_ann.items()])
 
-        assert all([raw_edge_ann_direct['%%'.join(k)] == v
+        assert all([raw_edge_ann_direct['data']['tree1']['%%'.join(k)] == v
                     for n, (node_attrs, edge_attrs) in raw_edge_ann.items()
                     for k, v in edge_attrs.items()])
 
@@ -75,7 +81,7 @@ class TestRawUDSAnnotation:
 
     def test_items(self, raw_sentence_annotations):
         raw_node_ann, raw_edge_ann = raw_sentence_annotations
-        
+
         # verify that items by annotator generator works
         for gid, (node_attrs, edge_attrs) in raw_node_ann.items(annotator_id='genericity-pred-annotator-88'):
             assert gid == 'tree1'
@@ -106,22 +112,3 @@ class TestRawUDSAnnotation:
             for gid, node_attrs in raw_edge_ann.items(annotation_type="node",
                                                       annotator_id='protoroles-annotator-14'):
                 pass
-
-def assert_document_annotation(uds, raw):
-    if raw:
-        node_ann, edge_ann = setup_raw_document_annotations()
-    else:
-        node_ann, edge_ann = setup_normalized_document_annotations()
-    document = list(node_ann.node_attributes.keys())[0]
-
-    # Assert node annotations
-    node_ann_attrs = dict(list(node_ann.node_attributes.values())[0])
-    for doc_node, node_annotation in node_ann_attrs.items():
-        for k, v in node_annotation.items():
-            assert uds.documents[document].document_graph.nodes[doc_node][k] == v
-
-    # Assert edge annotations
-    edge_ann_attrs = dict(list(edge_ann.edge_attributes.values())[0])
-    for doc_edge, edge_annotation in edge_ann_attrs.items():
-        for k, v in edge_annotation.items():
-            assert uds.documents[document].document_graph.edges[doc_edge][k] == v
