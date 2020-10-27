@@ -12,6 +12,7 @@ import requests
 
 from pkg_resources import resource_filename
 from os.path import basename, splitext
+from logging import warn
 from glob import glob
 from random import sample
 from functools import lru_cache
@@ -28,8 +29,13 @@ from .annotation import UDSAnnotation
 from .annotation import RawUDSAnnotation
 from .annotation import NormalizedUDSAnnotation
 from .graph import UDSSentenceGraph
+from .metadata import UDSCorpusMetadata
 from .metadata import UDSAnnotationMetadata
 from .metadata import UDSPropertyMetadata
+
+
+Location = Union[str, TextIO]
+
 
 class UDSCorpus(PredPattCorpus):
     """A collection of Universal Decompositional Semantics graphs
@@ -56,7 +62,10 @@ class UDSCorpus(PredPattCorpus):
         which annotation type to load ("raw" or "normalized")
     """
 
-    DATA_DIR = resource_filename('decomp', 'data/')
+    UD_URL = 'https://github.com/UniversalDependencies/' +\
+             'UD_English-EWT/archive/r1.2.zip'
+    ANN_DIR = resource_filename('decomp', 'data/')
+    CACHE_DIR = resource_filename('decomp', 'data/')
 
     def __init__(self,
                  sentences: Optional[PredPattCorpus] = None,
@@ -66,13 +75,69 @@ class UDSCorpus(PredPattCorpus):
                  version: str = '2.0',
                  split: Optional[str] = None,
                  annotation_format: str = 'normalized'):
+        self._validate_arguments(sentences, documents,
+                                 version, split, annotation_format)
 
         self.version = version
         self.annotation_format = annotation_format
 
+        self._metadata = UDSCorpusMetadata()
+
+        # methods inherited from Corpus that reference the self._graphs
+        # attribute will operate on sentence-level graphs only        
+        self._graphs = self._sentences = {}
+        self._documents = {}
+
+        self._initialize_paths(version, annotation_format)
+        all_built = self._check_build_status()
+
+        if sentences is None and split in self._sentences_paths:
+            self._load_split(split)
+
+        elif sentences is None and split is None and all_built:
+            for split in ['train', 'dev', 'test']:
+                self._load_split(split)
+
+        elif sentences is None:
+            # download UD-EWT
+            udewt = requests.get(self.UD_URL).content
+
+            if sentence_annotations or document_annotations:
+                warn("sentence and document annotations ignored")
+
+            self._process_conll(split, udewt)
+
+        else:
+            self._sentences = sentences
+            self._documents = documents
+
+            self.add_annotation(sentence_annotations, document_annotations)
+
+    def _validate_arguments(self, sentences, documents,
+                            version, split, annotation_format):
+        # neither documents nor graphs should be supplied to the constructor
+        # without the other
+        if sentences is None and documents is not None:
+            raise ValueError('UDS documents were provided without sentences. '
+                             'Cannot construct corpus.')
+
+        elif sentences is not None and documents is None:
+            raise ValueError('UDS sentences were provided without documents. '
+                             'Cannot construct corpus.')
+
+        if not (split is None or split in ['train', 'dev', 'test']):
+            errmsg = 'split must be "train", "dev", or "test"'
+            raise ValueError(errmsg)
+
+        if annotation_format not in ['raw', 'normalized']:
+            errmsg = f'Unrecognized annotation format {annotation_format}.'\
+                     f'Must be either "raw" or "normalized".'
+            raise ValueError(errmsg)
+
+    def _initialize_paths(self, version, annotation_format) -> bool:
         self._sentences_paths = {splitext(basename(p))[0].split('-')[-2]: p
                                  for p
-                                 in glob(os.path.join(self.__class__.DATA_DIR,
+                                 in glob(os.path.join(self.CACHE_DIR,
                                                       version,
                                                       annotation_format,
                                                       'sentence'
@@ -80,175 +145,127 @@ class UDSCorpus(PredPattCorpus):
 
         self._documents_paths = {splitext(basename(p))[0].split('-')[-2]: p
                                  for p
-                                 in glob(os.path.join(self.__class__.DATA_DIR,
+                                 in glob(os.path.join(self.CACHE_DIR,
                                                       version,
                                                       annotation_format,
                                                       'document'
                                                       '*.json'))}
 
-        self._sentences_annotation_dir = os.path.join(self.__class__.DATA_DIR,
+        self._sentences_annotation_dir = os.path.join(self.ANN_DIR,
                                                       version,
                                                       annotation_format,
                                                       'sentence',
                                                       'annotations')
 
-        self._documents_annotation_dir = os.path.join(self.__class__.DATA_DIR,
+        self._documents_annotation_dir = os.path.join(self.ANN_DIR,
                                                       version,
                                                       annotation_format,
                                                       'document',
                                                       'annotations')
 
-        self._sentence_annotation_metadata = UDSAnnotationMetadata({})
-        self._document_annotation_metadata = UDSAnnotationMetadata({})
+        sent_ann_paths = glob(os.path.join(self._sentences_annotation_dir,
+                                           '*.json'))
+        doc_ann_paths = glob(os.path.join(self._documents_annotation_dir,
+                                          '*.json'))
 
-        self._sentence_node_subspaces = set()
-        self._sentence_edge_subspaces = set()        
-
-        self._document_node_subspaces = set()
-        self._document_edge_subspaces = set()
-
-        # Annotation paths are specified as singleton dictionaries.
-        # This is a holdover from when we allowed normalized and raw
-        # annotations to be loaded together. We keep it this way so
-        # that we can easily allow that again should we wish. This
-        # also allows for relatively easy addition of new annotation
-        # formats.
-
-        if annotation_format in ['raw', 'normalized']:
-            # Out of the box, the annotations are stored as zip files and the
-            # JSON they contain must be extracted
-            zipped_sentence_annotations = glob(os.path.join(self._sentences_annotation_dir, '*.zip'))
-            zipped_document_annotations = glob(os.path.join(self._documents_annotation_dir, '*.zip'))
+        # out of the box, the annotations are stored as zip files and the
+        # JSON they contain must be extracted
+        if not sent_ann_paths:
+            zipped_sent_paths = os.path.join(self._sentences_annotation_dir,
+                                             '*.zip')
+            zipped_sentence_annotations = glob(zipped_sent_paths)
 
             for zipped in zipped_sentence_annotations:
                 ZipFile(zipped).extractall(path=self._sentences_annotation_dir)
 
+            sent_ann_paths = glob(os.path.join(self._sentences_annotation_dir,
+                                               '*.json'))
+
+        if not doc_ann_paths:
+            zipped_doc_paths = os.path.join(self._documents_annotation_dir,
+                                            '*.zip')
+
+            zipped_document_annotations = glob(zipped_doc_paths)
+
             for zipped in zipped_document_annotations:
                 ZipFile(zipped).extractall(path=self._documents_annotation_dir)
 
-            sentence_paths = glob(os.path.join(self._sentences_annotation_dir, '*.json'))
-            document_paths = glob(os.path.join(self._documents_annotation_dir, '*.json'))
+            doc_ann_paths = glob(os.path.join(self._documents_annotation_dir,
+                                              '*.json'))
 
-            self._sentence_annotation_paths = {annotation_format: sentence_paths}
-            self._document_annotation_paths = {annotation_format: document_paths}
-        else:
-            errmsg = f'Unrecognized annotation type {annotation_format}. The annotation '\
-                     f'type must be either "raw" or "normalized".'
-            raise ValueError(errmsg)
+        self._sentence_annotation_paths = sent_ann_paths
+        self._document_annotation_paths = doc_ann_paths
 
-        if not (split is None or split in ['train', 'dev', 'test']):
-            errmsg = 'split must be "train", "dev", or "test"'
-            raise ValueError(errmsg)
-
-        # Check whether the sentence- and document-level graphs have already
-        # been built.
+    def _check_build_status(self):
         sentences_built = self._sentences_paths and \
-                        all(s in self._sentences_paths for s in ['train', 'dev', 'test'])
+                          all(s in self._sentences_paths
+                              for s in ['train', 'dev', 'test'])
         documents_built = self._documents_paths and \
-                        all(s in self._documents_paths for s in ['train', 'dev', 'test'])
-        all_built = sentences_built and documents_built
+                          all(s in self._documents_paths
+                              for s in ['train', 'dev', 'test'])
 
-        self._sentences = {}
-        self._documents = {}
+        return sentences_built and documents_built
 
-        # Neither documents nor graphs should be supplied to the constructor
-        # without the other
-        if sentences is None and documents is not None:
-            raise ValueError('UDS documents were provided without sentences.'\
-                        'Cannot construct corpus.')
-        elif sentences is not None and documents is None:
-            raise ValueError('UDS sentences were provided without documents.'\
-                        'Cannot construct corpus.')
+    def _load_split(self, split):
+        sentence_fpath = self._sentences_paths[split]
+        doc_fpath = self._documents_paths[split]
+        split = self.__class__.from_json(sentence_fpath, doc_fpath)
 
-        if sentences is None and split in self._sentences_paths:
-            sentence_fpath = self._sentences_paths[split]
-            doc_fpath = self._documents_paths[split]
-            split = self.__class__.from_json(sentence_fpath, doc_fpath)
-            self._sentences.update(split._sentences)
-            self._documents.update(split._documents)
+        self._metadata += split.metadata
 
-        elif sentences is None and split is None and all_built:
-            for sentence_fpath, doc_fpath in zip(sorted(self._sentences_paths.values()),\
-                                             sorted(self._documents_paths.values())):
-                split = self.__class__.from_json(sentence_fpath, doc_fpath)
-                self._sentences.update(split._sentences)
-                self._documents.update(split._documents)
+        self._sentences.update(split._sentences)
+        self._documents.update(split._documents)
 
-        elif sentences is None:
-            url = 'https://github.com/UniversalDependencies/' +\
-                  'UD_English-EWT/archive/r1.2.zip'
+    def _process_conll(self, split, udewt):
+        with ZipFile(BytesIO(udewt)) as zf:
+            conll_names = [fname for fname in zf.namelist()
+                           if splitext(fname)[-1] == '.conllu']
+            for fn in conll_names:
+                with zf.open(fn) as conll:
+                    conll_str = conll.read().decode('utf-8')
+                    sname = splitext(basename(fn))[0].split('-')[-1]
+                    spl = self.__class__.from_conll(conll_str,
+                                                    self._sentence_annotation_paths,
+                                                    self._document_annotation_paths,
+                                                    annotation_format=self.annotation_format,
+                                                    name='ewt-'+sname)
 
-            udewt = requests.get(url).content
+                    if sname == split or split is None:
+                        # prepare sentences
+                        sentences_json_name = '-'.join(['uds', 'ewt', 'sentences',
+                                                        sname, self.annotation_format]) +\
+                                              '.json'
+                        sentences_json_path = os.path.join(self.__class__.CACHE_DIR,
+                                                           self.version,
+                                                           self.annotation_format,
+                                                           'sentence',
+                                                           sentences_json_name)
 
-            with ZipFile(BytesIO(udewt)) as zf:
-                conll_names = [fname for fname in zf.namelist()
-                               if splitext(fname)[-1] == '.conllu']
-                for fn in conll_names:
-                    with zf.open(fn) as conll:
-                        conll_str = conll.read().decode('utf-8')
-                        sname = splitext(basename(fn))[0].split('-')[-1]
-                        spl = self.__class__.from_conll(conll_str,
-                                                        self._sentence_annotation_paths,
-                                                        self._document_annotation_paths,
-                                                        name='ewt-'+sname)
+                        self._sentences.update(spl._sentences)
+                        self._sentences_paths[sname] = sentences_json_path
 
-                        # in case additional annotations are passed;
-                        # this should generally NOT happen, since this
-                        # branch is only entered on first build, but
-                        # if someone imported this class directly from
-                        # the semantics module without first building
-                        # the dataset, they could in principle try to
-                        # pass annotations, so we want to do something
-                        # reasonable here
-                        for ann in sentence_annotations:
-                            spl.add_annotation(ann, is_document_level=False)
-                        for ann in document_annotations:
-                            spl.add_annotation(ann, is_document_level=True)
+                        # prepare documents
+                        documents_json_name = '-'.join(['uds', 'ewt', 'documents',
+                                                        sname, self.annotation_format]) +\
+                                              '.json'
+                        documents_json_path = os.path.join(self.__class__.CACHE_DIR,
+                                                           self.version,
+                                                           self.annotation_format,
+                                                           'document',
+                                                           documents_json_name)
 
-                        if sname == split or split is None:
-                            # Prepare sentences
-                            sentences_json_name = '-'.join(['uds', 'ewt', 'sentences', sname, annotation_format]) + '.json'
-                            sentences_json_path = os.path.join(self.__class__.DATA_DIR,
-                                                     version,
-                                                     annotation_format,
-                                                     'sentence',
-                                                     sentences_json_name)
-                            self._sentences.update(spl._sentences)
-                            self._sentences_paths[sname] = sentences_json_path
+                        self._documents.update(spl._documents)
+                        self._documents_paths[sname] = documents_json_path
 
-                            # Prepare documents
-                            documents_json_name = '-'.join(['uds', 'ewt', 'documents', sname, annotation_format]) + '.json'
-                            documents_json_path = os.path.join(self.__class__.DATA_DIR,
-                                                   version,
-                                                   annotation_format,
-                                                   'document',
-                                                   documents_json_name)
-                            self._documents.update(spl._documents)
-                            self._documents_paths[sname] = documents_json_path
-
-                            # Serialize both
-                            spl.to_json(sentences_json_path, documents_json_path)
-
-        else:
-            self._sentences = sentences
-
-            for ann in sentence_annotations:
-                self.add_annotation(ann, is_document_level=False)
-
-            self._documents = documents
-
-            for ann in document_annotations:
-                self.add_annotation(ann, is_document_level=True)
-
-        # Methods inherited from Corpus that reference the self._graphs
-        # attribute will operate on sentence-level graphs only
-        self._graphs = self._sentences
+                        # serialize both
+                        spl.to_json(sentences_json_path, documents_json_path)
 
     @classmethod
     def from_conll(cls,
-                   corpus: Union[str, TextIO],
-                   sentence_annotations: Dict[str, List[Union[str, TextIO]]] = {},
-                   document_annotations: Dict[str, List[Union[str, TextIO]]] = {},
+                   corpus: Location,
+                   sentence_annotations: List[Location] = [],
+                   document_annotations: List[Location] = [],
+                   annotation_format: str = 'normalized',
                    name: str = 'ewt') -> 'UDSCorpus':
         """Load UDS graph corpus from CoNLL (dependencies) and JSON (annotations)
 
@@ -262,65 +279,51 @@ class UDSCorpus(PredPattCorpus):
         corpus
             (path to) Universal Dependencies corpus in conllu format
         sentence_annotations
-            a dictionary whose keys indicate whether the annotation is in raw
-            or normalized form and whose values are paths to JSON files containing
+            a list of paths to JSON files or open JSON files containing
             sentence-level annotations
         document_annotations
-            a dictionary whose keys indicate whether the annotation is in raw
-            or normalized form and whose values are paths to JSON files containing
+            a list of paths to JSON files or open JSON files containing
             document-level annotations
+        annotation_format
+            Whether the annotation is raw or normalized
         name
             corpus name to be appended to the beginning of graph ids
         """
+        if annotation_format == 'raw':
+            loader = RawUDSAnnotation.from_json
+        elif annotation_format == 'normalized':
+            loader = NormalizedUDSAnnotation.from_json
+        else:
+            raise ValueError('annotation_format must be either'
+                             '"raw" or "normalized"')
+
         predpatt_corpus = PredPattCorpus.from_conll(corpus, name=name)
         predpatt_sentence_graphs = {name: UDSSentenceGraph(g, name)
                                     for name, g in predpatt_corpus.items()}
         predpatt_documents = cls._initialize_documents(predpatt_sentence_graphs)
 
-        # Process sentence-level graph annotations
+        # process sentence-level graph annotations
         processed_sentence_annotations = []
 
-        for ann_type, ann_path in sentence_annotations.items():
-            if ann_type == 'raw':
-                for ann in ann_path:
-                    ann = RawUDSAnnotation.from_json(ann)
-                    processed_sentence_annotations.append(ann)
+        for ann_path in sentence_annotations:
+            ann = loader(ann_path)
+            processed_sentence_annotations.append(ann)
 
-            elif ann_type == 'normalized':
-                for ann in ann_path:
-                    ann = NormalizedUDSAnnotation.from_json(ann)
-                    processed_sentence_annotations.append(ann)
-
-            else:
-                raise ValueError('Unrecognized annotation type {0} '
-                                 'for sentence annotation {1}.'.format(ann_type, ann_path))
-
-        # Process document-level graph annotations
+        # process document-level graph annotations
         processed_document_annotations = []
 
-        for ann_type, ann_path in document_annotations.items():
-            if ann_type == 'raw':
-                for ann in ann_path:
-                    ann = RawUDSAnnotation.from_json(ann)
-                    processed_document_annotations.append(ann)
-
-            elif ann_type == 'normalized':
-                for ann in ann_path:
-                    ann = NormalizedUDSAnnotation.from_json(ann)
-                    processed_document_annotations.append(ann)
-
-            else:
-                raise ValueError('Unrecognized annotation type {0} '
-                                 'for document annotation {1}.'.format(ann_type, ann_path))
+        for ann_path in document_annotations:
+            ann = loader(ann_path)
+            processed_document_annotations.append(ann)
 
         return cls(predpatt_sentence_graphs, predpatt_documents, 
-                   processed_sentence_annotations, processed_document_annotations)
+                   processed_sentence_annotations,
+                   processed_document_annotations)
 
     @classmethod
     def _load_ud_ids(cls, sentence_ids_only: bool = False) -> Dict[str, Dict[str, str]]:
-
-        # Load in the document and sentence IDs for each sentence-level graph
-        ud_ids_path = os.path.join(cls.DATA_DIR, 'ud_ids.json')
+        # load in the document and sentence IDs for each sentence-level graph
+        ud_ids_path = os.path.join(cls.ANN_DIR, 'ud_ids.json')
 
         with open(ud_ids_path) as ud_ids_file:
             ud_ids = json.load(ud_ids_file)
@@ -332,8 +335,8 @@ class UDSCorpus(PredPattCorpus):
                 return ud_ids
 
     @classmethod
-    def from_json(cls, sentences_jsonfile: Union[str, TextIO],
-                  documents_jsonfile: Union[str, TextIO]) -> 'UDSCorpus':
+    def from_json(cls, sentences_jsonfile: Location,
+                  documents_jsonfile: Location) -> 'UDSCorpus':
         """Load annotated UDS graph corpus (including annotations) from JSON
 
         This is the suggested method for loading the UDS corpus.
@@ -351,21 +354,21 @@ class UDSCorpus(PredPattCorpus):
         documents_ext = splitext(basename(documents_jsonfile))[-1]
         sent_ids = cls._load_ud_ids(sentence_ids_only=True)
 
-        # Process sentence-level graphs
+        # process sentence-level graphs
         if isinstance(sentences_jsonfile, str) and sentences_ext == '.json':
             with open(sentences_jsonfile) as infile:
-                graphs_json = json.load(infile)
+                sentences_json = json.load(infile)
 
         elif isinstance(sentences_jsonfile, str):
-            graphs_json = json.loads(sentences_jsonfile)
+            sentences_json = json.loads(sentences_jsonfile)
 
         else:
-            graphs_json = json.load(sentences_jsonfile)
+            sentences_json = json.load(sentences_jsonfile)
 
-        graphs = {name: UDSSentenceGraph.from_dict(g_json, name)
-                  for name, g_json in graphs_json.items()}
+        sentences = {name: UDSSentenceGraph.from_dict(g_json, name)
+                     for name, g_json in sentences_json['data'].items()}
 
-        # Process document-level graphs
+        # process document-level graphs
         if isinstance(documents_jsonfile, str) and documents_ext == '.json':
             with open(documents_jsonfile) as infile:
                 documents_json = json.load(infile)
@@ -376,44 +379,68 @@ class UDSCorpus(PredPattCorpus):
         else:
             documents_json = json.load(documents_jsonfile)
 
-        documents = {name: UDSDocument.from_dict(d_json, graphs, sent_ids, name)
-                for name, d_json in documents_json.items()}
+        documents = {name: UDSDocument.from_dict(d_json, sentences,
+                                                 sent_ids, name)
+                     for name, d_json in documents_json['data'].items()}
 
-        return cls(graphs, documents)
+        corpus = cls(sentences, documents)
 
-    def add_annotation(self, annotation: UDSAnnotation,
-                       is_document_level: bool = False) -> None:
-        """Add annotations to UDS graphs or documents in the corpus
+        metadata_dict = {'sentence_metadata': sentences_json['metadata'],
+                         'document_metadata': documents_json['metadata']}
+        metadata = UDSCorpusMetadata.from_dict(metadata_dict)
+        corpus.add_corpus_metadata(metadata)
+
+        return corpus
+
+    def add_corpus_metadata(self, metadata: UDSCorpusMetadata) -> None:
+        self._metadata += metadata
+
+    def add_annotation(self, sentence_annotation: UDSAnnotation,
+                       document_annotation: UDSAnnotation) -> None:
+        """Add annotations to UDS sentence and document graphs
+
+        Parameters
+        ----------
+        sentence_annotation
+            the annotations to add to the sentence graphs in the corpus
+        document_annotation
+            the annotations to add to the document graphs in the corpus
+        """
+        for ann in sentence_annotation:
+            self.add_sentence_annotation(ann)
+
+        for ann in document_annotation:
+            self.add_document_annotation(ann)
+
+    def add_sentence_annotation(self, annotation: UDSAnnotation) -> None:
+        """Add annotations to UDS sentence graphs
 
         Parameters
         ----------
         annotation
             the annotations to add to the graphs in the corpus
-        is_document_level
-            indicates whether this is a sentence- or document-level annotation
         """
-        if is_document_level:
-            self._document_annotation_metadata += annotation.metadata
+        self._metadata.add_sentence_metadata(annotation.metadata)
 
-            self._document_node_subspaces |= annotation.node_subspaces
-            self._document_edge_subspaces |= annotation.edge_subspaces            
+        for gname, (node_attrs, edge_attrs) in annotation.items():
+            if gname in self._sentences:
+                self._sentences[gname].add_annotation(node_attrs,
+                                                      edge_attrs)
 
-            for dname, (node_attrs, edge_attrs) in annotation.items():
-                if dname in self._documents:
-                    self._documents[dname].add_annotation(node_attrs,
-                                                          edge_attrs)
+    def add_document_annotation(self, annotation: UDSAnnotation) -> None:
+        """Add annotations to UDS documents
 
-        else:
-            self._sentence_annotation_metadata += annotation.metadata
+        Parameters
+        ----------
+        annotation
+            the annotations to add to the documents in the corpus
+        """
+        self._metadata.add_document_metadata(annotation.metadata)
 
-            self._sentence_node_subspaces |= annotation.node_subspaces
-            self._sentence_edge_subspaces |= annotation.edge_subspaces
-
-            for gname, (node_attrs, edge_attrs) in annotation.items():
-                if gname in self._sentences:
-                    self._sentences[gname].add_annotation(node_attrs,
-                                                          edge_attrs)
-
+        for dname, (node_attrs, edge_attrs) in annotation.items():
+            if dname in self._documents:
+                self._documents[dname].add_annotation(node_attrs,
+                                                      edge_attrs)
 
     @classmethod
     def _initialize_documents(cls, graphs: Dict[str, 'UDSSentenceGraph']) -> Dict[str, UDSDocument]:
@@ -442,8 +469,8 @@ class UDSCorpus(PredPattCorpus):
         return documents
 
     def to_json(self,
-                sentences_outfile: Optional[Union[str, TextIO]] = None,
-                documents_outfile: Optional[Union[str, TextIO]] = None) -> Optional[str]:
+                sentences_outfile: Optional[Location] = None,
+                documents_outfile: Optional[Location] = None) -> Optional[str]:
         """Serialize corpus to json
 
         Parameters
@@ -453,10 +480,15 @@ class UDSCorpus(PredPattCorpus):
         documents_outfile
             file to serialize document-level graphs to
         """
+        metadata_serializable = self._metadata.to_dict()
 
-        # Serialize graphs
-        sentences_serializable = {name: graph.to_dict()
-                               for name, graph in self.graphs.items()}
+        print(metadata_serializable.keys())
+        
+        # convert graphs to dictionaries
+        sentences_serializable = {'metadata': metadata_serializable['sentence_metadata'],
+                                  'data': {name: graph.to_dict()
+                                           for name, graph
+                                           in self.graphs.items()}}
 
         if sentences_outfile is None:
             return json.dumps(sentences_serializable)
@@ -468,12 +500,13 @@ class UDSCorpus(PredPattCorpus):
         else:
             json.dump(sentences_serializable, sentences_outfile)
 
-
         # Serialize documents (Note: we serialize only the *graphs*
         # for each document — not the metadata, which is loaded by
         # other means when calling UDSDocument.from_dict)
-        documents_serializable = {name: doc.document_graph.to_dict()
-                             for name, doc in self._documents.items()}
+        documents_serializable = {'metadata': metadata_serializable['document_metadata'],
+                                  'data': {name: doc.document_graph.to_dict()
+                                           for name, doc
+                                           in self._documents.items()}}
 
         if documents_outfile is None:
             return json.dumps(documents_serializable)
@@ -513,7 +546,6 @@ class UDSCorpus(PredPattCorpus):
             against. This will slow down future queries but saves a
             lot of memory
         """
-
         return {gid: graph.query(query, query_type,
                                  cache_query, cache_rdf)
                 for gid, graph in self.items()}
@@ -547,14 +579,18 @@ class UDSCorpus(PredPattCorpus):
                 in sample(self._documents.keys(), k=k)}
 
     @property
+    def metadata(self):
+        return self._metadata
+
+    @property
     def sentence_node_subspaces(self) -> Set[str]:
         """The UDS sentence node subspaces in the corpus"""
-        return self._sentence_node_subspaces
+        raise NotImplementedError
 
     @property
     def sentence_edge_subspaces(self) -> Set[str]:
         """The UDS sentence edge subspaces in the corpus"""
-        return self._sentence_edge_subspaces
+        raise NotImplementedError
 
     @property
     def sentence_subspaces(self) -> Set[str]:
@@ -565,7 +601,7 @@ class UDSCorpus(PredPattCorpus):
     @property
     def document_node_subspaces(self) -> Set[str]:
         """The UDS document node subspaces in the corpus"""
-        return self._document_node_subspaces
+        raise NotImplementedError
 
     @property
     def document_edge_subspaces(self) -> Set[str]:
@@ -580,7 +616,7 @@ class UDSCorpus(PredPattCorpus):
 
     def sentence_properties(self, subspace: Optional[str] = None) -> Set[str]:
         """The properties in a sentence subspace"""
-        return self._sentence_annotation_metadata.properties(subspace)
+        raise NotImplementedError
 
     def sentence_property_metadata(self, subspace: str,
                                    prop: str) -> UDSPropertyMetadata:
@@ -593,11 +629,11 @@ class UDSCorpus(PredPattCorpus):
         prop
             The property in the subspace
         """
-        return self._sentence_annotation_metadata[subspace, prop]
+        raise NotImplementedError
 
     def document_properties(self, subspace: Optional[str] = None) -> Set[str]:
         """The properties in a document subspace"""
-        return self._document_annotation_metadata.properties(subspace)
+        raise NotImplementedError
 
     def document_property_metadata(self, subspace: str,
                                    prop: str) -> UDSPropertyMetadata:
@@ -610,4 +646,4 @@ class UDSCorpus(PredPattCorpus):
         prop
             The property in the subspace
         """
-        return self._document_annotation_metadata[subspace, prop]
+        raise NotImplementedError

@@ -189,7 +189,6 @@ class UDSSentenceGraph(UDSGraph):
             against. This will slow down future queries but saves a
             lot of memory
         """
-
         try:
             if isinstance(query, str) and cache_query:
                 if query not in self.__class__.QUERIES:

@@ -256,7 +256,7 @@ class UDSAnnotation(ABC):
         return set(self.edge_attributes)
 
     @property
-    def metadata(self):
+    def metadata(self) -> UDSAnnotationMetadata:
         """All metadata for this annotation"""
         return self._metadata
 
@@ -269,7 +269,7 @@ class UDSAnnotation(ABC):
     def edge_subspaces(self) -> Set[str]:
         """The subspaces for edge annotations"""
         return self._edge_subspaces    
-    
+
     @property
     def subspaces(self) -> Set[str]:
         """The subspaces for node and edge annotations"""
