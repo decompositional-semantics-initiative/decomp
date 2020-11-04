@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 setup(name='decomp',
-      version='2.0.0a1',
+      version='0.2.0a1',
       description='Toolkit for working with Universal\
                    Decompositional Semantics graphs',
       url='https://decomp.io/',
