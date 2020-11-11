@@ -140,7 +140,7 @@ class UDSCorpus(PredPattCorpus):
                                  in glob(os.path.join(self.CACHE_DIR,
                                                       version,
                                                       annotation_format,
-                                                      'sentence'
+                                                      'sentence',
                                                       '*.json'))}
 
         self._documents_paths = {splitext(basename(p))[0].split('-')[-2]: p
@@ -148,7 +148,7 @@ class UDSCorpus(PredPattCorpus):
                                  in glob(os.path.join(self.CACHE_DIR,
                                                       version,
                                                       annotation_format,
-                                                      'document'
+                                                      'document',
                                                       '*.json'))}
 
         self._sentences_annotation_dir = os.path.join(self.ANN_DIR,
@@ -489,7 +489,7 @@ class UDSCorpus(PredPattCorpus):
         sentences_serializable = {'metadata': metadata_serializable['sentence_metadata'],
                                   'data': {name: graph.to_dict()
                                            for name, graph
-                                           in self.graphs.items()}}
+                                           in self._sentences.items()}}
 
         if sentences_outfile is None:
             return json.dumps(sentences_serializable)
