@@ -571,7 +571,8 @@ class RawUDSAnnotation(UDSAnnotation):
             raise ValueError(errmsg)
 
         if annotator_id is None:
-            return super().items(annotation_type)
+            for gid in self.graphids:
+                yield gid, self[gid]
 
         elif annotation_type == "node":
             if annotator_id in self.node_attributes_by_annotator:

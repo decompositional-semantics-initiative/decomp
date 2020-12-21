@@ -140,7 +140,7 @@ class UDSCorpus(PredPattCorpus):
                                  in glob(os.path.join(self.CACHE_DIR,
                                                       version,
                                                       annotation_format,
-                                                      'sentence'
+                                                      'sentence',
                                                       '*.json'))}
 
         self._documents_paths = {splitext(basename(p))[0].split('-')[-2]: p
@@ -148,7 +148,7 @@ class UDSCorpus(PredPattCorpus):
                                  in glob(os.path.join(self.CACHE_DIR,
                                                       version,
                                                       annotation_format,
-                                                      'document'
+                                                      'document',
                                                       '*.json'))}
 
         self._sentences_annotation_dir = os.path.join(self.ANN_DIR,
@@ -228,6 +228,7 @@ class UDSCorpus(PredPattCorpus):
                                                     self._sentence_annotation_paths,
                                                     self._document_annotation_paths,
                                                     annotation_format=self.annotation_format,
+                                                    version=self.version,
                                                     name='ewt-'+sname)
 
                     if sname == split or split is None:
@@ -269,6 +270,7 @@ class UDSCorpus(PredPattCorpus):
                    sentence_annotations: List[Location] = [],
                    document_annotations: List[Location] = [],
                    annotation_format: str = 'normalized',
+                   version: str = '2.0',
                    name: str = 'ewt') -> 'UDSCorpus':
         """Load UDS graph corpus from CoNLL (dependencies) and JSON (annotations)
 
@@ -289,6 +291,8 @@ class UDSCorpus(PredPattCorpus):
             document-level annotations
         annotation_format
             Whether the annotation is raw or normalized
+        version
+            the version of UDS datasets to use
         name
             corpus name to be appended to the beginning of graph ids
         """
@@ -321,7 +325,9 @@ class UDSCorpus(PredPattCorpus):
 
         return cls(predpatt_sentence_graphs, predpatt_documents, 
                    processed_sentence_annotations,
-                   processed_document_annotations)
+                   processed_document_annotations,
+                   version=version,
+                   annotation_format=annotation_format)
 
     @classmethod
     def _load_ud_ids(cls, sentence_ids_only: bool = False) -> Dict[str, Dict[str, str]]:
@@ -489,7 +495,7 @@ class UDSCorpus(PredPattCorpus):
         sentences_serializable = {'metadata': metadata_serializable['sentence_metadata'],
                                   'data': {name: graph.to_dict()
                                            for name, graph
-                                           in self.graphs.items()}}
+                                           in self._sentences.items()}}
 
         if sentences_outfile is None:
             return json.dumps(sentences_serializable)

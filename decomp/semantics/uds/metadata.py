@@ -540,7 +540,7 @@ class UDSCorpusMetadata:
 
     @property
     def document_subspaces(self) -> Set[str]:
-        return self._doument_metadata.subspaces
+        return self._document_metadata.subspaces
 
     def sentence_properties(self, subspace: Optional[str] = None) -> Set[str]:
         """The properties in a sentence subspace
