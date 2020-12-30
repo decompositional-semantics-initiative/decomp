@@ -121,60 +121,60 @@ def _assert_document_annotation(uds, raw):
 
 class TestUDSCorpus:
 
-    @pytest.mark.slow
-    def test_load_v1_normalized(self, tmp_path, caplog):
-        caplog.set_level(logging.WARNING)
+    # @pytest.mark.slow
+    # def test_load_v1_normalized(self, tmp_path, caplog):
+    #     caplog.set_level(logging.WARNING)
 
-        uds = _load_corpus(tmp_path, '1.0', 'normalized')
+    #     uds = _load_corpus(tmp_path, '1.0', 'normalized')
 
-        raw = False
+    #     raw = False
 
-        _assert_correct_corpus_initialization(uds, raw)
-        #_assert_document_annotation(uds, raw)
+    #     _assert_correct_corpus_initialization(uds, raw)
+    #     #_assert_document_annotation(uds, raw)
 
-        # reload the UDSCorpus, which will initialize it from
-        # the now-serialized graphs
-        uds_cached = _load_corpus(tmp_path, '1.0', 'normalized')
+    #     # reload the UDSCorpus, which will initialize it from
+    #     # the now-serialized graphs
+    #     uds_cached = _load_corpus(tmp_path, '1.0', 'normalized')
 
-        _assert_correct_corpus_initialization(uds_cached, raw)
-        #_assert_document_annotation(uds_cached, raw)
+    #     _assert_correct_corpus_initialization(uds_cached, raw)
+    #     #_assert_document_annotation(uds_cached, raw)
 
 
-    @pytest.mark.slow        
-    def test_load_v2_normalized(self, tmp_path, caplog):
-        caplog.set_level(logging.WARNING)
+    # @pytest.mark.slow        
+    # def test_load_v2_normalized(self, tmp_path, caplog):
+    #     caplog.set_level(logging.WARNING)
         
-        uds = _load_corpus(tmp_path, '2.0', 'normalized')
+    #     uds = _load_corpus(tmp_path, '2.0', 'normalized')
 
-        raw = False
+    #     raw = False
 
-        _assert_correct_corpus_initialization(uds, raw)
-        #_assert_document_annotation(uds, raw)
+    #     _assert_correct_corpus_initialization(uds, raw)
+    #     #_assert_document_annotation(uds, raw)
 
-        # reload the UDSCorpus, which will initialize it from
-        # the now-serialized graphs
-        uds_cached = _load_corpus(tmp_path, '2.0', 'normalized')
+    #     # reload the UDSCorpus, which will initialize it from
+    #     # the now-serialized graphs
+    #     uds_cached = _load_corpus(tmp_path, '2.0', 'normalized')
 
-        _assert_correct_corpus_initialization(uds_cached, raw)
-        #_assert_document_annotation(uds_cached, raw)
+    #     _assert_correct_corpus_initialization(uds_cached, raw)
+    #     #_assert_document_annotation(uds_cached, raw)
 
-    @pytest.mark.slow        
-    def test_load_v1_raw(self, tmp_path, caplog):
-        caplog.set_level(logging.WARNING)
+    # @pytest.mark.slow        
+    # def test_load_v1_raw(self, tmp_path, caplog):
+    #     caplog.set_level(logging.WARNING)
 
-        uds = _load_corpus(tmp_path, '1.0', 'raw')
+    #     uds = _load_corpus(tmp_path, '1.0', 'raw')
 
-        raw = True
+    #     raw = True
 
-        _assert_correct_corpus_initialization(uds, raw)
-        #_assert_document_annotation(uds, raw)
+    #     _assert_correct_corpus_initialization(uds, raw)
+    #     #_assert_document_annotation(uds, raw)
 
-        # reload the UDSCorpus, which will initialize it from
-        # the now-serialized graphs
-        uds_cached = _load_corpus(tmp_path, '1.0', 'raw')
+    #     # reload the UDSCorpus, which will initialize it from
+    #     # the now-serialized graphs
+    #     uds_cached = _load_corpus(tmp_path, '1.0', 'raw')
 
-        _assert_correct_corpus_initialization(uds_cached, raw)
-        #_assert_document_annotation(uds_cached, raw)
+    #     _assert_correct_corpus_initialization(uds_cached, raw)
+    #     #_assert_document_annotation(uds_cached, raw)
 
     @pytest.mark.slow        
     def test_load_v2_raw(self, tmp_path, caplog):
@@ -184,6 +184,10 @@ class TestUDSCorpus:
 
         raw = True
 
+        #print(uds.metadata.to_dict())
+
+        print(uds._sentences_paths)
+        print(uds._documents_paths)
         _assert_correct_corpus_initialization(uds, raw)
         #_assert_document_annotation(uds, raw)
 
@@ -191,6 +195,12 @@ class TestUDSCorpus:
         # the now-serialized graphs
         uds_cached = _load_corpus(tmp_path, '2.0', 'raw')
 
+        print()
+        #print(uds_cached.metadata.to_dict())
+
+        raise Exception
+        
+        
         _assert_correct_corpus_initialization(uds_cached, raw)
         #_assert_document_annotation(uds_cached, raw)
 
