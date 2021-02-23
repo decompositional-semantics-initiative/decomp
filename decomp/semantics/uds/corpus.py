@@ -4,7 +4,7 @@
 # pylint: disable=W0231
 # pylint: disable=W0640
 # pylint: disable=C0103
-"""Module for representing UDS graphs"""
+"""Module for representing UDS corpora."""
 
 import os
 import json

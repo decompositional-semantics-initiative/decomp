@@ -1,12 +1,15 @@
 Universal Decompositional Document Graphs
 =========================================
 
-UDS now allows for annotations at the level of a *document*. A document is
-conceived in the same way as in the English Web Treebank, and the same
-identifiers are used to designate them. Documents and their annotations are
-represented using separate graphs from the sentence-level ones. These graphs,
-encapsulated in the `UDSDocumentGraph`_ class, are initialized with one node
-for each semantics node in the document's constituent sentence-level graphs.
+The semantic graphs that form the third layer of annotation represent
+document-level relations. These graphs contain a node for each node in
+the document's constituent sentence-level graphs along with a pointer
+from the document-level node to the sentence-level node. Unlike the
+sentence-level graphs, they are not produced by PredPatt, so whether
+any two nodes in a document-level graph are joined by an edge is
+determined by whether the relation between the two nodes is annotated
+in some UDS dataset.
+
 At minimum, each of these nodes has the following attributes:
 
 .. _UDSDocumentGraph: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSDocumentGraph
@@ -23,10 +26,10 @@ only predicates to arguments, but predicates to predicates and arguments to
 arguments. Beyond the attributes provided by the annotation, each edge will
 also contain all but the last of the core set of node attributes listed above.
 
-The `UDSDocumentGraph`_ object is wrapped by a `UDSDocument`, which holds
-additional metadata associated with the document, data relating to its
-constituent sentences (and their graphs), and methods for interacting with
-it (see `UDSDocument`_ for details). Finally, it should be noted that querying
-on document graphs is not currently supported.
+The `UDSDocumentGraph`_ object is wrapped by a `UDSDocument`_, which
+holds additional metadata associated with the document, data relating
+to its constituent sentences (and their graphs), and methods for
+interacting with it. Finally, it should be noted that querying on
+document graphs is not currently supported.
 
 .. _UDSDocument: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSDocument

@@ -1,4 +1,4 @@
-"""Module for representing UDS graphs"""
+"""Module for representing UDS corpora, documents, graphs, and annotations."""
 
 from .corpus import UDSCorpus
 from .document import UDSDocument
