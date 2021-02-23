@@ -4,7 +4,7 @@ memoized_property==1.0.3
 typing==3.6.2
 rdflib==4.2.2
 setuptools==41.0.1
-numpy==1.16.4
+numpy>=1.16.4
 pyparsing==2.2.0
 overrides==3.1.0
 http://github.com/hltcoe/PredPatt/tarball/master#egg=predpatt
