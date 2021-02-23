@@ -23,7 +23,7 @@ Semantics Initiative`_.
 
 If you use either UDS or Decomp in your research, we ask that you cite the following paper:
 
-  White, Aaron Steven, Elias Stengel-Eskin, Siddharth Vashishtha, Venkata Subrahmanyan Govindarajan, Dee Ann Reisinger, Tim Vieira, Keisuke Sakaguchi, et al. 2020. `The Universal Decompositional Semantics Dataset and Decomp Toolkit`_. In Proceedings of The 12th Language Resources and Evaluation Conference, 5698–5707. Marseille, France: European Language Resources Association.
+  White, Aaron Steven, Elias Stengel-Eskin, Siddharth Vashishtha, Venkata Subrahmanyan Govindarajan, Dee Ann Reisinger, Tim Vieira, Keisuke Sakaguchi, et al. 2020. `The Universal Decompositional Semantics Dataset and Decomp Toolkit`_. *Proceedings of The 12th Language Resources and Evaluation Conference*, 5698–5707. Marseille, France: European Language Resources Association.
 
 .. code-block:: latex
 

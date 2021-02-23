@@ -1,3 +1,5 @@
+"""Module for representing UDS documents."""
+
 import re
 
 from typing import Optional, Any

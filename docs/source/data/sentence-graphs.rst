@@ -1,15 +1,16 @@
-`PredPatt`_ Semantic Graphs
+`PredPatt`_ Sentence Graphs
 ===========================
 
 .. _PredPatt: https://github.com/hltcoe/PredPatt
 
 The semantic graphs that form the second layer of annotation in the
 dataset are produced by the PredPatt_ system. PredPatt takes as input
-a UD parse and produces a set of predicates and set of arguments of
-each predicate. Both predicates and arguments are associated with a
-single head token in the sentence as well as a set of tokens that make
-up the predicate or argument (its span). Predicate or argument spans
-may be trivial in only containinig the head token.
+a UD parse for a single sentence and produces a set of predicates and
+set of arguments of each predicate in that sentence. Both predicates
+and arguments are associated with a single head token in the sentence
+as well as a set of tokens that make up the predicate or argument (its
+span). Predicate or argument spans may be trivial in only containinig
+the head token.
 
 For example, given the dependency parse for the sentence *Chris gave
 the book to Pat .*, PredPatt produces the following.

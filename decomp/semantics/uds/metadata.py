@@ -1,4 +1,4 @@
-"""Classes for representing annotation metadata"""
+"""Classes for representing UDS annotation metadata."""
 
 from typing import Union, Optional, Type
 from typing import Dict, List, Tuple, Set
@@ -328,9 +328,9 @@ class UDSPropertyMetadata:
         ----------
         metadata
             A mapping from ``"value"`` and ``"confidence"`` to
-            :class:`decomp.semantics.uds.metadata.UDSDataType`s. This
+            :class:`decomp.semantics.uds.metadata.UDSDataType`. This
             mapping may optionally specify a mapping from
-            ``"annotators"`` to a set of annotator identifiers
+            ``"annotators"`` to a set of annotator identifiers.
         """
         required = {'value', 'confidence'}
         missing = required - set(metadata)

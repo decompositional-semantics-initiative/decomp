@@ -1,3 +1,5 @@
+"""Module for representing UDS sentence and document graphs."""
+
 from logging import info, warning
 from abc import ABC, abstractmethod
 from overrides import overrides

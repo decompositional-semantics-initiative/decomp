@@ -1,3 +1,5 @@
+"""Module for representing UDS property annotations."""
+
 import json
 
 from typing import Union, Any, Optional, TextIO
