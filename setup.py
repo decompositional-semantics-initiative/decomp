@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 setup(name='decomp',
-      version='0.1.3',
+      version='2.0.0a2',
       description='Toolkit for working with Universal\
                    Decompositional Semantics graphs',
       url='https://decomp.io/',
@@ -14,10 +14,11 @@ setup(name='decomp',
       install_requires=['requests==2.22.0',
                         'networkx==2.2',
                         'memoized_property==1.0.3',
+                        'overrides==3.1.0',
                         'typing==3.6.2',
                         'rdflib==4.2.2',
                         'setuptools==41.0.1',
-                        'numpy==1.16.4',
+                        'numpy>=1.16.4',
                         'pyparsing==2.2.0',
                         'predpatt @ http://github.com/hltcoe/PredPatt/tarball/master#egg=predpatt'],
       test_suite='nose.collector',

@@ -1,7 +1,6 @@
-include decomp/*
-include decomp/data/1.0/annotations/*.json
-include docs/*
-include tests/*
+recursive-include decomp/ *
+recursive-include docs/ *
+recursive-include tests/ *
 include requirements.txt
 include README.md
 include LICENSE

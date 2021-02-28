@@ -3,14 +3,22 @@ Querying UDS Graphs
 
 Decomp provides a rich array of methods for querying UDS graphs: both
 pre-compiled and user-specified. Arbitrary user-specified graph
-queries can be performed using the `UDSGraph.query`_ instance
+queries can be performed using the `UDSSentenceGraph.query`_ instance
 method. This method accepts arbitrary SPARQL 1.1 queries, either as
 strings or as precompiled `Query`_ objects built using RDFlib's
 `prepareQuery`_.
 
-.. _UDSGraph.query: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSGraph.query
+.. _UDSSentenceGraph.query: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSSentenceGraph.query
 .. _Query: https://rdflib.readthedocs.io/en/stable/apidocs/rdflib.plugins.sparql.html#rdflib.plugins.sparql.sparql.Query
 .. _prepareQuery: https://rdflib.readthedocs.io/en/stable/apidocs/rdflib.plugins.sparql.html?highlight=preparequery#rdflib.plugins.sparql.processor.prepareQuery
+
+
+**NOTE:** Querying is not currently supported for document-level graphs
+(`UDSDocumentGraph`_ objects) or for sentence-level graphs that contain
+raw annotations (`RawUDSDataset`_).
+
+.. _UDSDocumentGraph: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSDocumentGraph
+.. _RawUDSDataset: ../package/decomp.semantics.uds.html#decomp.semantics.uds.RawUDSDataset
 
 Pre-compiled queries
 --------------------
@@ -128,7 +136,7 @@ postprocess yourself. This is necessary if, for instance, you are
 making a ``CONSTRUCT``, ``ASK``, or ``DESCRIBE`` query.
 
 Also, note that the ``cache_rdf`` parameter is set to ``False``. This is a
-memory-saving measure, as ``UDSGraph.query`` implicitly builds an RDF
+memory-saving measure, as ``UDSSentenceGraph.query`` implicitly builds an RDF
 graph on the backend, and these graphs can be quite large. Leaving
 ``cache_rdf`` at its defaults of ``True`` will substantially speed up
 later queries at the expense of sometimes substantial memory costs.

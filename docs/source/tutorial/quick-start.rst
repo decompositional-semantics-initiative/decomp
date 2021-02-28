@@ -26,20 +26,37 @@ will be faster, since the dataset is cached on build.
 .. _Universal Dependencies English Web Treebank: https://github.com/UniversalDependencies/UD_English-EWT
 .. _UDS annotations: http://decomp.io/data/
 
-`UDSGraph`_ objects in the corpus can be accessed using standard
+`UDSSentenceGraph`_ objects in the corpus can be accessed using standard
 dictionary getters or iteration. For instance, to get the UDS graph
 corresponding to the 12th sentence in ``en-ud-train.conllu``, you can
 use:
 
-.. _UDSGraph: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSGraph
+.. _UDSSentenceGraph: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSSentenceGraph
 
 .. code-block:: python
 
    uds["ewt-train-12"]
 
+To access documents (`UDSDocument`_ objects, each of which has an associated
+`UDSDocumentGraph`_), you can use:
+
+.. _UDSDocument: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSDocument
+.. _UDSDocumentGraph: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSDocumentGraph
+
+.. code-block:: python
+
+   uds.documents["reviews-112579"]
+
+
+To get the associated document graph, use:
+
+.. code-block:: python
+
+   uds.documents["reviews-112579"].document_graph
+
 
 More generally, ``UDSCorpus`` objects behave like dictionaries. For
-example, to print all the graph identifiers in the corpus
+example, to print all the sentence-level graph identifiers in the corpus
 (e.g. ``"ewt-train-12"``), you can use:
 
 .. code-block:: python
@@ -48,8 +65,18 @@ example, to print all the graph identifiers in the corpus
        print(graphid)
 
 
-Similarly, to print all the graph identifiers in the corpus
-(e.g. "ewt-in-12") along with the corresponding sentence, you can use:
+To print all the document identifiers in the corpus, which correspond
+directly to English Web Treebank file IDs (e.g. ``"reviews-112579"``), you 
+can use:
+
+.. code-block:: python
+
+   for documentid in uds.documents:
+       print(documentid)
+
+
+Similarly, to print all the sentence-level graph identifiers in the corpus
+(e.g. ``"ewt-train-12"``) along with the corresponding sentence, you can use:
 
 .. code-block:: python
 
@@ -57,23 +84,42 @@ Similarly, to print all the graph identifiers in the corpus
        print(graphid)
        print(graph.sentence)
        
-A list of graph identifiers can also be accessed via the ``graphids``
-attribute of the UDSCorpus. A mapping from these identifiers and the
-corresponding graph can be accessed via the ``graphs`` attribute.
+
+Likewise, the following will print all document identifiers, along with each
+document's entire text:
 
 .. code-block:: python
 
-   # a list of the graph identifiers in the corpus
+   for documentid, document in uds.documents.items():
+       print(documentid)
+       print(document.text)
+
+
+A list of sentence-level graph identifiers can also be accessed via the 
+``graphids`` attribute of the UDSCorpus. A mapping from these identifiers 
+and the corresponding graph can be accessed via the ``graphs`` attribute.
+
+.. code-block:: python
+
+   # a list of the sentence-level graph identifiers in the corpus
    uds.graphids
 
-   # a dictionary mapping the graph identifiers to the
-   # corresponding graph
+   # a dictionary mapping the sentence-level 
+   # graph identifiers to the corresponding graph
    uds.graphs
 
-There are various instance attributes and methods for accessing nodes,
-edges, and their attributes in the UDS graphs. For example, to get a
-dictionary mapping identifiers for syntax nodes in the UDS graph to
-their attributes, you can use:
+
+A list of document identifiers can also be accessed via the ``document_ids``
+attribute of the UDSCorpus:
+
+.. code-block:: python
+
+   uds.document_ids
+
+
+For sentence-level graphs, there are various instance attributes and 
+methods for accessing nodes, edges, and their attributes in the UDS
+sentence-level graphs. For example, to get a dictionary mapping identifiers for syntax nodes in a sentence-level graph to their attributes, you can use:
  
 .. code-block:: python
 
@@ -139,6 +185,35 @@ nodes in the UDS graph that make of the predicate headed by the 7th
 token in the corresponding sentence to a list of the form and lemma
 attributes for the corresponding tokens.
 
-More complicated queries of the UDS graph can be performed using the
-``query`` method, which accepts arbitrary SPARQL 1.1 queries. See
+More complicated queries of a sentence-level UDS graph can be performed 
+using the ``query`` method, which accepts arbitrary SPARQL 1.1 queries. See
 :doc:`querying` for details.
+
+Queries on document-level graphs are not currently supported. However, each
+`UDSDocument`_ does contain a number of useful attributes, including its ``genre``
+(corresponding to the English Web Treebank subcorpus); its ``text`` (as
+demonstrated above); its ``timestamp``; the ``sentence_ids`` of its 
+constituent sentences; and the sentence-level graphs (``sentence_graphs``) 
+associated with those sentences. Additionally, one can also look up the
+semantics node associated with a particular node in the document graph via
+the `semantics_node`_ instance method.
+
+.. _UDSDocument: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSDocument
+.. _semantics_node: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSDocument.semantics_node
+
+
+Lastly, iterables for the nodes and edges of a document-level graph may be
+accessed as follows:
+
+
+.. code-block:: python
+
+   uds.documents["reviews-112579"].document_graph.nodes
+   uds.documents["reviews-112579"].document_graph.edges
+
+
+Unlike the nodes and edges in a sentence-level graph, the ones in a document-
+level graph all share a common (``document``) domain. By default, document
+graphs are initialized without edges and with one node for each semantics node
+in the sentence-level graphs associated with the constituent sentences. Edges
+may be added by supplying annotations (see :doc:`reading`).
