@@ -11,17 +11,18 @@ import json
 import jsonpickle
 
 from .. import UDSCorpus
-from ..semantics.uds import UDSGraph
+from ..semantics.uds import UDSSentenceGraph
+from ..semantics.uds.metadata import UDSCorpusMetadata
 
 def get_ontologies() -> Tuple[List]:
     """
     collect node and edge ontologies from existing UDS corpus 
     """
     corpus = UDSCorpus(split="dev") 
-    node_ontology = corpus.semantic_node_type_subspaces
-    edge_ontology = corpus.semantic_edge_type_subspaces
-    node_ontology = sorted([f"{k}-{v_val}" for k, v in node_ontology.items() for v_val in v])
-    edge_ontology = sorted([f"{k}-{v_val}" for k, v in edge_ontology.items() for v_val in v])
+    metadata = corpus.metadata.sentence_metadata.metadata 
+    node_ontology = [f"{k}-{v_val}" for k,v in metadata.items() for v_val in v.keys() if k != "protoroles"]
+    edge_ontology = [f"{k}-{v_val}" for k,v in metadata.items() for v_val in v.keys() if k == "protoroles"]
+
     return node_ontology, edge_ontology
 
 
@@ -51,19 +52,19 @@ class StringList:
 
 class UDSVisualization:
     """A toolkit for serving Dash-based visualizations 
-    of UDSGraphs in the browser.
+    of UDSSentenceGraphs in the browser.
 
     Parameters
     ---------
     graph
-        the UDSGraph instance to visualize
+        the UDSSentenceGraph instance to visualize
     add_span_edges
         whether to add edges from semantic nodes to the syntactic nodes 
         included in their spans
     add_syntax_edges
         whether to add UD edges between syntactic nodes 
     from_prediction
-        flag which indicates whether UDSGraph instance was generated
+        flag which indicates whether UDSSentenceGraph instance was generated
         by a parser when true
     sentence
         input sentence, provided when using predicted graph 
@@ -79,7 +80,7 @@ class UDSVisualization:
         visualization height 
     """
     def __init__(self,
-                 graph: UDSGraph, 
+                 graph: UDSSentenceGraph, 
                  add_span_edges: bool = True,
                  add_syntax_edges: bool = False,
                  from_prediction: bool = False,
@@ -119,7 +120,7 @@ class UDSVisualization:
         self.added_edges = []
         self.add_span_edges = add_span_edges
         self.add_syntax_edges = add_syntax_edges
-        
+
         self.node_ontology_orig, self.edge_ontology_orig = get_ontologies()
         self.node_ontology = [x for x in self.node_ontology_orig]
         self.edge_ontology = [x for x in self.edge_ontology_orig]
@@ -757,7 +758,7 @@ class UDSVisualization:
             json dict representation of the current visualization 
         """
         uds_graph = data['graph']
-        miso_graph = UDSGraph.from_dict(uds_graph, 'test-graph') 
+        miso_graph = UDSSentenceGraph.from_dict(uds_graph, 'test-graph') 
 
         vis = cls(miso_graph, sentence = data['sentence'])
         for k, v in data.items():
