@@ -9,6 +9,7 @@ import matplotlib
 from matplotlib import transforms
 import json
 import jsonpickle
+import pdb 
 
 from .. import UDSCorpus
 from ..semantics.uds import UDSSentenceGraph
@@ -250,7 +251,12 @@ class UDSVisualization:
                 val = choose_from[node][attr_type][attr_subtype]["value"]
             except KeyError:
                 continue
-            val = np.round(val, 2)
+            try:
+                val = np.round(val, 2)
+            except (TypeError, AttributeError) as e:
+                assert(type(val) == dict)
+                raise AttributeError("Only normalized annotations are supported for visualization")
+
             pairs.append((attr, val))
 
             lens.append(len(attr) + len(str(val)) + 2)
@@ -421,7 +427,10 @@ class UDSVisualization:
                             node_idx = i
                     else:
                         continue
-                node_name = "-".join(node.split("-")[0:3])
+                if not node.startswith("tree"):
+                    node_name = "-".join(node.split("-")[0:3])
+                else:
+                    node_name = node.split("-")[0]
                 node_1 = f"{node_name}-syntax-{node_idx}"
                 if node_idx > 0:
                     head_text = self.graph.nodes[node_1]['form']
@@ -681,10 +690,11 @@ class UDSVisualization:
         self.node_ontology = [x for x in self.node_ontology_orig if x.split("-")[0] in subspaces]
         self.edge_ontology = [x for x in self.edge_ontology_orig if x.split("-")[0] in subspaces] 
         
-    def serve(self):
+    def serve(self, do_return = False):
         """serve graph to locally-hosted site to port 8050 with no parser""" 
 
         external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+        print(f"name is {__name__}")
         app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
         app.title = self.graph.name
         app.layout = html.Div([
@@ -728,8 +738,10 @@ class UDSVisualization:
             """
             self._update_ontology(value)
             return self.prepare_graph()
-
-        app.run_server(debug=False)
+        if not do_return:
+            app.run_server(debug=False)
+        else:
+            return app 
         
     def show(self):
         """show in-browser, usuable in jupyter notebooks"""
