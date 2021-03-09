@@ -12,3 +12,4 @@ package, follow those instructions before continuing the tutorial.
    reading
    querying   
    serializing
+   visualization
