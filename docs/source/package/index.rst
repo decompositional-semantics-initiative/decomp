@@ -8,3 +8,4 @@ Package Reference
    decomp.semantics
    decomp.corpus
    decomp.graph
+   decomp.vis
