@@ -21,23 +21,26 @@ nodes and edges in the semantics domain. The set of nodes and edges
 visible to UDS is a superset of those associated with PredPatt
 predicates and their arguments.
 
-There are currently four node type subspaces annotated on
+There are currently five node type subspaces annotated on
 nodes in sentence-level graphs.
 
   - `Factuality`_ (``factuality``)
   - `Genericity`_ (``genericity``)
   - `Time`_ (``time``)
   - `Entity type`_ (``wordsense``)
+  - `Event structure`_ (``event_structure``)
 
-There is currently one edge type subspace annotated on
+There are currently two edge type subspaces annotated on
 edges in sentence-level graphs.
 
   - `Semantic Proto-Roles`_ (``protoroles``)
+  - `Event Structure`_ (``event_structure``)
 
-There is currently (starting in UDS2.0) one edge type subspace
+There are currently (starting in UDS2.0) two edge type subspaces
 annotated on edges in document-level graphs.
 
   - `Time`_ (``time``)
+  - `Event Structure`_ (``event_structure``)
     
 Each subspace key lies at the same level as the ``type`` attribute and
 maps to a dictionary value. This dictionary maps from attribute keys
@@ -357,4 +360,28 @@ Semantic Proto-Roles
       pages = "1713--1723",
   }
 
+Event Structure
+---------------
+
+**Project page**
+
+`<http://decomp.io/projects/event-structure/>`_
+
+**Sentence-level attributes**
+
+*normalized*
+
+``natural_parts``, ``part_similarity``, ``dynamic``, ``avg_part_duration_lbound``, ``avg_part_duration_ubound``, ``situation_duration_lbound``, ``situation_duration_ubound``, ``telic``, ``distributive``, ``containment.p1_contains_p2``, ``containment.p2_contains_p1``
+
+*raw*
+
+``natural_parts``, ``part_similarity``, ``dynamic``, ``avg_part_duration_lbound``, ``avg_part_duration_ubound``, ``situation_duration_lbound``, ``situation_duration_ubound``, ``telic``, ``distributive``, ``containment.p1_contains_p2``, ``containment.p2_contains_p1``
+
+**First UDS version**
+
+2.0 (document-level)
+
+**References**
+
+  Gantt, W., L. Glass, & A.S. White. 2020. `Decomposing and Recomposing Event Structure`. In Submisssion.
 
