@@ -72,7 +72,7 @@ class UDSCorpus(PredPattCorpus):
                  documents: Optional[Dict[str, UDSDocument]] = None,
                  sentence_annotations: List[UDSAnnotation] = [],
                  document_annotations: List[UDSAnnotation] = [],
-                 version: str = '1.0',
+                 version: str = '2.0',
                  split: Optional[str] = None,
                  annotation_format: str = 'normalized'):
         self._validate_arguments(sentences, documents,
