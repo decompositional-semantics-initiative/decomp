@@ -28,16 +28,19 @@ nodes in sentence-level graphs.
   - `Genericity`_ (``genericity``)
   - `Time`_ (``time``)
   - `Entity type`_ (``wordsense``)
+  - `Event structure`_ (``event_structure``)
 
 There is currently one edge type subspace annotated on
 edges in sentence-level graphs.
 
   - `Semantic Proto-Roles`_ (``protoroles``)
+  - `Event structure`_ (``event_structure``)    
 
 There is currently (starting in UDS2.0) one edge type subspace
 annotated on edges in document-level graphs.
 
   - `Time`_ (``time``)
+  - `Event structure`_ (``event_structure``)    
     
 Each subspace key lies at the same level as the ``type`` attribute and
 maps to a dictionary value. This dictionary maps from attribute keys
@@ -358,3 +361,54 @@ Semantic Proto-Roles
   }
 
 
+Event structure
+---------------
+
+**Project page**
+
+`<http://decomp.io/projects/event-structure/>`_
+
+**Sentence-level attributes**
+
+*normalized*
+
+
+``distributive``, ``dynamic``, ``natural_parts``, ``part_similarity``, ``telic``, ``avg_part_duration_lbound-centuries``, ``avg_part_duration_ubound-centuries``, ``situation_duration_lbound-centuries``, ``situation_duration_ubound-centuries``, ``avg_part_duration_lbound-days``, ``avg_part_duration_ubound-days``, ``situation_duration_lbound-days``, ``situation_duration_ubound-days``, ``avg_part_duration_lbound-decades``, ``avg_part_duration_ubound-decades``, ``situation_duration_lbound-decades``, ``situation_duration_ubound-decades``, ``avg_part_duration_lbound-forever``, ``avg_part_duration_ubound-forever``, ``situation_duration_lbound-forever``, ``situation_duration_ubound-forever``, ``avg_part_duration_lbound-fractions_of_a_second``, ``avg_part_duration_ubound-fractions_of_a_second``, ``situation_duration_lbound-fractions_of_a_second``, ``situation_duration_ubound-fractions_of_a_second``, ``avg_part_duration_lbound-hours``, ``avg_part_duration_ubound-hours``, ``situation_duration_lbound-hours``, ``situation_duration_ubound-hours``, ``avg_part_duration_lbound-instant``, ``avg_part_duration_ubound-instant``, ``situation_duration_lbound-instant``, ``situation_duration_ubound-instant``, ``avg_part_duration_lbound-minutes``, ``avg_part_duration_ubound-minutes``, ``situation_duration_lbound-minutes``, ``situation_duration_ubound-minutes``, ``avg_part_duration_lbound-months``, ``avg_part_duration_ubound-months``, ``situation_duration_lbound-months``, ``situation_duration_ubound-months``, ``avg_part_duration_lbound-seconds``, ``avg_part_duration_ubound-seconds``, ``situation_duration_lbound-seconds``, ``situation_duration_ubound-seconds``, ``avg_part_duration_lbound-weeks``, ``avg_part_duration_ubound-weeks``, ``situation_duration_lbound-weeks``, ``situation_duration_ubound-weeks``, ``avg_part_duration_lbound-years``, ``avg_part_duration_ubound-years``, ``situation_duration_lbound-years``, ``situation_duration_ubound-years``
+
+*raw*
+
+``dynamic``, ``natural_parts``, ``part_similarity``, ``telic``, ``avg_part_duration_lbound``, ``avg_part_duration_ubound``, ``situation_duration_lbound``, ``situation_duration_ubound``
+
+
+**Document-level attributes**
+
+``pred1_contains_pred2``, ``pred2_contains_pred1``
+
+**First UDS version**
+
+2.0
+
+**Notes**
+
+1. Whether ``dynamic``, ``situation_duration_lbound``, and ``situation_duration_ubound`` are answered or ``part_similarity``, ``avg_part_duration_lbound``, and ``avg_part_duration_ubound`` are answered is dependent on the answer an annotator gives to ``natural_parts``. Thus, not all node attributes will necessarily be present on all nodes.
+
+**References**
+
+  Gantt, W., L. Glass, & A.S. White. 2021. `Decomposing and Recomposing Event Structure`_. arXiv:2103.10387 [cs.CL].
+
+
+.. _Decomposing and Recomposing Event Structure: https://arxiv.org/abs/2103.10387
+  
+.. code-block:: latex
+
+  @misc{gantt2021decomposing,
+      title={Decomposing and Recomposing Event Structure}, 
+      author={William Gantt and Lelia Glass and Aaron Steven White},
+      year={2021},
+      eprint={2103.10387},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL}
+  }
+
+
+ 
