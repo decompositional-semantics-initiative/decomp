@@ -129,7 +129,7 @@ class UDSDocument:
         edge_attrs
             the edge annotations to be added
         """
-        self.document_graph.add_annotation(node_attrs, edge_attrs)
+        self.document_graph.add_annotation(node_attrs, edge_attrs, self.sentence_ids)
 
     def semantics_node(self, document_node: str) -> Dict[str, Dict]:
         """The semantics node for a given document node
