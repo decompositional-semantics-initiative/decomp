@@ -23,8 +23,10 @@ Document graphs are initialized without edges, which are created dynamically
 when edge attribute annotations are added. These edges may span nodes
 associated with different sentences within a document and may connect not
 only predicates to arguments, but predicates to predicates and arguments to
-arguments. Beyond the attributes provided by the annotation, each edge will
-also contain all but the last of the core set of node attributes listed above.
+arguments. Any annotations that are provided that cross document boundaries
+will be automatically filtered out. Finally, beyond the attributes provided 
+by annotations, each edge will also contain all but the last of the core
+set of node attributes listed above.
 
 The `UDSDocumentGraph`_ object is wrapped by a `UDSDocument`_, which
 holds additional metadata associated with the document, data relating
