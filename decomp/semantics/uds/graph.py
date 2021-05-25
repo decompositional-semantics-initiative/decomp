@@ -691,7 +691,8 @@ class UDSDocumentGraph(UDSGraph):
 
     def add_annotation(self,
                    node_attrs: Dict[str, Dict[str, Any]],
-                   edge_attrs: Dict[str, Dict[str, Any]]) -> None:
+                   edge_attrs: Dict[str, Dict[str, Any]],
+                   sentence_ids: Dict[str, str]) -> None:
         """Add node and or edge annotations to the graph
 
         Parameters
@@ -700,22 +701,31 @@ class UDSDocumentGraph(UDSGraph):
             the node annotations to be added
         edge_attrs
             the edge annotations to be added
+        sentence_ids
+            the IDs of all sentences in the document
         """
         for node, attrs in node_attrs.items():
             self._add_node_annotation(node, attrs)
 
         for edge, attrs in edge_attrs.items():
-            self._add_edge_annotation(edge, attrs)
+            self._add_edge_annotation(edge, attrs, sentence_ids)
 
-    def _add_edge_annotation(self, edge, attrs):
+    def _add_edge_annotation(self, edge, attrs, sentence_ids):
         if edge in self.graph.edges:
             self.graph.edges[edge].update(attrs)
         else:
-            # This will create edges dynamically
+            # Verify that the annotation is intra-document
+            s1 = '-'.join(edge[0].split('-')[:3])
+            s2 = '-'.join(edge[1].split('-')[:3])
+            if s1 not in sentence_ids or s2 not in sentence_ids:
+                warnmsg = f'Skipping cross-document annotation from {edge[0]} to {edge[1]}'
+                warning(warnmsg)
+                return
             attrs = dict(attrs, **{'domain': 'document',
                             'type': 'relation',
                             'frompredpatt': False,
                             'id': edge[1]})
+
         self.graph.add_edges_from([(edge[0], edge[1], attrs)])
 
     def _add_node_annotation(self, node, attrs):
