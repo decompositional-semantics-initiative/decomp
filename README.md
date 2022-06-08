@@ -40,7 +40,7 @@ at [Read the Docs](https://readthedocs.org/).
 
 If you make use of the dataset and/or toolkit in your research, we ask
 that you please cite the following paper in addition to the paper that
-introduces the underlying dataset(s) on which UDS1.0 is based.
+introduces the underlying dataset(s) on which UDS is based.
 
 > White, Aaron Steven, Elias Stengel-Eskin, Siddharth Vashishtha, Venkata Subrahmanyan Govindarajan, Dee Ann Reisinger, Tim Vieira, Keisuke Sakaguchi, et al. 2020. [The Universal Decompositional Semantics Dataset and Decomp Toolkit](https://www.aclweb.org/anthology/2020.lrec-1.699/). In Proceedings of The 12th Language Resources and Evaluation Conference, 5698–5707. Marseille, France: European Language Resources Association.
 
