@@ -1,4 +1,4 @@
-requests==2.22.0
+requests==2.31.0
 networkx>=2.5.1
 memoized_property==1.0.3
 typing==3.6.2
