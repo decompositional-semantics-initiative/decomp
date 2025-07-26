@@ -2,12 +2,15 @@
 
 import re
 
-from typing import Optional, Any
-from typing import Dict
+from typing import Any, TypeAlias, cast
 
 from memoized_property import memoized_property
 from networkx import DiGraph
 from .graph import UDSSentenceGraph, UDSDocumentGraph
+
+# Type aliases
+SentenceGraphDict: TypeAlias = dict[str, UDSSentenceGraph]
+SentenceIDDict: TypeAlias = dict[str, str]
 
 
 class UDSDocument:
@@ -29,11 +32,11 @@ class UDSDocument:
         the NetworkX DiGraph for the document. If not provided, this will be
         initialized without edges from sentence_graphs
     """
-    def __init__(self, sentence_graphs: Dict[str, UDSSentenceGraph],
-                 sentence_ids: Dict[str, str], name: str, genre: str,
-                 timestamp: Optional[str] = None, doc_graph: Optional[UDSDocumentGraph] = None):
-        self.sentence_graphs = {}
-        self.sentence_ids = {}
+    def __init__(self, sentence_graphs: SentenceGraphDict,
+                 sentence_ids: SentenceIDDict, name: str, genre: str,
+                 timestamp: str | None = None, doc_graph: UDSDocumentGraph | None = None):
+        self.sentence_graphs: SentenceGraphDict = {}
+        self.sentence_ids: SentenceIDDict = {}
         self.name = name
         self.genre = genre
         self.timestamp = timestamp
@@ -47,13 +50,13 @@ class UDSDocument:
         # Initialize the sentence-level graphs
         self.add_sentence_graphs(sentence_graphs, sentence_ids)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert the graph to a dictionary"""
         return self.document_graph.to_dict()
 
     @classmethod
-    def from_dict(cls, document: Dict[str, Dict], sentence_graphs: Dict[str, UDSSentenceGraph], 
-                       sentence_ids: Dict[str, str], name: str = 'UDS') -> 'UDSDocument':
+    def from_dict(cls, document: dict[str, dict], sentence_graphs: dict[str, UDSSentenceGraph], 
+                       sentence_ids: dict[str, str], name: str = 'UDS') -> 'UDSDocument':
         """Construct a UDSDocument from a dictionary
 
         Since only the document graphs are serialized, the sentence
@@ -74,7 +77,7 @@ class UDSDocument:
         name
             identifier to append to the beginning of node ids
         """
-        document_graph = UDSDocumentGraph.from_dict(document, name)
+        document_graph = cast(UDSDocumentGraph, UDSDocumentGraph.from_dict(document, name))
         sent_graph_names = set(map(lambda node: node['semantics']['graph'], document['nodes']))
         sent_graphs = {}
         sent_ids = {}
@@ -88,12 +91,12 @@ class UDSDocument:
         return cls(sent_graphs, sent_ids, name, genre, timestamp, document_graph)
 
     @staticmethod
-    def _get_timestamp_from_document_name(document_name):
-        timestamp = re.search('\d{8}_?\d{6}', document_name)
+    def _get_timestamp_from_document_name(document_name: str) -> str | None:
+        timestamp = re.search(r'\d{8}_?\d{6}', document_name)
         return timestamp[0] if timestamp else None
 
-    def add_sentence_graphs(self, sentence_graphs: Dict[str, UDSSentenceGraph], 
-                                  sentence_ids: Dict[str, str]) -> None:
+    def add_sentence_graphs(self, sentence_graphs: SentenceGraphDict, 
+                                  sentence_ids: SentenceIDDict) -> None:
         """Add additional sentences to a document
 
         Parameters
@@ -118,8 +121,8 @@ class UDSDocument:
                             domain='document', type=node['type'],
                             frompredpatt=False, semantics=semantics)
 
-    def add_annotation(self, node_attrs: Dict[str, Dict[str, Any]],
-                             edge_attrs: Dict[str, Dict[str, Any]]) -> None:
+    def add_annotation(self, node_attrs: dict[str, dict[str, Any]],
+                             edge_attrs: dict[str, dict[str, Any]]) -> None:
         """Add node or edge annotations to the document-level graph
 
         Parameters
@@ -131,7 +134,7 @@ class UDSDocument:
         """
         self.document_graph.add_annotation(node_attrs, edge_attrs, self.sentence_ids)
 
-    def semantics_node(self, document_node: str) -> Dict[str, Dict]:
+    def semantics_node(self, document_node: str) -> dict[str, dict]:
         """The semantics node for a given document node
 
         Parameters
@@ -144,7 +147,7 @@ class UDSDocument:
         semantics_node = self.sentence_graphs[semantics['graph']].semantics_nodes[semantics['node']]
         return {semantics['node']: semantics_node}
 
-    @memoized_property
+    @memoized_property  # type: ignore[misc]
     def text(self) -> str:
         """The document text"""
         return ' '.join([sent_graph.sentence for gname, sent_graph in sorted(self.sentence_graphs.items())])

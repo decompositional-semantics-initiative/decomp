@@ -2,9 +2,9 @@ import os
 import json
 import logging
 import pytest
+import importlib.resources
 
 from glob import glob
-from pkg_resources import resource_filename
 from decomp.semantics.uds import UDSCorpus
 
 test_document_name = 'answers-20111105112131AA6gIX6_ans'
@@ -46,7 +46,7 @@ total_graphs = 16622
 total_documents = 1174
 
 
-data_dir = resource_filename('decomp', 'data/')
+data_dir = str(importlib.resources.files('decomp') / 'data')
 
 
 def _load_corpus(base, version, annotation_format):

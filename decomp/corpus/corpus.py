@@ -4,13 +4,15 @@ from abc import ABCMeta, abstractmethod
 
 from random import sample
 from logging import warning
-from typing import Dict, List, Tuple, Iterable, Hashable, Any, TypeVar
+from typing import Hashable, TypeVar, Iterator, Generic, TypeAlias
 
 InGraph = TypeVar('InGraph')  # the input graph type
 OutGraph = TypeVar('OutGraph')  # the output graph type
 
+GraphDict: TypeAlias = dict[Hashable, OutGraph]
 
-class Corpus(metaclass=ABCMeta):
+
+class Corpus(Generic[InGraph, OutGraph], metaclass=ABCMeta):
     """Container for graphs
 
     Parameters
@@ -20,18 +22,19 @@ class Corpus(metaclass=ABCMeta):
         subclass of this abstract class can process
     """
 
-    def __init__(self, graphs_raw: Iterable[InGraph]):
+    def __init__(self, graphs_raw: dict[Hashable, InGraph]):
         self._graphs_raw = graphs_raw
+        self._graphs: dict[Hashable, OutGraph] = {}
         self._build_graphs()
 
-    def __iter__(self) -> Iterable[Hashable]:
+    def __iter__(self) -> Iterator[Hashable]:
         return iter(self._graphs)
 
-    def items(self) -> Iterable[Tuple[Hashable, OutGraph]]:
+    def items(self) -> Iterator[tuple[Hashable, OutGraph]]:
         """Dictionary-like iterator for (graphid, graph) pairs"""
-        return self._graphs.items()
+        return iter(self._graphs.items())
 
-    def __getitem__(self, k: Hashable) -> Any:
+    def __getitem__(self, k: Hashable) -> OutGraph:
         return self._graphs[k]
 
     def __contains__(self, k: Hashable) -> bool:
@@ -41,15 +44,13 @@ class Corpus(metaclass=ABCMeta):
         return len(self._graphs)
 
     def _build_graphs(self) -> None:
-        self._graphs = {}
-
         for graphid, rawgraph in self._graphs_raw.items():
             try:
                 self._graphs[graphid] = self._graphbuilder(graphid, rawgraph)
             except ValueError:
-                warning(graphid+' has no or multiple root nodes')
+                warning(str(graphid)+' has no or multiple root nodes')
             except RecursionError:
-                warning(graphid+' has loops')
+                warning(str(graphid)+' has loops')
 
     @abstractmethod
     def _graphbuilder(self,
@@ -58,12 +59,12 @@ class Corpus(metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
-    def graphs(self) -> Dict[Hashable, OutGraph]:
+    def graphs(self) -> dict[Hashable, OutGraph]:
         """the graphs in corpus"""
         return self._graphs
 
     @property
-    def graphids(self) -> List[Hashable]:
+    def graphids(self) -> list[Hashable]:
         """The graph ids in corpus"""
 
         return list(self._graphs)
@@ -74,7 +75,7 @@ class Corpus(metaclass=ABCMeta):
 
         return len(self._graphs)
 
-    def sample(self, k: int) -> Dict[Hashable, OutGraph]:
+    def sample(self, k: int) -> dict[Hashable, OutGraph]:
         """Sample k graphs without replacement
 
         Parameters
@@ -83,6 +84,5 @@ class Corpus(metaclass=ABCMeta):
             the number of graphs to sample
         """
         
-        return {tid: self._graphs[tid]
-                for tid
-                in sample(self._graphs.keys(), k=k)}
+        sampled_keys = sample(list(self._graphs.keys()), k=k)
+        return {tid: self._graphs[tid] for tid in sampled_keys}

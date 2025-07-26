@@ -1,5 +1,6 @@
 """Module for converting from networkx to RDF"""
 
+from typing import Any
 from networkx import DiGraph, to_dict_of_dicts
 from rdflib import Graph, URIRef, Literal
 
@@ -13,17 +14,17 @@ class RDFConverter:
         the graph to convert
     """
 
-    SUBSPACES = {}
-    PROPERTIES = {'domain': URIRef('domain'),
-                  'type': URIRef('type'),
-                  'subspace': URIRef('subspace'),
-                  'confidence': URIRef('confidence')}
-    VALUES = {}
+    SUBSPACES: dict[str, URIRef] = {}
+    PROPERTIES: dict[str, URIRef] = {'domain': URIRef('domain'),
+                                     'type': URIRef('type'),
+                                     'subspace': URIRef('subspace'),
+                                     'confidence': URIRef('confidence')}
+    VALUES: dict[str, URIRef] = {}
 
     def __init__(self, nxgraph: DiGraph):
         self.nxgraph = nxgraph
         self.rdfgraph = Graph()
-        self.nodes = {}
+        self.nodes: dict[str, URIRef] = {}
 
     @classmethod
     def networkx_to_rdf(cls, nxgraph: DiGraph) -> Graph:
@@ -47,22 +48,22 @@ class RDFConverter:
 
         return converter.rdfgraph
 
-    def _add_node_attributes(self, nodeid):
+    def _add_node_attributes(self, nodeid: str) -> None:
         self._construct_node(nodeid)
         
         self._add_attributes(nodeid,
-                             self.nxgraph.nodes[nodeid].items())
+                             list(self.nxgraph.nodes[nodeid].items()))
 
         
-    def _add_edge_attributes(self, nodeid1, nodeid2):
+    def _add_edge_attributes(self, nodeid1: str, nodeid2: str) -> None:
         edgeid = self._construct_edge(nodeid1, nodeid2)
         edgetup = (nodeid1, nodeid2)
         
         self._add_attributes(edgeid,
-                             self.nxgraph.edges[edgetup].items())
+                             list(self.nxgraph.edges[edgetup].items()))
         
 
-    def _add_attributes(self, nid, attributes):
+    def _add_attributes(self, nid: str, attributes: list[tuple[str, Any]]) -> None:
         triples = []
         
         for attrid1, attrs1 in attributes:
@@ -86,11 +87,11 @@ class RDFConverter:
         for t in triples:
             self.rdfgraph.add(t)                    
         
-    def _construct_node(self, nodeid):        
+    def _construct_node(self, nodeid: str) -> None:        
         if nodeid not in self.nodes:
             self.nodes[nodeid] = URIRef(nodeid)
 
-    def _construct_edge(self, nodeid1, nodeid2):
+    def _construct_edge(self, nodeid1: str, nodeid2: str) -> str:
         edgeid = nodeid1 + '%%' + nodeid2
 
         if edgeid not in self.nodes:
@@ -107,10 +108,11 @@ class RDFConverter:
         else:
             return edgeid
 
-    def _construct_property(self, nodeid, propid, val,
-                            subspaceid=None):
+    def _construct_property(self, nodeid: str, propid: str, val: Any,
+                            subspaceid: str | None = None) -> list[tuple[URIRef, URIRef, URIRef | Literal]]:
 
         c = self.__class__
+        triples: list[tuple[URIRef, URIRef, URIRef | Literal]]
         
         if isinstance(val, dict) and subspaceid is not None:
             # We currently do not support querying on raw UDS
@@ -146,7 +148,7 @@ class RDFConverter:
         return triples
 
     @classmethod
-    def _construct_subspace(cls, subspaceid, propid):
+    def _construct_subspace(cls, subspaceid: str, propid: str) -> list[tuple[URIRef, URIRef, URIRef | Literal]]:
         if subspaceid not in cls.SUBSPACES:
             cls.SUBSPACES[subspaceid] = URIRef(subspaceid)
             

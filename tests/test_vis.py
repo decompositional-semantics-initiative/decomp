@@ -1,5 +1,6 @@
 import json
 import os 
+import shutil
 from predpatt import PredPatt, PredPattOpts, load_conllu
 from decomp.syntax.dependency import DependencyGraphBuilder
 from decomp.semantics.predpatt import PredPattGraphBuilder
@@ -13,6 +14,12 @@ import pytest
 import dash 
 from dash.testing.application_runners import import_app
 
+# check if chromedriver is available
+requires_chromedriver = pytest.mark.skipif(
+    shutil.which("chromedriver") is None,
+    reason="ChromeDriver executable not found in PATH"
+)
+
 
 @pytest.fixture
 def basic_sentence_graph(test_data_dir):
@@ -20,6 +27,7 @@ def basic_sentence_graph(test_data_dir):
     graph = UDSSentenceGraph.from_dict(graph_data)
     return graph
 
+@requires_chromedriver
 def test_vis_basic(basic_sentence_graph, dash_duo):
     vis = UDSVisualization(basic_sentence_graph, add_syntax_edges=True)
     app = vis.serve(do_return = True)

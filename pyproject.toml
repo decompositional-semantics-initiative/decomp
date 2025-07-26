@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=64.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "decomp"
+version = "0.3.0"
+description = "Toolkit for working with Universal Decompositional Semantics graphs"
+authors = [
+    {name = "Aaron Steven White", email = "aaron.white@rochester.edu"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic"
+]
+dependencies = [
+    "networkx>=2.7.1",
+    "overrides>=7.0.0",
+    "rdflib>=7.0.0",
+    "numpy>=1.24.0",
+    "pyparsing>=3.0.0",
+    "requests>=2.31.0",
+    "memoized_property==1.0.3",
+]
+
+[project.urls]
+Homepage = "https://decomp.io/"
+Repository = "https://github.com/decompositional-semantics-initiative/decomp"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.12.0",
+    "mypy>=1.17.0",
+]
+viz = [
+    "dash[testing]>=1.9.1",
+    "selenium>=4.6.1",
+    "jsonpickle>=1.4.1",
+    "matplotlib>=3.2.1",
+]
+
+[tool.setuptools]
+packages = ["decomp"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+decomp = ["data/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true

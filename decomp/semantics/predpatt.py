@@ -4,7 +4,7 @@
 """Module for converting PredPatt objects to networkx digraphs"""
 
 from os.path import basename, splitext
-from typing import Tuple, Hashable, TextIO, Optional, Union
+from typing import Hashable, TextIO
 from networkx import DiGraph
 from predpatt import load_conllu, PredPatt, PredPattOpts
 from ..corpus import Corpus
@@ -21,7 +21,7 @@ class PredPattCorpus(Corpus):
 
     def _graphbuilder(self,
                       graphid: Hashable,
-                      predpatt_depgraph: Tuple[PredPatt, DiGraph]) -> DiGraph:
+                      predpatt_depgraph: tuple[PredPatt, DiGraph]) -> DiGraph:
         """
         Parameters
         ----------
@@ -38,9 +38,9 @@ class PredPattCorpus(Corpus):
 
     @classmethod
     def from_conll(cls,
-                   corpus: Union[str, TextIO],
+                   corpus: str | TextIO,
                    name: str = 'ewt',
-                   options: Optional[PredPattOpts] = None) -> 'PredPattCorpus':
+                   options: PredPattOpts | None = None) -> 'PredPattCorpus':
         """Load a CoNLL dependency corpus and apply predpatt
 
         Parameters

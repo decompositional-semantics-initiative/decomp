@@ -1,7 +1,7 @@
-from typing import List, Dict, Tuple, Optional
+from typing import Any, TypeAlias, cast
 import dash
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
 import networkx as nx
 import plotly.graph_objs as go
 import numpy as np
@@ -11,11 +11,11 @@ import json
 import jsonpickle
 import pdb 
 
-from .. import UDSCorpus
+from ..semantics.uds import UDSCorpus
 from ..semantics.uds import UDSSentenceGraph
 from ..semantics.uds.metadata import UDSCorpusMetadata
 
-def get_ontologies() -> Tuple[List]:
+def get_ontologies() -> tuple[list[str], list[str]]:
     """
     collect node and edge ontologies from existing UDS corpus 
     """
@@ -85,7 +85,7 @@ class UDSVisualization:
                  add_span_edges: bool = True,
                  add_syntax_edges: bool = False,
                  from_prediction: bool = False,
-                 sentence: Optional[str] = None,
+                 sentence: str | None = None,
                  syntax_y: float = 0.0,
                  semantics_y: float = 10.0,
                  node_offset: float = 7.0,
@@ -93,8 +93,8 @@ class UDSVisualization:
                  height: float = 400):
 
         if graph is None:
-            graph = UDSCorpus(split="dev")['ewt-dev-1']
-            sentence = graph.StringList(sentence)
+            graph = UDSCorpus(split="dev")['ewt-dev-1']  # type: ignore[unreachable]
+            sentence = str(sentence)
 
         self.graph = graph
         
@@ -114,11 +114,11 @@ class UDSVisualization:
         
         self.do_shorten = True if len(self.graph.syntax_subgraph) > 12 else False
         
-        self.shapes = []
-        self.trace_list = []
-        self.node_to_xy = {}
+        self.shapes: list[dict[str, Any]] = []
+        self.trace_list: list[go.Scatter] = []
+        self.node_to_xy: dict[str, tuple[float, float]] = {}
 
-        self.added_edges = []
+        self.added_edges: list[tuple[str, str]] = []
         self.add_span_edges = add_span_edges
         self.add_syntax_edges = add_syntax_edges
 
@@ -126,7 +126,7 @@ class UDSVisualization:
         self.node_ontology = [x for x in self.node_ontology_orig]
         self.edge_ontology = [x for x in self.edge_ontology_orig]
         
-    def _format_line(self, start, end, radius = None):
+    def _format_line(self, start: tuple[float, float], end: tuple[float, float], radius: float | None = None) -> tuple[Any, Any, Any]:
         # format a line between dependents 
         if start == end:
             return None, None, None
@@ -160,11 +160,12 @@ class UDSVisualization:
         zeroed_x_range = x_range - x0
         zeroed_y_range = y_range - y0
         sum_range = zeroed_x_range**2 + zeroed_y_range**2
-        x_range_true, y_range_true = [], []
+        x_range_true: list[float] = []
+        y_range_true: list[float] = []
         y_range_true
 
         for i in range(len(x_range)):
-            if x_range[i] > np.sqrt(radius/2):
+            if radius is not None and x_range[i] > np.sqrt(radius/2):
                 x_range_true.append(x_range[i])
                 y_range_true.append(y_range[i])
 
@@ -172,7 +173,7 @@ class UDSVisualization:
         y_range = [None] + y_range.tolist() + [None]
         return x_range, y_range, np.max(y_range[1:-1])
     
-    def _add_arrowhead(self, point, root0, root1, direction, color="black", width = 0.1):
+    def _add_arrowhead(self, point: tuple[float, float], root0: float, root1: float, direction: str, color: str = "black", width: float = 0.1) -> None:
         # get tangent line at point
         x,y = point
         if direction in ["left", "right"]:
@@ -195,7 +196,7 @@ class UDSVisualization:
         y2 = y - width*l
         
         # put at origin
-        vertices = [[0, 0], [x1-x0, y1-y0], [x2-x0, y2-y0], [0,0]]
+        vertices: list[list[float]] = [[0, 0], [x1-x0, y1-y0], [x2-x0, y2-y0], [0,0]]
         
         width = 1
         if direction in ["left"]:
@@ -216,7 +217,7 @@ class UDSVisualization:
                                         .frozen())
       
 
-        vertices_prime = [arrowhead_transformation.transform_point((x,y)) for (x,y) in vertices]
+        vertices_prime = [arrowhead_transformation.transform_point((float(x), float(y))) for (x, y) in vertices]
         x0_prime, y0_prime = vertices_prime[0] 
         x1_prime, y1_prime = vertices_prime[1]
         x2_prime, y2_prime = vertices_prime[2]
@@ -232,23 +233,24 @@ class UDSVisualization:
 
         self.trace_list.append(arrow)
         
-    def _get_attribute_str(self, node: str, is_node:bool=True) -> str:
+    def _get_attribute_str(self, node: str | tuple[str, str], is_node:bool=True) -> str:
         # format attribute string for hovering
-        to_ret, pairs = [], []
+        to_ret_list: list[str] = []
+        pairs = []
         lens = []
         if is_node:
             onto = self.node_ontology
             choose_from = self.graph.nodes
         else:
             onto = self.edge_ontology
-            choose_from = self.graph.edges
+            choose_from = self.graph.edges  # type: ignore[assignment]
             
         for attr in onto:
             try:
                 split_attr = attr.split("-")
                 attr_type = split_attr[0]
                 attr_subtype = "-".join(split_attr[1:])
-                val = choose_from[node][attr_type][attr_subtype]["value"]
+                val = choose_from[node][attr_type][attr_subtype]["value"]  # type: ignore[index]
             except KeyError:
                 continue
             try:
@@ -266,19 +268,19 @@ class UDSVisualization:
             for i, (attr, val) in enumerate(pairs):
                 # don't try to display more than 20 at once 
                 if i > 15:
-                    to_ret.append("...") 
+                    to_ret_list.append("...") 
                     break
                 line_len = lens[i]
                 n_spaces = max_len - line_len
-                to_ret.append(f"{attr}: {val}")
+                to_ret_list.append(f"{attr}: {val}")
                       
-        to_ret = "<br>".join(to_ret)
-        if is_node:
-            to_ret = f"<b>{node}</b> <br> {to_ret}"
+        to_ret_str = "<br>".join(to_ret_list)
+        if is_node and isinstance(node, str):
+            to_ret_str = f"<b>{node}</b> <br> {to_ret_str}"
             
-        return to_ret
+        return to_ret_str
     
-    def _get_xy_from_edge(self, node_0, node_1):
+    def _get_xy_from_edge(self, node_0: str, node_1: str) -> tuple[float, float, float, float] | None:
         # get the (x,y) coordinates of the endpoints of an edge
         try:
             x0,y0 = self.node_to_xy[node_0]
@@ -288,7 +290,7 @@ class UDSVisualization:
             # addresse, root, speaker nodes
             return None
         
-    def _select_direction(self, x0, x1):
+    def _select_direction(self, x0: float, x1: float) -> str:
         # determine which way an arrowhead should face
         if x0 == x1:
             return "down"
@@ -297,7 +299,7 @@ class UDSVisualization:
         else:
             return "down-left"
         
-    def _make_label_node(self, x, y, hovertext, text, marker = None):
+    def _make_label_node(self, x: Any, y: Any, hovertext: Any, text: Any, marker: dict[str, Any] | None = None) -> go.Scatter:
         # make invisible nodes that hold labels 
         if marker is None:
             marker = {'size': 20, 'color': "LightGrey",
@@ -311,22 +313,22 @@ class UDSVisualization:
                                      marker = marker)
         return text_node_trace
     
-    def _get_prediction_node_head(self, node_0):
+    def _get_prediction_node_head(self, node_0: str) -> str | None:
         # different function needed for dealing with MISO predicted graphs
         outgoing_edges = [e for e in self.graph.edges if e[0] == node_0]
         try:
-            head_edge = [e for e in outgoing_edges if self.graph.edges[e]['semrel'] == "head"]
+            head_edges = [e for e in outgoing_edges if self.graph.edges[e]['semrel'] == "head"]
         except KeyError:
             return None
 
-        if len(head_edge) != 1:
+        if len(head_edges) != 1:
             return None
 
-        head_edge = head_edge[0]
-        node_1 = head_edge[1]
+        head_edge = head_edges[0]
+        node_1 = str(head_edge[1])
         return node_1
 
-    def _add_syntax_nodes(self):
+    def _add_syntax_nodes(self) -> None:
         syntax_layer = self.graph.syntax_subgraph
         syntax_node_trace = go.Scatter(x=[], y=[],hovertext=[], text=[], 
                                         mode='markers+text', textposition="bottom center",
@@ -354,12 +356,12 @@ class UDSVisualization:
                         text = ""
                     idx = self.sentence.index(text)     
                     nodes_and_idxs.append((node, idx))
-                syntax_iterator = sorted(nodes_and_idxs, key = lambda x: x[1])
-                syntax_iterator = [x[0] for x in syntax_iterator]
+                sorted_nodes = sorted(nodes_and_idxs, key = lambda x: x[1])
+                syntax_iterator = [x[0] for x in sorted_nodes]
             else:
-                syntax_iterator = sorted(syntax_layer, key = lambda x: int(x.split('-')[1]))
+                syntax_iterator = sorted(syntax_layer.nodes, key = lambda x: int(str(x).split('-')[1]))
         else:
-            syntax_iterator = syntax_layer
+            syntax_iterator = list(syntax_layer.nodes)
         
         for i, node in enumerate(syntax_iterator):
             if "form" in self.graph.nodes[node].keys():
@@ -392,15 +394,16 @@ class UDSVisualization:
                 
         self.trace_list.append(syntax_node_trace)
         
-    def _add_semantics_nodes(self):
+    def _add_semantics_nodes(self) -> None:
         semantics_layer = self.graph.semantics_subgraph
         
-        semantics_data = {"large": {"pred": {"x": [], "y": [], "hovertext": [], "text": []}, 
-                                   "arg": {"x": [], "y": [], "hovertext": [], "text": []}},
-                          "small": {"pred": {"x": [], "y": [], "hovertext": [], "text": []}, 
-                                   "arg": {"x": [], "y": [], "hovertext": [], "text": []}}}
+        semantics_data: dict[str, dict[str, dict[str, list[Any]]]] = {
+            "large": {"pred": {"x": [], "y": [], "hovertext": [], "text": []}, 
+                     "arg": {"x": [], "y": [], "hovertext": [], "text": []}},
+            "small": {"pred": {"x": [], "y": [], "hovertext": [], "text": []}, 
+                     "arg": {"x": [], "y": [], "hovertext": [], "text": []}}}
         
-        taken = []
+        taken: list[float] = []
         next_increment = 0
         for i, node in enumerate(semantics_layer):
             attr_str = self._get_attribute_str(node, is_node=True)
@@ -448,7 +451,10 @@ class UDSVisualization:
                     if head_synt_node == "root": 
                         node_idx = 0
                     else:
-                        node_idx = self.sentence.index(self.graph.nodes[head_synt_node]['form'])
+                        if self.sentence is not None:
+                            node_idx = self.sentence.index(self.graph.nodes[head_synt_node]['form'])
+                        else:
+                            node_idx = 0
                         if node_idx == 1000:
                             node_idx = -2
                 if head_synt_node == "root": 
@@ -502,13 +508,13 @@ class UDSVisualization:
                 self.trace_list.append(text_node_trace)
                 self.trace_list.append(semantics_node_trace)
         
-    def _add_syntax_edges(self):
+    def _add_syntax_edges(self) -> None:
         for (node_0, node_1) in self.graph.syntax_subgraph.edges:
-            try:
-                # swap order 
-                x0,y0,x1,y1 = self._get_xy_from_edge(node_1, node_0)
-            except TypeError:
+            # swap order
+            result = self._get_xy_from_edge(node_1, node_0)
+            if result is None:
                 continue
+            x0,y0,x1,y1 = result
             x_range, y_range, height = self._format_line((x0,y0), (x1,y1), radius = self.syntax_marker_size)
             if x_range is None:
                 continue
@@ -528,14 +534,14 @@ class UDSVisualization:
                 
             self._add_arrowhead((x1,y1), x0, x1, direction, color="blue")
 
-    def _add_semantics_edges(self):
+    def _add_semantics_edges(self) -> None:
         for (node_0, node_1) in self.graph.semantics_subgraph.edges:
             if "speaker" in node_0 or "speaker" in node_1 or "addressee" in node_0 or "addressee" in node_1:
                 continue
-            try:
-                x0,y0,x1,y1 = self._get_xy_from_edge(node_0, node_1)
-            except TypeError:
+            result = self._get_xy_from_edge(node_0, node_1)
+            if result is None:
                 continue
+            x0,y0,x1,y1 = result
 
             # add a curve above for all semantic relations 
             x_range, y_range, height = self._format_line((x0,y0), (x1,y1), radius = self.semantics_marker_size)
@@ -578,18 +584,19 @@ class UDSVisualization:
                 
             self._add_arrowhead((x1,y1), x0, x1, direction, width=0.2)
             
-    def _add_head_edges(self):  
+    def _add_head_edges(self) -> None:  
         semantics_layer = self.graph.semantics_subgraph
         for node_0 in semantics_layer:
             try:
                 if not self.from_prediction:
-                    node_1, __ = self.graph.head(node_0)
+                    node_idx, __ = self.graph.head(node_0)
                     node_name = "-".join(node_0.split("-")[0:3])
-                    node_1 = f"{node_name}-syntax-{node_1}"
+                    node_1 = f"{node_name}-syntax-{node_idx}"
                 else:
-                    node_1 = self._get_prediction_node_head(node_0)
-                    if node_1 is None:
+                    pred_head = self._get_prediction_node_head(node_0)
+                    if pred_head is None:
                         continue
+                    node_1 = pred_head
                     
                 key="text"
                 if "form" in self.graph.nodes[node_1].keys():
@@ -597,8 +604,11 @@ class UDSVisualization:
                 if self.graph.nodes[node_1][key] == "@@ROOT@@":
                     continue
 
-                x0,y0,x1,y1 = self._get_xy_from_edge(node_0, node_1)
-            except (ValueError, KeyError, IndexError, TypeError) as e:
+                result = self._get_xy_from_edge(node_0, node_1)
+                if result is None:
+                    continue
+                x0,y0,x1,y1 = result
+            except (ValueError, KeyError, IndexError) as e:
                 continue
 
             edge_trace = go.Scatter(x=tuple([x0, x1]), y=tuple([y0,y1]),
@@ -618,15 +628,18 @@ class UDSVisualization:
             
             self.added_edges.append((node_0, node_1))
             
-    def _add_span_edges(self):
+    def _add_span_edges(self) -> None:
         for (node_0, node_1) in self.graph.instance_edges():
             if (node_0, node_1) not in self.added_edges:
                 # skip arg-pred edges 
                 if self.graph.edges[(node_0, node_1)]['type'] != "nonhead":
                     continue
                 try:
-                    x0,y0,x1,y1 = self._get_xy_from_edge(node_0, node_1)
-                except (KeyError, TypeError, IndexError) as e:
+                    result = self._get_xy_from_edge(node_0, node_1)
+                    if result is None:
+                        continue
+                    x0,y0,x1,y1 = result
+                except (KeyError, IndexError) as e:
                     continue
                     
                 edge_trace = go.Scatter(x=tuple([x0, x1]), y=tuple([y0,y1]),
@@ -645,7 +658,7 @@ class UDSVisualization:
                 self._add_arrowhead(point, x0, y0, direction, color="grey")
 
 
-    def prepare_graph(self) -> Dict:
+    def prepare_graph(self) -> dict:
         """Converts a UDS graph into a Dash-ready layout"""
 
         # clear 
@@ -676,21 +689,21 @@ class UDSVisualization:
 
         return figure
 
-    def _get_uds_subspaces(self):
-        types = set()
+    def _get_uds_subspaces(self) -> list[dict[str, str]]:
+        types_set = set()
         for prop in self.node_ontology_orig + self.edge_ontology_orig:
-            types |= set([prop.split("-")[0]])
-        types = sorted(list(types))
+            types_set |= set([prop.split("-")[0]])
+        types = sorted(list(types_set))
         to_ret = []
         for t in types:
             to_ret.append({"label": t, "value": t})
         return to_ret
     
-    def _update_ontology(self, subspaces):
+    def _update_ontology(self, subspaces: list[str]) -> None:
         self.node_ontology = [x for x in self.node_ontology_orig if x.split("-")[0] in subspaces]
         self.edge_ontology = [x for x in self.edge_ontology_orig if x.split("-")[0] in subspaces] 
         
-    def serve(self, do_return = False):
+    def serve(self, do_return: bool = False) -> dash.Dash | None:
         """serve graph to locally-hosted site to port 8050 with no parser""" 
 
         external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -705,7 +718,7 @@ class UDSVisualization:
                                    html.Div(className="four columns",
                                             children=[
                                                 dcc.Checklist(id="subspace-list",
-                                                                    options=self._get_uds_subspaces(),
+                                                                    options=self._get_uds_subspaces(),  # type: ignore[arg-type]
                                                               value=[x['label'] for x in self._get_uds_subspaces()],
                                                               className="subspace-checklist"
                                                                     )
@@ -728,7 +741,7 @@ class UDSVisualization:
         
         @app.callback(dash.dependencies.Output('my-graph', 'figure'),
                   [dash.dependencies.Input('subspace-list', 'value')])
-        def update_output(value: List[str]):
+        def update_output(value: list[str]) -> dict[str, Any]:
             """Callback to update ontology based on which subspaces are checked
             
             Parameters
@@ -740,10 +753,11 @@ class UDSVisualization:
             return self.prepare_graph()
         if not do_return:
             app.run_server(debug=False)
+            return None
         else:
             return app 
         
-    def show(self):
+    def show(self) -> None:
         """show in-browser, usuable in jupyter notebooks"""
 
         figure = self.prepare_graph()
@@ -752,16 +766,22 @@ class UDSVisualization:
 
     def to_json(self) -> str:
         """serialize visualization object, required for callback"""
-        self.sentence = str(self.sentence)
+        sentence_str = str(self.sentence)
+        # temporarily store the string version
+        original_sentence = self.sentence
+        self.sentence = sentence_str  # type: ignore[assignment]
         graph = self.graph.to_dict()
         json_str = jsonpickle.encode(self, unpicklable=False)
         json_dict = jsonpickle.decode(json_str)
         json_dict['graph'] = graph
 
-        return jsonpickle.encode(json_dict)
+        result = jsonpickle.encode(json_dict)
+        # restore original sentence object
+        self.sentence = original_sentence
+        return str(result)
 
     @classmethod
-    def from_json(cls, data: Dict) -> 'UDSVisualization':
+    def from_json(cls, data: dict) -> 'UDSVisualization':
         """ load serialized visualization object 
 
         Parameters
@@ -770,7 +790,7 @@ class UDSVisualization:
             json dict representation of the current visualization 
         """
         uds_graph = data['graph']
-        miso_graph = UDSSentenceGraph.from_dict(uds_graph, 'test-graph') 
+        miso_graph = cast(UDSSentenceGraph, UDSSentenceGraph.from_dict(uds_graph, 'test-graph')) 
 
         vis = cls(miso_graph, sentence = data['sentence'])
         for k, v in data.items():
@@ -780,7 +800,7 @@ class UDSVisualization:
                 setattr(vis, k, v)
         return vis
 
-def serve_parser(parser, with_syntax: bool =False):
+def serve_parser(parser: Any, with_syntax: bool = False) -> None:
     """wrapper for serving from MISO parser
 
     Parameters
@@ -815,7 +835,7 @@ def serve_parser(parser, with_syntax: bool =False):
                                html.Div(className="four columns",
                                         children=[
                                             dcc.Checklist(id="subspace-list",
-                                                                options=vis._get_uds_subspaces(),
+                                                                options=vis._get_uds_subspaces(),  # type: ignore[arg-type]
                                                           value=[x['label'] for x in vis._get_uds_subspaces()],
                                                           className="subspace-checklist"
                                                                 )
@@ -842,7 +862,7 @@ def serve_parser(parser, with_syntax: bool =False):
     @app.callback(dash.dependencies.Output('vis-hidden', 'children'),
                   [dash.dependencies.Input('submit-button', 'n_clicks')],
               [dash.dependencies.State('input_text', 'value'), dash.dependencies.State('vis-hidden', 'children')])
-    def parse_new_sentence(n_clicks:int, text_value: str, vis_data: List[str]) -> List[str]:
+    def parse_new_sentence(n_clicks:int, text_value: str, vis_data: list[str]) -> list[str]:
         """Dash callback to link the submit button with a change in state to the input text,
         executes upon click of submit button and parses new sentence, updating the visualziation
 
@@ -873,7 +893,7 @@ def serve_parser(parser, with_syntax: bool =False):
     @app.callback(dash.dependencies.Output("my-graph", "figure"), 
             [dash.dependencies.Input('vis-hidden', 'children'), 
              dash.dependencies.Input('subspace-list', 'value')])
-    def update_graph_from_vis(vis_data: List[str], subspace_list: List[str]) -> Dict: 
+    def update_graph_from_vis(vis_data: list[str], subspace_list: list[str]) -> dict: 
         """Callback to update the visualization when subspaces are 
         selected or deselected 
 

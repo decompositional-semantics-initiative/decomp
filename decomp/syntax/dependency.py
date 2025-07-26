@@ -2,10 +2,13 @@
 # pylint: disable=R0903
 """Module for building/containing dependency trees from CoNLL"""
 
-from typing import List
+from typing import Hashable, TypeAlias
 from numpy import array
 from networkx import DiGraph
 from ..corpus import Corpus
+
+ConllRow: TypeAlias = list[str]
+ConllData: TypeAlias = list[ConllRow]
 
 CONLL_HEAD = {'u': ['id', 'form', 'lemma', 'upos', 'xpos',
                     'feats', 'head', 'deprel', 'deps', 'misc'],
@@ -24,7 +27,7 @@ CONLL_EDGE_ATTRS = {'u': {k: CONLL_HEAD['u'].index(k)
                           for k in ['deprel']}}
 
 
-class CoNLLDependencyTreeCorpus(Corpus):
+class CoNLLDependencyTreeCorpus(Corpus[ConllData, DiGraph]):
     """Class for building/containing dependency trees from CoNLL-U
 
     Attributes
@@ -37,8 +40,8 @@ class CoNLLDependencyTreeCorpus(Corpus):
         number of graphs in corpus
     """
 
-    def _graphbuilder(self, graphid: str, rawgraph: str):
-        return DependencyGraphBuilder.from_conll(rawgraph, graphid)
+    def _graphbuilder(self, graphid: Hashable, rawgraph: ConllData) -> DiGraph:
+        return DependencyGraphBuilder.from_conll(rawgraph, str(graphid))
 
 
 class DependencyGraphBuilder:
@@ -46,7 +49,7 @@ class DependencyGraphBuilder:
 
     @classmethod
     def from_conll(cls,
-                   conll: List[List[str]],
+                   conll: ConllData,
                    treeid: str='',
                    spec: str='u') -> DiGraph:
         """Build DiGraph from a CoNLL representation
@@ -86,13 +89,13 @@ class DependencyGraphBuilder:
         return depgraph
 
     @staticmethod
-    def _conll_node_attrs(treeid, row, spec):
+    def _conll_node_attrs(treeid: str, row: ConllRow, spec: str) -> tuple[str, dict[str, str | int]]:
         node_id = row[0]
 
-        node_attrs = {'domain': 'syntax',
-                      'type': 'token',
-                      'position': int(node_id)}
-        other_attrs = {}
+        node_attrs: dict[str, str | int] = {'domain': 'syntax',
+                                            'type': 'token',
+                                            'position': int(node_id)}
+        other_attrs: dict[str, str] = {}
 
         for attr, idx in CONLL_NODE_ATTRS[spec].items():
             # convert features into a dictionary
@@ -110,7 +113,7 @@ class DependencyGraphBuilder:
         return (treeid+'syntax-'+node_id, node_attrs)
 
     @staticmethod
-    def _conll_edge_attrs(treeid, row, spec):
+    def _conll_edge_attrs(treeid: str, row: ConllRow, spec: str) -> tuple[str, str, dict[str, str]]:
         child_id = treeid+'syntax-'+row[0]
 
         parent_position = row[CONLL_HEAD[spec].index('head')]
