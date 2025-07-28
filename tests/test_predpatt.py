@@ -1,6 +1,6 @@
 from io import StringIO
 from networkx import DiGraph
-from predpatt import load_conllu, PredPatt, PredPattOpts
+from decomp.semantics.predpatt import load_conllu, PredPatt, PredPattOpts
 from decomp.syntax.dependency import DependencyGraphBuilder
 from decomp.semantics.predpatt import PredPattCorpus, PredPattGraphBuilder
 

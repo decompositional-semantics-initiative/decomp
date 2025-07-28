@@ -1,7 +1,7 @@
 import os
 import pytest
 
-from predpatt import PredPatt, PredPattOpts, load_conllu
+from decomp.semantics.predpatt import PredPatt, PredPattOpts, load_conllu
 
 from decomp.syntax.dependency import DependencyGraphBuilder
 from decomp.semantics.predpatt import PredPattGraphBuilder
