@@ -9,20 +9,21 @@ from __future__ import annotations
 from collections import defaultdict, namedtuple
 from typing import TYPE_CHECKING, Any
 
+
 if TYPE_CHECKING:
-    from ..core.token import Token
+    pass
 
 # Import at runtime to avoid circular dependency
 def _get_dep_v1():
-    from ..util.ud import dep_v1
+    from ..utils.ud_schema import dep_v1
     return dep_v1
 
 
 class DepTriple(namedtuple('DepTriple', 'rel gov dep')):
     """Dependency triple representing a single dependency relation.
-    
+
     A named tuple with three fields representing a dependency edge in the parse tree.
-    
+
     Attributes
     ----------
     rel : str
@@ -31,31 +32,31 @@ class DepTriple(namedtuple('DepTriple', 'rel gov dep')):
         The governor (head) of the dependency. Can be token index or Token object.
     dep : int | Token
         The dependent of the dependency. Can be token index or Token object.
-        
+
     Notes
     -----
     The __repr__ format shows the relation with dependent first: rel(dep,gov).
     This ordering (dep before gov) is preserved for compatibility.
     """
-    
+
     def __repr__(self) -> str:
         """Return string representation in format rel(dep,gov).
-        
+
         Note that dependent comes before governor in the output.
-        
+
         Returns
         -------
         str
             String representation like 'nsubj(0,2)'.
         """
-        return '%s(%s,%s)' % (self.rel, self.dep, self.gov)
+        return f'{self.rel}({self.dep},{self.gov})'
 
 
 class UDParse:
     """Universal Dependencies parse representation.
-    
+
     Container for a dependency parse including tokens, POS tags, and dependency relations.
-    
+
     Parameters
     ----------
     tokens : list
@@ -66,7 +67,7 @@ class UDParse:
         List of dependency relations in the parse.
     ud : module, optional
         Universal Dependencies module (ignored - always uses dep_v1).
-        
+
     Attributes
     ----------
     ud : module
@@ -82,16 +83,16 @@ class UDParse:
     dependents : defaultdict[list]
         Maps governor index/token to list of dependent DepTriples.
     """
-    
+
     def __init__(
-        self, 
+        self,
         tokens: list[Any],
         tags: list[str],
         triples: list[DepTriple],
         ud: Any = None
     ) -> None:
         """Initialize UDParse with tokens, tags, and dependency triples.
-        
+
         Parameters
         ----------
         tokens : list
@@ -108,25 +109,25 @@ class UDParse:
         self.tokens = tokens
         self.tags = tags
         self.triples = triples
-        
+
         # build governor mapping: dependent -> DepTriple
         self.governor: dict[Any, DepTriple] = {e.dep: e for e in triples}
-        
+
         # build dependents mapping: governor -> [DepTriple]
         self.dependents: defaultdict[Any, list[DepTriple]] = defaultdict(list)
         for e in self.triples:
             self.dependents[e.gov].append(e)
-    
+
     def pprint(self, color: bool = False, K: int = 1) -> str:
         """Pretty-print list of dependencies.
-        
+
         Parameters
         ----------
         color : bool, optional
             Whether to use colored output (default: False).
         K : int, optional
             Number of columns to use (default: 1).
-            
+
         Returns
         -------
         str
@@ -135,13 +136,10 @@ class UDParse:
         # import here to avoid circular dependency
         from tabulate import tabulate
         from termcolor import colored
-        
-        tokens1 = self.tokens + ['ROOT']
+
+        tokens1 = [*self.tokens, 'ROOT']
         C = colored('/%s', 'magenta') if color else '/%s'
-        E = ['%s(%s%s, %s%s)' % (e.rel, tokens1[e.dep],
-                                 C % e.dep,
-                                 tokens1[e.gov],
-                                 C % e.gov)
+        E = [f'{e.rel}({tokens1[e.dep]}{C % e.dep}, {tokens1[e.gov]}{C % e.gov})'
              for e in sorted(self.triples, key=lambda x: x.dep)]
         cols = [[] for _ in range(K)]
         for i, x in enumerate(E):
@@ -149,13 +147,13 @@ class UDParse:
         # add padding to columns because zip stops at shortest iterator.
         for c in cols:
             c.extend('' for _ in range(len(cols[0]) - len(c)))
-        return tabulate(zip(*cols), tablefmt='plain')
-    
+        return tabulate(zip(*cols, strict=False), tablefmt='plain')
+
     def latex(self) -> bytes:
         """Generate LaTeX code for dependency diagram.
-        
+
         Creates LaTeX code using tikz-dependency package for visualization.
-        
+
         Returns
         -------
         bytes
@@ -178,21 +176,21 @@ class UDParse:
 \end{document}"""
         tok = ' \\& '.join(x.replace('&', r'and').replace('_', ' ') for x in self.tokens)
         tag = ' \\& '.join(self.tags).lower()
-        dep = '\n'.join(r'\depedge{%d}{%d}{%s}' % (e.gov+1, e.dep+1, e.rel)
+        dep = '\n'.join(rf'\depedge{{{e.gov+1}}}{{{e.dep+1}}}{{{e.rel}}}'
                         for e in self.triples if e.gov >= 0)
         return (boilerplate % (tok, tag, dep)).replace('$','\\$').encode('utf-8')
-    
+
     def view(self, do_open: bool = True) -> str | None:
         """Open a dependency parse diagram of the sentence.
-        
+
         Requires that pdflatex be in PATH and that Daniele Pighin's
         tikz-dependency.sty be in the current directory.
-        
+
         Parameters
         ----------
         do_open : bool, optional
             Whether to open the PDF file (default: True).
-            
+
         Returns
         -------
         str | None
@@ -200,40 +198,42 @@ class UDParse:
         """
         import os
         from hashlib import md5
-        
+
         latex = self.latex()
         was = os.getcwd()
         try:
             os.chdir('/tmp')
-            base = 'parse_%s' % md5(' '.join(self.tokens).encode('ascii', errors='ignore')).hexdigest()
-            pdf = '%s.pdf' % base
+            tokens_str = ' '.join(self.tokens)
+            hash_str = md5(tokens_str.encode('ascii', errors='ignore')).hexdigest()
+            base = f'parse_{hash_str}'
+            pdf = f'{base}.pdf'
             if not os.path.exists(pdf):
-                with open('%s.tex' % base, 'wb') as f:
+                with open(f'{base}.tex', 'wb') as f:
                     f.write(latex)
-                os.system('pdflatex -halt-on-error %s.tex >/dev/null' % base)
+                os.system(f'pdflatex -halt-on-error {base}.tex >/dev/null')
             if do_open:
-                os.system('xdg-open %s' % pdf)
+                os.system(f'xdg-open {pdf}')
             return os.path.abspath(pdf)
         finally:
             os.chdir(was)
-    
+
     def toimage(self) -> str | None:
         """Convert parse diagram to PNG image.
-        
+
         Creates a PNG image of the dependency parse diagram.
-        
+
         Returns
         -------
         str | None
             Path to the generated PNG file, or None if generation fails.
         """
         import os
-        
+
         img = self.view(do_open=False)
         if img is not None:
             out = img[:-4] + '.png'
             if not os.path.exists(out):
-                cmd = 'gs -dBATCH -dNOPAUSE -sDEVICE=pngalpha -o %s %s' % (out, img)
+                cmd = f'gs -dBATCH -dNOPAUSE -sDEVICE=pngalpha -o {out} {img}'
                 os.system(cmd)
             return out
         return None

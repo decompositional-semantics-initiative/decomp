@@ -6,50 +6,54 @@ building predicate phrases, and handling predicate-specific phenomena.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from .base import (
-    PredicateRootRule,
+    EnglishSpecific,
     PredConjRule,
+    PredicateRootRule,
     PredPhraseRule,
     SimplifyRule,
-    EnglishSpecific,
 )
 
+
 if TYPE_CHECKING:
-    from ..core.token import Token
     from ..core.predicate import Predicate
+    from ..core.token import Token
     from ..parsing.udparse import DepTriple
 
 
 # predicate root identification rules
 
-class a1(PredicateRootRule):
+class A1(PredicateRootRule):
     """Extract a predicate token from the dependent of clausal relation {ccomp, csub, csubjpass}."""
-    
+
     rule_type = 'predicate_root'
 
 
-class a2(PredicateRootRule):
+class A2(PredicateRootRule):
     """Extract a predicate token from the dependent of clausal complement 'xcomp'."""
-    
+
     rule_type = 'predicate_root'
 
 
-class b(PredicateRootRule):
+class B(PredicateRootRule):
     """Extract a predicate token from the dependent of clausal modifier."""
-    
+
     rule_type = 'predicate_root'
 
 
-class c(PredicateRootRule):
-    """Extract a predicate token from the governor of the relations {nsubj, nsubjpass, dobj, iobj, ccomp, xcomp, advcl}."""
-    
+class C(PredicateRootRule):
+    """Extract a predicate token from the governor of predicate-indicating relations.
+
+    Relations: {nsubj, nsubjpass, dobj, iobj, ccomp, xcomp, advcl}.
+    """
+
     rule_type = 'predicate_root'
-    
+
     def __init__(self, e: DepTriple) -> None:
         """Initialize with the dependency edge that triggered this rule.
-        
+
         Parameters
         ----------
         e : DepTriple
@@ -57,10 +61,10 @@ class c(PredicateRootRule):
         """
         super().__init__()
         self.e = e
-    
+
     def __repr__(self) -> str:
         """Return string representation showing the edge details.
-        
+
         Returns
         -------
         str
@@ -69,38 +73,38 @@ class c(PredicateRootRule):
         return f"add_root({self.e.gov})_for_{self.e.rel}_from_({self.e.dep})"
 
 
-class d(PredicateRootRule):
+class D(PredicateRootRule):
     """Extract a predicate token from the dependent of apposition."""
-    
+
     rule_type = 'predicate_root'
 
 
-class e(PredicateRootRule):
+class E(PredicateRootRule):
     """Extract a predicate token from the dependent of an adjectival modifier."""
-    
+
     rule_type = 'predicate_root'
 
 
-class v(PredicateRootRule):
-    """Extract a predicate token from the dependent of the possessive relation 'nmod:poss' (English specific)."""
-    
+class V(PredicateRootRule):
+    """Extract a predicate token from the dependent of 'nmod:poss' (English specific)."""
+
     rule_type = 'predicate_root'
 
 
-class f(PredicateRootRule):
+class F(PredicateRootRule):
     """Extract a conjunct token of a predicate token."""
-    
+
     rule_type = 'predicate_root'
 
 
 # predicate conjunction resolution rules
 
-class pred_conj_borrow_aux_neg(PredConjRule):
+class PredConjBorrowAuxNeg(PredConjRule):
     """Borrow aux and neg tokens from conjoined predicate's name."""
-    
+
     def __init__(self, friend: Predicate, borrowed_token: Token) -> None:
         """Initialize with the friend predicate and borrowed token.
-        
+
         Parameters
         ----------
         friend : Predicate
@@ -113,12 +117,12 @@ class pred_conj_borrow_aux_neg(PredConjRule):
         self.borrowed_token = borrowed_token
 
 
-class pred_conj_borrow_tokens_xcomp(PredConjRule):
+class PredConjBorrowTokensXcomp(PredConjRule):
     """Borrow tokens from xcomp in a conjunction or predicates."""
-    
+
     def __init__(self, friend: Predicate, borrowed_token: Token) -> None:
         """Initialize with the friend predicate and borrowed token.
-        
+
         Parameters
         ----------
         friend : Predicate
@@ -133,70 +137,90 @@ class pred_conj_borrow_tokens_xcomp(PredConjRule):
 
 # predicate phrase building rules
 
-class n1(PredPhraseRule):
-    """Extract a token from the subtree of the predicate root token, and add it to the predicate phrase."""
+class N1(PredPhraseRule):
+    """Extract a token from the subtree of the predicate root token.
+
+    Adds the token to the predicate phrase.
+    """
+
     pass
 
 
-class n2(PredPhraseRule):
-    """Drop a token, which is an argument root token, from the subtree of the predicate root token."""
+class N2(PredPhraseRule):
+    """Drop a token, which is an argument root token, from the predicate subtree."""
+
     pass
 
 
-class n3(PredPhraseRule):
-    """Drop a token, which is another predicate root token, from the subtree of the predicate root token."""
+class N3(PredPhraseRule):
+    """Drop a token, which is another predicate root token, from the predicate subtree."""
+
     pass
 
 
-class n4(PredPhraseRule):
-    """Drop a token, which is the dependent of the relations set {ccomp, csubj, advcl, acl, acl:relcl, nmod:tmod, parataxis, appos, dep}, from the subtree of the predicate root token."""
+class N4(PredPhraseRule):
+    """Drop a token which is a dependent of specific relations from the predicate subtree.
+
+    Relations: {ccomp, csubj, advcl, acl, acl:relcl, nmod:tmod, parataxis, appos, dep}.
+    """
+
     pass
 
 
-class n5(PredPhraseRule):
-    """Drop a token, which is a conjunct of the predicate root token or a conjunct of a xcomp's dependent token, from the subtree of the predicate root token."""
+class N5(PredPhraseRule):
+    """Drop a conjunct token from the predicate subtree.
+
+    Drops conjuncts of the predicate root token or conjuncts of a xcomp's dependent token.
+    """
+
     pass
 
 
-class n6(PredPhraseRule):
+class N6(PredPhraseRule):
     """Add a case phrase to the predicate phrase."""
+
     pass
 
 
 # simplification rules for predicates
 
-class p1(SimplifyRule):
+class P1(SimplifyRule):
     """Remove a non-core argument, a nominal modifier, from the predpatt."""
+
     pass
 
 
-class p2(SimplifyRule):
+class P2(SimplifyRule):
     """Remove an argument of other type from the predpatt."""
+
     pass
 
 
-class q(SimplifyRule):
+class Q(SimplifyRule):
     """Remove an adverbial modifier in the predicate phrase."""
+
     pass
 
 
-class r(SimplifyRule):
+class R(SimplifyRule):
     """Remove auxiliary in the predicate phrase."""
+
     pass
 
 
 # utility rules
 
-class u(SimplifyRule):
+class U(SimplifyRule):
     """Strip the punct in the phrase."""
+
     pass
 
 
 # english-specific rules
 
-class en_relcl_dummy_arg_filter(EnglishSpecific):
+class EnRelclDummyArgFilter(EnglishSpecific):
     """Filter out dummy arguments in English relative clauses."""
-    
+
     def __init__(self) -> None:
         """Initialize the English relative clause filter."""
         super().__init__()

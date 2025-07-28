@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from ..core.argument import Argument
     from ..core.predicate import Predicate
@@ -16,14 +17,14 @@ if TYPE_CHECKING:
 
 def isSbjOrObj(arg: Argument) -> bool:
     """Filter to accept core arguments (subjects and objects).
-    
+
     Accepts arguments with core grammatical relations: nsubj, dobj, iobj.
-    
+
     Parameters
     ----------
     arg : Argument
         The argument to check.
-        
+
     Returns
     -------
     bool
@@ -38,15 +39,15 @@ def isSbjOrObj(arg: Argument) -> bool:
 
 def isNotPronoun(arg: Argument) -> bool:
     """Filter out pronoun arguments.
-    
+
     Excludes arguments that are pronouns (PRP tag) or specific
     pronoun-like words: that, this, which, what.
-    
+
     Parameters
     ----------
     arg : Argument
         The argument to check.
-        
+
     Returns
     -------
     bool
@@ -64,17 +65,17 @@ def isNotPronoun(arg: Argument) -> bool:
 
 def has_direct_arc(pred: Predicate, arg: Argument) -> bool:
     """Check if the argument and predicate has a direct arc.
-    
+
     Verifies that the argument root token is directly governed
     by the predicate root token.
-    
+
     Parameters
     ----------
     pred : Predicate
         The predicate.
     arg : Argument
         The argument to check.
-        
+
     Returns
     -------
     bool

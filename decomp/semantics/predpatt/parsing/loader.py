@@ -7,20 +7,21 @@ particularly focusing on CoNLL-U format files.
 
 from __future__ import annotations
 
-import os
 import codecs
+import os
 from collections import namedtuple
-from typing import Iterator, Any
+from collections.abc import Iterator
+from typing import Any
 
 from ..parsing.udparse import UDParse
 
 
 class DepTriple(namedtuple('DepTriple', 'rel gov dep')):
     """Dependency triple for use within the loader.
-    
+
     Note: This is a separate DepTriple from the one in udparse.py.
     The loader creates its own instances for internal use.
-    
+
     Attributes
     ----------
     rel : str
@@ -30,22 +31,25 @@ class DepTriple(namedtuple('DepTriple', 'rel gov dep')):
     dep : int
         The dependent token index.
     """
-    
+
     def __repr__(self) -> str:
         """Return string representation in format rel(dep,gov)."""
-        return '%s(%s,%s)' % (self.rel, self.dep, self.gov)
+        return f'{self.rel}({self.dep},{self.gov})'
 
 
-def load_comm(filename: str, tool: str = 'ud converted ptb trees using pyStanfordDependencies') -> Iterator[tuple[str, UDParse]]:
+def load_comm(
+    filename: str,
+    tool: str = 'ud converted ptb trees using pyStanfordDependencies'
+) -> Iterator[tuple[str, UDParse]]:
     """Load a concrete communication file with required pyStanfordDependencies output.
-    
+
     Parameters
     ----------
     filename : str
         Path to the concrete communication file.
     tool : str, optional
         The tool name to look for in the dependency parse metadata.
-        
+
     Yields
     ------
     tuple[str, UDParse]
@@ -63,17 +67,17 @@ def load_comm(filename: str, tool: str = 'ud converted ptb trees using pyStanfor
 
 def load_conllu(filename_or_content: str) -> Iterator[tuple[str, UDParse]]:
     """Load CoNLL-U style files (e.g., the Universal Dependencies treebank).
-    
+
     Parameters
     ----------
     filename_or_content : str
         Either a path to a CoNLL-U file or the content string itself.
-        
+
     Yields
     ------
     tuple[str, UDParse]
         Tuples of (sentence_id, parse) for each sentence in the file.
-        
+
     Notes
     -----
     - Sentence IDs default to "sent_N" where N starts at 1
@@ -102,7 +106,7 @@ def load_conllu(filename_or_content: str) -> Iterator[tuple[str, UDParse]]:
         if not block:
             continue
         lines = []
-        sent_id = 'sent_%s' % sent_num
+        sent_id = f'sent_{sent_num}'
         has_sent_id = 0
         for line in block.split('\n'):
             if line.startswith('#'):
@@ -118,8 +122,11 @@ def load_conllu(filename_or_content: str) -> Iterator[tuple[str, UDParse]]:
                 continue
             assert len(line) == 10, line
             lines.append(line)
-        [_, tokens, _, tags, _, _, gov, gov_rel, _, _] = list(zip(*lines))
-        triples = [DepTriple(rel, int(gov)-1, dep) for dep, (rel, gov) in enumerate(zip(gov_rel, gov))]
+        [_, tokens, _, tags, _, _, gov, gov_rel, _, _] = list(zip(*lines, strict=False))
+        triples = [
+            DepTriple(rel, int(gov)-1, dep)
+            for dep, (rel, gov) in enumerate(zip(gov_rel, gov, strict=False))
+        ]
         parse = UDParse(list(tokens), tags, triples)
         yield sent_id, parse
         sent_num += 1
@@ -127,14 +134,14 @@ def load_conllu(filename_or_content: str) -> Iterator[tuple[str, UDParse]]:
 
 def get_tags(tokenization: Any, tagging_type: str = 'POS') -> list[str]:
     """Extract tags of a specific type from a tokenization.
-    
+
     Parameters
     ----------
     tokenization : Tokenization
         A Concrete tokenization object.
     tagging_type : str, optional
         The type of tagging to extract (default: 'POS').
-        
+
     Returns
     -------
     list[str]
@@ -149,14 +156,14 @@ def get_tags(tokenization: Any, tagging_type: str = 'POS') -> list[str]:
 
 def get_udparse(sent: Any, tool: str) -> UDParse:
     """Create a ``UDParse`` from a sentence extracted from a Communication.
-    
+
     Parameters
     ----------
     sent : Sentence
         A Concrete Sentence object.
     tool : str
         The tool name to look for in dependency parse metadata.
-        
+
     Returns
     -------
     UDParse

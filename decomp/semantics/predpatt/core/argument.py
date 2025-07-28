@@ -8,11 +8,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from ..util.ud import dep_v1
+from ..utils.ud_schema import dep_v1
 from .token import Token
 
+
 if TYPE_CHECKING:
-    from .. import rules as R
+    pass
 
 
 def sort_by_position(x: list[Any]) -> list[Any]:
@@ -57,13 +58,14 @@ class Argument:
         root: Token,
         ud: Any = dep_v1,
         rules: list[Any] = [],  # NOTE: Mutable default to match original
-                               # TODO: Change to None after PredPatt integration is complete
-                               #       This mutable default is intentional to perfectly replicate
-                               #       PredPatt's behavior, including its quirks
+                               # WARNING: This mutable default is INTENTIONAL and REQUIRED
+                               #          for exact compatibility with original PredPatt.
+                               #          Instances share the same list when rules is not provided.
+                               #          DO NOT CHANGE to None - this would break compatibility!
         share: bool = False
     ) -> None:
         """Initialize an Argument.
-        
+
         Parameters
         ----------
         root : Token
@@ -86,20 +88,20 @@ class Argument:
 
     def __repr__(self) -> str:
         """Return string representation.
-        
+
         Returns
         -------
         str
             String in format 'Argument(root)'.
         """
-        return 'Argument(%s)' % self.root
+        return f'Argument({self.root})'
 
     def copy(self) -> Argument:
         """Create a copy of this argument.
-        
+
         Creates a new Argument with the same root and copied lists
         for rules and tokens. The share flag is not copied.
-        
+
         Returns
         -------
         Argument
@@ -111,10 +113,10 @@ class Argument:
 
     def reference(self) -> Argument:
         """Create a reference (shared) copy of this argument.
-        
+
         Creates a new Argument marked as shared (share=True) with
         the same tokens list (not copied). Used for borrowed arguments.
-        
+
         Returns
         -------
         Argument
@@ -127,7 +129,7 @@ class Argument:
 
     def is_reference(self) -> bool:
         """Check if this is a reference (shared) argument.
-        
+
         Returns
         -------
         bool
@@ -137,7 +139,7 @@ class Argument:
 
     def isclausal(self) -> bool:
         """Check if this is a clausal argument.
-        
+
         Clausal arguments are those with governor relations indicating
         embedded clauses: ccomp, csubj, csubjpass, or xcomp.
 
@@ -151,7 +153,7 @@ class Argument:
 
     def phrase(self) -> str:
         """Get the argument phrase.
-        
+
         Joins the text of all tokens in the argument with spaces.
         The tokens are joined in the order they appear in the tokens list,
         which may be sorted by position during phrase extraction.
@@ -165,10 +167,10 @@ class Argument:
 
     def coords(self) -> list[Argument]:
         """Get coordinated arguments including this one.
-        
+
         Expands coordinated structures by finding conjunct dependents
         of the root token. Does not expand ccomp or csubj arguments.
-        
+
         Returns
         -------
         list[Argument]
@@ -176,8 +178,8 @@ class Argument:
             sorted by position.
         """
         # import here to avoid circular dependency
-        from .. import rules as R
-        
+        from .. import rules as R  # noqa: N812
+
         coords = [self]
         # don't consider the conjuncts of ccomp, csubj and amod
         if self.root.gov_rel not in {self.ud.ccomp, self.ud.csubj}:

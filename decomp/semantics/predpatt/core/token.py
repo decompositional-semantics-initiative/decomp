@@ -7,19 +7,22 @@ original PredPatt implementation.
 """
 
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
-from ..util.ud import dep_v1, postag
+from ..utils.ud_schema import dep_v1, postag
+
 
 if TYPE_CHECKING:
     from typing import Any
-    from ..UDParse import DepTriple
+
+    from ..parsing.udparse import DepTriple
 
 
 class Token:
     """
     Represents a single token in a dependency parse.
-    
+
     Attributes
     ----------
     position : int
@@ -41,11 +44,11 @@ class Token:
         The Universal Dependencies module (dep_v1 or dep_v2) that defines
         relation types and constants.
     """
-    
+
     def __init__(self, position: int, text: str, tag: str, ud: Any = dep_v1) -> None:
         """
         Initialize a Token.
-        
+
         Parameters
         ----------
         position : int
@@ -65,55 +68,55 @@ class Token:
         self.gov: Token | None = None
         self.gov_rel: str | None = None
         self.ud: Any = ud
-    
+
     def __repr__(self) -> str:
         """
         Return string representation of the token.
-        
+
         Returns
         -------
         str
             String in format 'text/position'.
         """
         return f'{self.text}/{self.position}'
-    
+
     @property
     def isword(self) -> bool:
         """
         Check if the token is not punctuation.
-        
+
         Returns
         -------
         bool
             True if the token is not punctuation, False otherwise.
         """
         return self.tag != postag.PUNCT
-    
+
     def argument_like(self) -> bool:
         """
         Check if this token looks like the root of an argument.
-        
+
         Returns
         -------
         bool
             True if the token's gov_rel is in ARG_LIKE relations.
         """
         return self.gov_rel in self.ud.ARG_LIKE
-    
+
     def hard_to_find_arguments(self) -> bool:
         """
         Check if this is potentially the root of a predicate with hard-to-find arguments.
-        
+
         This func is only called when one of its dependents is an easy
         predicate. Here, we're checking:
         Is this potentially the root of an easy predicate, which will have an
         argment?
-        
+
         Returns
         -------
         bool
             True if this could be a predicate root with hard-to-find arguments.
-            
+
         Notes
         -----
         The original implementation has a typo in the docstring ("argment").
@@ -123,7 +126,8 @@ class Token:
         # There is nothing wrong with a negotiation,
         # but nothing helpful about generating one that is just for show .
         #        ^      ^              ^
-        #        --amod--       (a easy predicate, dependent of "helpful" which is hard_to_find_arguments)
+        #        --amod--       (a easy predicate, dependent of "helpful"
+        #                       which is hard_to_find_arguments)
         for e in self.dependents:
             if e.rel in self.ud.SUBJ or e.rel in self.ud.OBJ:
                 return False

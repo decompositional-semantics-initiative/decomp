@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from ..core.predicate import Predicate
     from ..parsing.udparse import UDParse
@@ -16,15 +17,15 @@ if TYPE_CHECKING:
 
 def isNotInterrogative(pred: Predicate) -> bool:
     """Filter out interrogative predicates.
-    
+
     Checks if the predicate contains a question mark. This is a simple
     heuristic filter to exclude interrogative sentences.
-    
+
     Parameters
     ----------
     pred : Predicate
         The predicate to check.
-        
+
     Returns
     -------
     bool
@@ -41,15 +42,15 @@ def isNotInterrogative(pred: Predicate) -> bool:
 
 def isPredVerb(pred: Predicate) -> bool:
     """Filter to accept only verbal predicates.
-    
+
     Checks if the predicate root has a verbal part-of-speech tag
     (starts with 'V').
-    
+
     Parameters
     ----------
     pred : Predicate
         The predicate to check.
-        
+
     Returns
     -------
     bool
@@ -64,7 +65,7 @@ def isPredVerb(pred: Predicate) -> bool:
 
 def isNotCopula(pred: Predicate) -> bool:
     """Filter out copula constructions.
-    
+
     Checks if any of the dependents of pred are copula verbs.
     UD annotates copula verbs only when the nonverbal predicate
     is the head of the clause.
@@ -83,7 +84,7 @@ def isNotCopula(pred: Predicate) -> bool:
 
     pred_deps_rel = [p.rel for p in pred.root.dependents]
     pred_deps_txt = [p.dep.text for p in pred.root.dependents]
-    if u'cop' in pred_deps_rel:
+    if 'cop' in pred_deps_rel:
         return False
     # just in case for parsing error (from Stanford Parser)
     if set(pred_deps_txt).intersection(set(copula_verbs)):
@@ -96,16 +97,16 @@ def isNotCopula(pred: Predicate) -> bool:
 
 def isGoodAncestor(pred: Predicate) -> bool:
     """Filter predicates with good ancestry.
-    
+
     Returns true if verb is not dominated by a relation
     that might alter its veridicality. This filter is very
     conservative; many veridical verbs will be excluded.
-    
+
     Parameters
     ----------
     pred : Predicate
         The predicate to check.
-        
+
     Returns
     -------
     bool
@@ -120,7 +121,7 @@ def isGoodAncestor(pred: Predicate) -> bool:
                       "acl:relcl", "case", "conj", "parataxis", "csubj",
                       "compound", "nmod"}
     pointer = pred.root # index of predicate
-    while pointer.gov_rel != u'root':
+    while pointer.gov_rel != 'root':
         if pointer.gov_rel in embedding_deps:
             return False
         # Replace pointer with its head
@@ -132,16 +133,16 @@ def isGoodAncestor(pred: Predicate) -> bool:
 
 def isGoodDescendants(pred: Predicate) -> bool:
     """Filter predicates with good descendants.
-    
+
     Returns true if verb immediately dominates a relation that might alter
     its veridicality. This filter is very
     conservative; many veridical verbs will be excluded.
-    
+
     Parameters
     ----------
     pred : Predicate
         The predicate to check.
-        
+
     Returns
     -------
     bool
@@ -160,17 +161,17 @@ def isGoodDescendants(pred: Predicate) -> bool:
 
 def hasSubj(pred: Predicate, passive: bool = False) -> bool:
     """Filter predicates that have subjects.
-    
+
     Checks if the predicate has a subject dependent. Optionally
     includes passive subjects (nsubjpass) when passive=True.
-    
+
     Parameters
     ----------
     pred : Predicate
         The predicate to check.
     passive : bool, optional
         Whether to include passive subjects (nsubjpass). Default: False.
-        
+
     Returns
     -------
     bool
@@ -190,14 +191,14 @@ def hasSubj(pred: Predicate, passive: bool = False) -> bool:
 
 def isNotHave(pred: Predicate) -> bool:
     """Filter out 'have' verbs.
-    
+
     Excludes predicates with 'have', 'had', or 'has' as the root text.
-    
+
     Parameters
     ----------
     pred : Predicate
         The predicate to check.
-        
+
     Returns
     -------
     bool
@@ -214,17 +215,17 @@ def isNotHave(pred: Predicate) -> bool:
 
 def filter_events_NUCL(event: Predicate, parse: UDParse) -> bool:
     """Filters for running Keisuke's NUCLE HIT.
-    
+
     Combines multiple predicate filters for the NUCL evaluation.
     Only applies if the parse is not interrogative.
-    
+
     Parameters
     ----------
     event : Predicate
         The predicate event to filter.
     parse : UDParse
         The dependency parse (used for interrogative check).
-        
+
     Returns
     -------
     bool
@@ -244,17 +245,17 @@ def filter_events_NUCL(event: Predicate, parse: UDParse) -> bool:
 
 def filter_events_SPRL(event: Predicate, parse: UDParse) -> bool:
     """Filters for running UD SPRL HIT.
-    
+
     Combines multiple predicate filters for the SPRL evaluation.
     Only applies if the parse is not interrogative.
-    
+
     Parameters
     ----------
     event : Predicate
         The predicate event to filter.
     parse : UDParse
         The dependency parse (used for interrogative check).
-        
+
     Returns
     -------
     bool
@@ -265,7 +266,8 @@ def filter_events_SPRL(event: Predicate, parse: UDParse) -> bool:
                                       isGoodAncestor,
                                       isGoodDescendants,
                                       lambda p: hasSubj(p, passive=True), #(including nsubjpass)
-                                      #good_morphology, (documented below; depends on full UD/CoNLLU schema)
+                                      # good_morphology, (documented below;
+                                      # depends on full UD/CoNLLU schema)
                                       # isSbjOrObj, #(including nsubjpass)
                                       #is_expletive,
                                   ))
@@ -273,18 +275,18 @@ def filter_events_SPRL(event: Predicate, parse: UDParse) -> bool:
 
 def activate(pred: Predicate) -> None:
     """Apply all predicate and argument filters to a predicate.
-    
+
     Demonstrates how to apply all available filters to a predicate
     and its arguments. Initializes empty rules lists before applying.
-    
+
     Parameters
     ----------
     pred : Predicate
         The predicate to apply all filters to.
     """
     # Import here to avoid circular dependency
-    from .argument_filters import isSbjOrObj, isNotPronoun, has_direct_arc
-    
+    from .argument_filters import has_direct_arc, isNotPronoun, isSbjOrObj
+
     pred.rules = []
     isNotInterrogative(pred)
     isPredVerb(pred)
@@ -302,10 +304,10 @@ def activate(pred: Predicate) -> None:
 
 def apply_filters(_filter, pred: Predicate, **options) -> bool:
     """Apply a filter function with proper parameter handling.
-    
+
     Handles different filter function signatures and parameter requirements.
     Supports both predicate filters and argument filters.
-    
+
     Parameters
     ----------
     _filter : callable
@@ -314,27 +316,21 @@ def apply_filters(_filter, pred: Predicate, **options) -> bool:
         The predicate to filter.
     **options
         Additional options for the filter (e.g., passive for hasSubj).
-        
+
     Returns
     -------
     bool
         True if filter accepts the predicate/arguments, False otherwise.
     """
     # Import here to avoid circular dependency
-    from .argument_filters import isSbjOrObj, isNotPronoun, has_direct_arc
-    
+    from .argument_filters import has_direct_arc, isNotPronoun, isSbjOrObj
+
     if _filter in {isSbjOrObj, isNotPronoun}:
-        for arg in pred.arguments:
-            if _filter(arg):
-                return True
-        return False
+        return any(_filter(arg) for arg in pred.arguments)
     elif _filter ==  has_direct_arc:
-        for arg in pred.arguments:
-            if _filter(pred, arg):
-                return True
-        return False
+        return any(_filter(pred, arg) for arg in pred.arguments)
     elif _filter == hasSubj:
-        passive = options.get('passive', None)
+        passive = options.get('passive')
         if passive:
             return _filter(pred, passive)
         else:

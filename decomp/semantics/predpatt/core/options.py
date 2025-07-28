@@ -8,16 +8,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
-    from ..util import ud as ud_module
+    pass
 
 
 class PredPattOpts:
     """Configuration options for PredPatt extraction.
-    
+
     Controls various aspects of predicate-argument extraction including
     simplification, resolution of special constructions, and formatting.
-    
+
     Parameters
     ----------
     simple : bool, optional
@@ -42,7 +43,7 @@ class PredPattOpts:
         Strip leading/trailing punctuation from phrases. Default: True.
     ud : str, optional
         Universal Dependencies version ("1.0" or "2.0"). Default: "1.0".
-        
+
     Attributes
     ----------
     simple : bool
@@ -68,7 +69,7 @@ class PredPattOpts:
     ud : str
         Universal Dependencies version string.
     """
-    
+
     def __init__(
         self,
         simple: bool = False,
@@ -84,7 +85,7 @@ class PredPattOpts:
         ud: str = "1.0"  # dep_v1.VERSION
     ) -> None:
         """Initialize PredPattOpts with configuration values.
-        
+
         Parameters are assigned in the exact same order as the original
         to ensure identical behavior and initialization.
         """
@@ -99,8 +100,8 @@ class PredPattOpts:
         self.big_args = big_args
         self.strip = strip
         self.borrow_arg_for_relcl = borrow_arg_for_relcl
-        
+
         # validation logic - must be exactly "1.0" or "2.0"
         assert str(ud) in {"1.0", "2.0"}, (
-            'the ud version "%s" is not in {"1.0", "2.0"}' % str(ud))
+            f'the ud version "{ud!s}" is not in {{"1.0", "2.0"}}')
         self.ud = str(ud)

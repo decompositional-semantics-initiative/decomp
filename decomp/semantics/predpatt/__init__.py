@@ -1,15 +1,27 @@
 # pylint: disable=W0221
 # pylint: disable=R0903
 # pylint: disable=R1704
-"""Module for converting PredPatt objects to networkx digraphs"""
+"""Module for converting PredPatt objects to networkx digraphs."""
 
+from __future__ import annotations
+
+from collections.abc import Hashable
 from os.path import basename, splitext
-from typing import Hashable, TextIO
+from typing import TextIO
+
 from networkx import DiGraph
-from .util.load import load_conllu
-from .patt import PredPatt, PredPattOpts
+
 from ...corpus import Corpus
 from ...syntax.dependency import CoNLLDependencyTreeCorpus
+from .core.argument import Argument
+from .core.options import PredPattOpts
+from .core.predicate import Predicate
+from .core.token import Token
+from .extraction.engine import PredPattEngine as PredPatt
+
+# Import from modernized modules
+from .parsing.loader import load_comm, load_conllu
+
 
 DEFAULT_PREDPATT_OPTIONS = PredPattOpts(resolve_relcl=True,
                                         borrow_arg_for_relcl=True,
@@ -18,12 +30,13 @@ DEFAULT_PREDPATT_OPTIONS = PredPattOpts(resolve_relcl=True,
 
 
 class PredPattCorpus(Corpus):
-    """Container for predpatt graphs"""
+    """Container for predpatt graphs."""
 
     def _graphbuilder(self,
                       graphid: Hashable,
                       predpatt_depgraph: tuple[PredPatt, DiGraph]) -> DiGraph:
-        """
+        """Build graph from predpatt and dependency graph.
+
         Parameters
         ----------
         treeid
@@ -32,7 +45,6 @@ class PredPattCorpus(Corpus):
             a pairing of the predpatt for a dependency parse and the graph
             representing that dependency parse
         """
-
         predpatt, depgraph = predpatt_depgraph
 
         return PredPattGraphBuilder.from_predpatt(predpatt, depgraph, graphid)
@@ -41,8 +53,8 @@ class PredPattCorpus(Corpus):
     def from_conll(cls,
                    corpus: str | TextIO,
                    name: str = 'ewt',
-                   options: PredPattOpts | None = None) -> 'PredPattCorpus':
-        """Load a CoNLL dependency corpus and apply predpatt
+                   options: PredPattOpts | None = None) -> PredPattCorpus:
+        """Load a CoNLL dependency corpus and apply predpatt.
 
         Parameters
         ----------
@@ -53,7 +65,6 @@ class PredPattCorpus(Corpus):
         options
             options for predpatt extraction
         """
-
         options = DEFAULT_PREDPATT_OPTIONS if options is None else options
 
         corp_is_str = isinstance(corpus, str)
@@ -88,21 +99,21 @@ class PredPattCorpus(Corpus):
                      ' incompatible with PredPatt. Use of version 1.2 is' +\
                      ' suggested.'
 
-            raise ValueError(errmsg)
-            
+            raise ValueError(errmsg) from None
+
         return cls({n: (pp, ud_corp[n])
                     for n, pp in predpatt.items()})
 
 
 class PredPattGraphBuilder:
-    """A predpatt graph builder"""
+    """A predpatt graph builder."""
 
     @classmethod
     def from_predpatt(cls,
                       predpatt: PredPatt,
                       depgraph: DiGraph,
                       graphid: str = '') -> DiGraph:
-        """Build a DiGraph from a PredPatt object and another DiGraph
+        """Build a DiGraph from a PredPatt object and another DiGraph.
 
         Parameters
         ----------
@@ -197,16 +208,18 @@ class PredPattGraphBuilder:
             child_id_pred = graphid +\
                             'semantics-pred-' +\
                             str(child_node.position+1)
-            return [(parent_id,
-                     child_id,
-                     {'domain': 'semantics',
-                      'type': 'dependency',
-                      'frompredpatt': True})] +\
-                   [(child_id,
-                     child_id_pred,
-                     {'domain': 'semantics',
-                      'type': 'head',
-                      'frompredpatt': True})]
+            return [
+                (parent_id, child_id, {
+                    'domain': 'semantics',
+                    'type': 'dependency',
+                    'frompredpatt': True
+                }),
+                (child_id, child_id_pred, {
+                    'domain': 'semantics',
+                    'type': 'head',
+                    'frompredpatt': True
+                })
+            ]
 
         return [(parent_id,
                  child_id,

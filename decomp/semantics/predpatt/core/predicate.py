@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from ..util.ud import dep_v1
+from ..utils.ud_schema import dep_v1, postag
 from .token import Token
+
 
 if TYPE_CHECKING:
     from .argument import Argument
@@ -48,7 +49,7 @@ def argument_names(args: list[Any]) -> dict[Any, str]:
     name = {}
     for i, arg in enumerate(args):
         c = i // 26 if i >= 26 else ''
-        name[arg] = '?%s%s' % (chr(97+(i % 26)), c)
+        name[arg] = f'?{chr(97+(i % 26))}{c}'
     return name
 
 
@@ -57,7 +58,9 @@ def sort_by_position(x: list[Any]) -> list[Any]:
     return list(sorted(x, key=lambda y: y.position))
 
 
-no_color = lambda x, _: x
+def no_color(x, _):
+    """Identity function for when color is disabled."""
+    return x
 
 
 class Predicate:
@@ -137,74 +140,9 @@ class Predicate:
         str
             Identifier in format 'pred.{type}.{position}.{arg_positions}'.
         """
-        return 'pred.%s.%s.%s' % (
-            self.type,
-            self.position,
-            '.'.join(str(a.position) for a in self.arguments)
-        )
+        arg_positions = '.'.join(str(a.position) for a in self.arguments)
+        return f'pred.{self.type}.{self.position}.{arg_positions}'
 
-    def has_subj(self) -> bool:
-        """Check if predicate has a subject argument.
-        
-        Returns
-        -------
-        bool
-            True if predicate has a subject argument.
-        """
-        return any(arg.root.gov_rel in self.ud.SUBJ for arg in self.arguments)
-    
-    def subj(self):
-        """Get the subject argument of this predicate.
-        
-        Returns
-        -------
-        Argument | None
-            The subject argument or None if no subject.
-        """
-        for arg in self.arguments:
-            if arg.root.gov_rel in self.ud.SUBJ:
-                return arg
-        return None
-    
-    def has_obj(self) -> bool:
-        """Check if predicate has an object argument.
-        
-        Returns
-        -------
-        bool
-            True if predicate has an object argument.
-        """
-        return any(arg.root.gov_rel in self.ud.OBJ for arg in self.arguments)
-    
-    def obj(self):
-        """Get the object argument of this predicate.
-        
-        Returns
-        -------
-        Argument | None
-            The object argument or None if no object.
-        """
-        for arg in self.arguments:
-            if arg.root.gov_rel in self.ud.OBJ:
-                return arg
-        return None
-    
-    def share_subj(self, other) -> bool:
-        """Check if this predicate shares a subject with another predicate.
-        
-        Parameters
-        ----------
-        other : Predicate
-            The other predicate to compare with.
-            
-        Returns
-        -------
-        bool
-            True if both predicates have subjects at the same position.
-        """
-        subj = self.subj()
-        other_subj = other.subj()
-        return subj and other_subj and subj.position == other_subj.position
 
     def has_token(self, token: Token) -> bool:
         """Check if predicate contains a token at given position.
@@ -278,7 +216,7 @@ class Predicate:
         Returns
         -------
         bool | None
-            True if both have subjects at same position, 
+            True if both have subjects at same position,
             None if either lacks a subject.
         """
         subj = self.subj()
@@ -343,7 +281,7 @@ class Predicate:
         if self.type == POSS:
             # possessive format: "?a 's ?b"
             assert len(self.arguments) == 2
-            return '%s %s %s' % (name[self.arguments[0]], self.type, name[self.arguments[1]])
+            return f'{name[self.arguments[0]]} {self.type} {name[self.arguments[1]]}'
 
         elif self.type in {APPOS, AMOD}:
             # appositive/adjectival format: "?a is/are [rest]"
@@ -353,7 +291,7 @@ class Predicate:
                 if a.root == self.root.gov:
                     gov_arg = a
                     break
-            
+
             if gov_arg:
                 # format: gov_arg is/are other_tokens_and_args
                 rest = []
@@ -364,7 +302,8 @@ class Predicate:
                         rest.append(name[item])
                     else:
                         rest.append(item.text)
-                return '%s is/are %s' % (name[gov_arg], ' '.join(rest))
+                rest_str = ' '.join(rest)
+                return f'{name[gov_arg]} is/are {rest_str}'
             else:
                 # fallback if no governor argument found
                 return ' '.join(name[item] if item in self.arguments else item.text for item in X)
@@ -372,10 +311,10 @@ class Predicate:
         else:
             # normal predicate or xcomp special case
             result = []
-            
+
             # check for xcomp with non-VERB/ADJ
-            if (self.root.gov_rel == self.ud.xcomp and 
-                self.root.tag not in {self.ud.VERB, self.ud.ADJ}):
+            if (self.root.gov_rel == self.ud.xcomp and
+                self.root.tag not in {postag.VERB, postag.ADJ}):
                 # add is/are after first argument
                 first_arg_added = False
                 for item in X:
@@ -393,7 +332,7 @@ class Predicate:
                         result.append(name[item])
                     else:
                         result.append(item.text)
-            
+
             return ' '.join(result)
 
     def format(
@@ -422,15 +361,12 @@ class Predicate:
         lines = []
         verbose = ''
         if track_rule:
-            verbose = ' ' + C('[%s-%s,%s]' % (
-                self.root.text,
-                self.root.gov_rel,
-                ','.join(sorted(map(str, self.rules)))
-            ), 'magenta')
-        
+            rules_str = ','.join(sorted(map(str, self.rules)))
+            verbose = ' ' + C(f'[{self.root.text}-{self.root.gov_rel},{rules_str}]', 'magenta')
+
         pred_str = self._format_predicate(argument_names(self.arguments), C)
         lines.append(f'{indent}{pred_str}{verbose}')
-        
+
         # format arguments
         name = argument_names(self.arguments)
         for arg in self.arguments:
@@ -441,13 +377,12 @@ class Predicate:
                 s = C(arg.phrase(), 'green')
             rule = ''
             if track_rule:
-                rule = ',%s' % ','.join(sorted(map(str, arg.rules)))
-                verbose = C(' [%s-%s%s]' % (arg.root.text,
-                                             arg.root.gov_rel, rule),
+                rules_str = ','.join(sorted(map(str, arg.rules)))
+                rule = f',{rules_str}'
+                verbose = C(f' [{arg.root.text}-{arg.root.gov_rel}{rule}]',
                             'magenta')
             else:
                 verbose = ''
-            lines.append('%s%s: %s%s'
-                         % (indent*2, name[arg], s, verbose))
-        
+            lines.append(f'{indent*2}{name[arg]}: {s}{verbose}')
+
         return '\n'.join(lines)

@@ -4,41 +4,37 @@ This module provides filtering functions to select or exclude predicates
 and arguments based on various linguistic and structural criteria.
 """
 
+from .argument_filters import has_direct_arc, isNotPronoun, isSbjOrObj
 from .predicate_filters import (
-    isNotInterrogative,
-    isPredVerb, 
-    isNotCopula,
-    isGoodAncestor,
-    isGoodDescendants,
-    hasSubj,
-    isNotHave,
+    activate,
+    apply_filters,
     filter_events_NUCL,
     filter_events_SPRL,
-    activate,
-    apply_filters
+    hasSubj,
+    isGoodAncestor,
+    isGoodDescendants,
+    isNotCopula,
+    isNotHave,
+    isNotInterrogative,
+    isPredVerb,
 )
 
-from .argument_filters import (
-    isSbjOrObj,
-    isNotPronoun,
-    has_direct_arc
-)
 
 __all__ = [
-    # Predicate filters
-    "isNotInterrogative",
-    "isPredVerb",
-    "isNotCopula", 
-    "isGoodAncestor",
-    "isGoodDescendants",
-    "hasSubj",
-    "isNotHave",
-    "filter_events_NUCL",
-    "filter_events_SPRL",
     "activate",
     "apply_filters",
-    # Argument filters
-    "isSbjOrObj",
+    "filter_events_NUCL",
+    "filter_events_SPRL",
+    "hasSubj",
+    "has_direct_arc",
+    "isGoodAncestor",
+    "isGoodDescendants",
+    "isNotCopula",
+    "isNotHave",
+    # Predicate filters
+    "isNotInterrogative",
     "isNotPronoun",
-    "has_direct_arc"
+    "isPredVerb",
+    # Argument filters
+    "isSbjOrObj"
 ]
