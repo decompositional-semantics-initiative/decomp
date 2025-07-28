@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from ..parsing.udparse import UDParse
 
 
-def isNotInterrogative(pred: Predicate) -> bool:
+def is_not_interrogative(pred: Predicate) -> bool:
     """Filter out interrogative predicates.
 
     Checks if the predicate contains a question mark. This is a simple
@@ -35,12 +35,12 @@ def isNotInterrogative(pred: Predicate) -> bool:
     tokens = pred.tokens
     if '?' not in tokens:
         filter_rules = getattr(pred, 'rules', [])
-        filter_rules.append(isNotInterrogative.__name__)
+        filter_rules.append(is_not_interrogative.__name__)
         return True
     return False
 
 
-def isPredVerb(pred: Predicate) -> bool:
+def is_pred_verb(pred: Predicate) -> bool:
     """Filter to accept only verbal predicates.
 
     Checks if the predicate root has a verbal part-of-speech tag
@@ -59,11 +59,11 @@ def isPredVerb(pred: Predicate) -> bool:
     if not pred.root.tag.startswith('V'):
         return False
     filter_rules = getattr(pred, 'rules', [])
-    filter_rules.append(isPredVerb.__name__)
+    filter_rules.append(is_pred_verb.__name__)
     return True
 
 
-def isNotCopula(pred: Predicate) -> bool:
+def is_not_copula(pred: Predicate) -> bool:
     """Filter out copula constructions.
 
     Checks if any of the dependents of pred are copula verbs.
@@ -91,11 +91,11 @@ def isNotCopula(pred: Predicate) -> bool:
         return False
     else:
         filter_rules = getattr(pred, 'rules', [])
-        filter_rules.append(isNotCopula.__name__)
+        filter_rules.append(is_not_copula.__name__)
         return True
 
 
-def isGoodAncestor(pred: Predicate) -> bool:
+def is_good_ancestor(pred: Predicate) -> bool:
     """Filter predicates with good ancestry.
 
     Returns true if verb is not dominated by a relation
@@ -127,11 +127,11 @@ def isGoodAncestor(pred: Predicate) -> bool:
         # Replace pointer with its head
         pointer = pointer.gov
     filter_rules = getattr(pred, 'rules', [])
-    filter_rules.append(isGoodAncestor.__name__)
+    filter_rules.append(is_good_ancestor.__name__)
     return True
 
 
-def isGoodDescendants(pred: Predicate) -> bool:
+def is_good_descendants(pred: Predicate) -> bool:
     """Filter predicates with good descendants.
 
     Returns true if verb immediately dominates a relation that might alter
@@ -155,11 +155,11 @@ def isGoodDescendants(pred: Predicate) -> bool:
         if desc.rel in embedding_deps:
             return False
     filter_rules = getattr(pred, 'rules', [])
-    filter_rules.append(isGoodDescendants.__name__)
+    filter_rules.append(is_good_descendants.__name__)
     return True
 
 
-def hasSubj(pred: Predicate, passive: bool = False) -> bool:
+def has_subj(pred: Predicate, passive: bool = False) -> bool:
     """Filter predicates that have subjects.
 
     Checks if the predicate has a subject dependent. Optionally
@@ -184,12 +184,12 @@ def hasSubj(pred: Predicate, passive: bool = False) -> bool:
     for x in pred.root.dependents:
         if x.rel in subj_rels:
             filter_rules = getattr(pred, 'rules', [])
-            filter_rules.append(hasSubj.__name__)
+            filter_rules.append(has_subj.__name__)
             return True
     return False
 
 
-def isNotHave(pred: Predicate) -> bool:
+def is_not_have(pred: Predicate) -> bool:
     """Filter out 'have' verbs.
 
     Excludes predicates with 'have', 'had', or 'has' as the root text.
@@ -209,12 +209,12 @@ def isNotHave(pred: Predicate) -> bool:
         return False
     else:
         filter_rules = getattr(pred, 'rules', [])
-        filter_rules.append(isNotHave.__name__)
+        filter_rules.append(is_not_have.__name__)
         return True
 
 
-def filter_events_NUCL(event: Predicate, parse: UDParse) -> bool:
-    """Filters for running Keisuke's NUCLE HIT.
+def filter_events_nucl(event: Predicate, parse: UDParse) -> bool:
+    """Apply filters for running Keisuke's NUCLE HIT.
 
     Combines multiple predicate filters for the NUCL evaluation.
     Only applies if the parse is not interrogative.
@@ -231,20 +231,20 @@ def filter_events_NUCL(event: Predicate, parse: UDParse) -> bool:
     bool
         True if event passes all NUCL filters (accept), False otherwise (reject).
     """
-    if isNotInterrogative(parse):
-        return all(f(event) for f in (isPredVerb,
-                                      isNotCopula,
-                                      isNotHave,
-                                      hasSubj,
-                                      isGoodAncestor,
-                                      isGoodDescendants))
+    if is_not_interrogative(parse):
+        return all(f(event) for f in (is_pred_verb,
+                                      is_not_copula,
+                                      is_not_have,
+                                      has_subj,
+                                      is_good_ancestor,
+                                      is_good_descendants))
     #isSbjOrObj (without nsubjpass)
     #isNotPronoun
     #has_direct_arc
 
 
-def filter_events_SPRL(event: Predicate, parse: UDParse) -> bool:
-    """Filters for running UD SPRL HIT.
+def filter_events_sprl(event: Predicate, parse: UDParse) -> bool:
+    """Apply filters for running UD SPRL HIT.
 
     Combines multiple predicate filters for the SPRL evaluation.
     Only applies if the parse is not interrogative.
@@ -261,11 +261,11 @@ def filter_events_SPRL(event: Predicate, parse: UDParse) -> bool:
     bool
         True if event passes all SPRL filters (accept), False otherwise (reject).
     """
-    if isNotInterrogative(parse):
-        return all(f(event) for f in (isPredVerb,
-                                      isGoodAncestor,
-                                      isGoodDescendants,
-                                      lambda p: hasSubj(p, passive=True), #(including nsubjpass)
+    if is_not_interrogative(parse):
+        return all(f(event) for f in (is_pred_verb,
+                                      is_good_ancestor,
+                                      is_good_descendants,
+                                      lambda p: has_subj(p, passive=True), #(including nsubjpass)
                                       # good_morphology, (documented below;
                                       # depends on full UD/CoNLLU schema)
                                       # isSbjOrObj, #(including nsubjpass)
@@ -285,20 +285,20 @@ def activate(pred: Predicate) -> None:
         The predicate to apply all filters to.
     """
     # Import here to avoid circular dependency
-    from .argument_filters import has_direct_arc, isNotPronoun, isSbjOrObj
+    from .argument_filters import has_direct_arc, is_not_pronoun, is_sbj_or_obj
 
     pred.rules = []
-    isNotInterrogative(pred)
-    isPredVerb(pred)
-    isNotCopula(pred)
-    isGoodAncestor(pred)
-    isGoodDescendants(pred)
-    hasSubj(pred, passive = True)
-    isNotHave(pred)
+    is_not_interrogative(pred)
+    is_pred_verb(pred)
+    is_not_copula(pred)
+    is_good_ancestor(pred)
+    is_good_descendants(pred)
+    has_subj(pred, passive = True)
+    is_not_have(pred)
     for arg in pred.arguments:
         arg.rules = []
-        isSbjOrObj(arg)
-        isNotPronoun(arg)
+        is_sbj_or_obj(arg)
+        is_not_pronoun(arg)
         has_direct_arc(pred, arg)
 
 
@@ -323,13 +323,13 @@ def apply_filters(_filter, pred: Predicate, **options) -> bool:
         True if filter accepts the predicate/arguments, False otherwise.
     """
     # Import here to avoid circular dependency
-    from .argument_filters import has_direct_arc, isNotPronoun, isSbjOrObj
+    from .argument_filters import has_direct_arc, is_not_pronoun, is_sbj_or_obj
 
-    if _filter in {isSbjOrObj, isNotPronoun}:
+    if _filter in {is_sbj_or_obj, is_not_pronoun}:
         return any(_filter(arg) for arg in pred.arguments)
     elif _filter ==  has_direct_arc:
         return any(_filter(pred, arg) for arg in pred.arguments)
-    elif _filter == hasSubj:
+    elif _filter == has_subj:
         passive = options.get('passive')
         if passive:
             return _filter(pred, passive)

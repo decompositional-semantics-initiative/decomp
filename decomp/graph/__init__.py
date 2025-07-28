@@ -1,6 +1,7 @@
 """Module for converting between NetworkX and RDFLib graphs"""
 
-from .rdf import RDFConverter
 from .nx import NXConverter
+from .rdf import RDFConverter
 
-__all__ = ['RDFConverter', 'NXConverter']
+
+__all__ = ['NXConverter', 'RDFConverter']

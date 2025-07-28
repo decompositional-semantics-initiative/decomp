@@ -1,10 +1,11 @@
 """Module for defining abstract graph corpus readers"""
 
 from abc import ABCMeta, abstractmethod
-
-from random import sample
+from collections.abc import Hashable, Iterator
 from logging import warning
-from typing import Hashable, TypeVar, Iterator, Generic, TypeAlias
+from random import sample
+from typing import Generic, TypeAlias, TypeVar
+
 
 InGraph = TypeVar('InGraph')  # the input graph type
 OutGraph = TypeVar('OutGraph')  # the output graph type
@@ -60,19 +61,17 @@ class Corpus(Generic[InGraph, OutGraph], metaclass=ABCMeta):
 
     @property
     def graphs(self) -> dict[Hashable, OutGraph]:
-        """the graphs in corpus"""
+        """The graphs in corpus"""
         return self._graphs
 
     @property
     def graphids(self) -> list[Hashable]:
         """The graph ids in corpus"""
-
         return list(self._graphs)
 
     @property
     def ngraphs(self) -> int:
         """Number of graphs in corpus"""
-
         return len(self._graphs)
 
     def sample(self, k: int) -> dict[Hashable, OutGraph]:
@@ -83,6 +82,5 @@ class Corpus(Generic[InGraph, OutGraph], metaclass=ABCMeta):
         k
             the number of graphs to sample
         """
-        
         sampled_keys = sample(list(self._graphs.keys()), k=k)
         return {tid: self._graphs[tid] for tid in sampled_keys}

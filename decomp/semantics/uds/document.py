@@ -1,12 +1,13 @@
 """Module for representing UDS documents."""
 
 import re
-
 from typing import Any, TypeAlias, cast
 
 from memoized_property import memoized_property
 from networkx import DiGraph
-from .graph import UDSSentenceGraph, UDSDocumentGraph
+
+from .graph import UDSDocumentGraph, UDSSentenceGraph
+
 
 # Type aliases
 SentenceGraphDict: TypeAlias = dict[str, UDSSentenceGraph]
@@ -32,6 +33,7 @@ class UDSDocument:
         the NetworkX DiGraph for the document. If not provided, this will be
         initialized without edges from sentence_graphs
     """
+
     def __init__(self, sentence_graphs: SentenceGraphDict,
                  sentence_ids: SentenceIDDict, name: str, genre: str,
                  timestamp: str | None = None, doc_graph: UDSDocumentGraph | None = None):
@@ -55,7 +57,7 @@ class UDSDocument:
         return self.document_graph.to_dict()
 
     @classmethod
-    def from_dict(cls, document: dict[str, dict], sentence_graphs: dict[str, UDSSentenceGraph], 
+    def from_dict(cls, document: dict[str, dict], sentence_graphs: dict[str, UDSSentenceGraph],
                        sentence_ids: dict[str, str], name: str = 'UDS') -> 'UDSDocument':
         """Construct a UDSDocument from a dictionary
 
@@ -95,7 +97,7 @@ class UDSDocument:
         timestamp = re.search(r'\d{8}_?\d{6}', document_name)
         return timestamp[0] if timestamp else None
 
-    def add_sentence_graphs(self, sentence_graphs: SentenceGraphDict, 
+    def add_sentence_graphs(self, sentence_graphs: SentenceGraphDict,
                                   sentence_ids: SentenceIDDict) -> None:
         """Add additional sentences to a document
 

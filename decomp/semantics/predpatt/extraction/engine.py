@@ -357,12 +357,11 @@ class PredPattEngine:
             if self.options.resolve_poss and e.rel == self.ud.nmod_poss:
                 nominate(e.dep, R.V(), POSS)
 
-            if self.options.resolve_amod:
-                # If resolve amod flag is enabled, then the dependent of an amod
-                # arc is a predicate (but only if the dependent is an
-                # adjective). We also filter cases where ADJ modifies ADJ.
-                if e.rel == self.ud.amod and e.dep.tag == postag.ADJ and e.gov.tag != postag.ADJ:
-                    nominate(e.dep, R.E(), AMOD)
+            # If resolve amod flag is enabled, then the dependent of an amod
+            # arc is a predicate (but only if the dependent is an
+            # adjective). We also filter cases where ADJ modifies ADJ.
+            if self.options.resolve_amod and e.rel == self.ud.amod and e.dep.tag == postag.ADJ and e.gov.tag != postag.ADJ:
+                nominate(e.dep, R.E(), AMOD)
 
             # Avoid 'dep' arcs, they are normally parse errors.
             # Note: we allow amod, poss, and appos predicates, even with a dep arc.
@@ -374,10 +373,9 @@ class PredPattEngine:
             if e.rel in {self.ud.ccomp, self.ud.csubj, self.ud.csubjpass}:
                 nominate(e.dep, R.A1())
 
-            if self.options.resolve_relcl:
-                # Dependent of clausal modifier is a predicate.
-                if e.rel in {self.ud.advcl, self.ud.acl, self.ud.aclrelcl}:
-                    nominate(e.dep, R.B())
+            # Dependent of clausal modifier is a predicate.
+            if self.options.resolve_relcl and e.rel in {self.ud.advcl, self.ud.acl, self.ud.aclrelcl}:
+                nominate(e.dep, R.B())
 
             if e.rel == self.ud.xcomp:
                 # Dependent of an xcomp is a predicate
@@ -695,7 +693,7 @@ class PredPattEngine:
         return self.event_dict.get(c)
 
     def parents(self, predicate):
-        """Iterator over the chain of parents (governing predicates).
+        """Iterate over the chain of parents (governing predicates).
 
         Yields predicates that govern the given predicate by following
         the chain of governor tokens.
@@ -752,15 +750,15 @@ class PredPattEngine:
         for arg in predicate.arguments:
             if not arg.share and not arg.tokens:
                 continue
-            C = []
+            c_list = []
             for c in arg.coords():
                 if not c.is_reference() and not c.tokens:
                     # Extract argument phrase (if we haven't already). This
                     # happens because are haven't processed the subrees of the
                     # 'conj' node in the argument until now.
                     self._arg_phrase_extract(predicate, c)
-                C.append(c)
-            aaa = [C, *aaa]
+                c_list.append(c)
+            aaa = [c_list, *aaa]
 
         expanded = itertools.product(*aaa)
         instances = []
@@ -799,21 +797,20 @@ class PredPattEngine:
 
         # Post-processing of predicate name for predicate conjunctions
         # involving xcomp.
-        if not self.options.cut:
-            # Not applied to the cut mode, because in the cut mode xcomp
-            # is recognized as a independent predicate. For example,
-            # They start firing and shooting .
-            #        ^     ^           ^
-            #        |     |----conj---|
-            #        -xcomp-
-            # cut == True:
-            #    (They, start, SOMETHING := firing and shooting)
-            #    (They, firing)
-            #    (They, shooting)
-            # cut == False:
-            #    (They, start firing)
-            #    (They, start shooting)
-            if p.root.gov.gov_rel == self.ud.xcomp:
+        # Not applied to the cut mode, because in the cut mode xcomp
+        # is recognized as a independent predicate. For example,
+        # They start firing and shooting .
+        #        ^     ^           ^
+        #        |     |----conj---|
+        #        -xcomp-
+        # cut == True:
+        #    (They, start, SOMETHING := firing and shooting)
+        #    (They, firing)
+        #    (They, shooting)
+        # cut == False:
+        #    (They, start firing)
+        #    (They, start shooting)
+        if not self.options.cut and p.root.gov.gov_rel == self.ud.xcomp:
                 g = self._get_top_xcomp(p)
                 if g is not None:
                     for y in g.tokens:
@@ -954,7 +951,7 @@ class PredPattEngine:
                             predicate.rules.append(R.N6(e.dep))
 
     def _pred_phrase_helper(self, pred, e):
-        """Helper routine for predicate phrase extraction.
+        """Determine which tokens to extract for the predicate phrase.
 
         This function is used when determining which edges to traverse when
         extracting predicate phrases. We add the dependent of each edge we
@@ -1027,7 +1024,7 @@ class PredPattEngine:
         )
 
     def _arg_phrase_helper(self, pred, arg, e):
-        """Helper routine for determining which tokens to extract for the argument phrase.
+        """Determine which tokens to extract for the argument phrase.
 
         Determines which tokens to extract for the argument phrase from the subtree
         rooted at argument's root token. Rules are provided as a side-effect.
@@ -1129,11 +1126,9 @@ class PredPattEngine:
             # this condition check must be in front of the following one.
             pred.rules.append(R.P1())
             return False
-        if arg.root.gov == pred.root or arg.root.gov.gov_rel == self.ud.xcomp:
-            # keep argument directly depending on pred root token,
-            # except argument is the dependent of 'xcomp' rel.
-            return True
-        return False
+        # keep argument directly depending on pred root token,
+        # except argument is the dependent of 'xcomp' rel.
+        return arg.root.gov == pred.root or arg.root.gov.gov_rel == self.ud.xcomp
 
     def _cleanup(self):
         """Cleanup operations: Sort instances and arguments by text order.

@@ -1,25 +1,29 @@
 #!/usr/bin/env python
-# encoding: utf-8
 """Tests for UD schema definitions to ensure exact compatibility."""
 
 import pytest
 
+
 # Skip these tests if external predpatt is not installed
 predpatt = pytest.importorskip("predpatt")
+from predpatt.util.ud import dep_v1 as orig_dep_v1
+from predpatt.util.ud import dep_v2 as orig_dep_v2
+from predpatt.util.ud import postag as orig_postag
+
 from decomp.semantics.predpatt.utils.ud_schema import (
-    POSTag, DependencyRelationsV1, DependencyRelationsV2,
-    postag, dep_v1, dep_v2, get_dependency_relations
-)
-from predpatt.util.ud import (
-    postag as orig_postag,
-    dep_v1 as orig_dep_v1,
-    dep_v2 as orig_dep_v2
+    DependencyRelationsV1,
+    DependencyRelationsV2,
+    POSTag,
+    dep_v1,
+    dep_v2,
+    get_dependency_relations,
+    postag,
 )
 
 
 class TestPOSTags:
     """Test POS tag definitions match original exactly."""
-    
+
     def test_postag_values(self):
         """Verify all POS tag values match original."""
         # Open class words
@@ -29,7 +33,7 @@ class TestPOSTags:
         assert POSTag.NOUN == orig_postag.NOUN == "NOUN"
         assert POSTag.PROPN == orig_postag.PROPN == "PROPN"
         assert POSTag.VERB == orig_postag.VERB == "VERB"
-        
+
         # Closed class words
         assert POSTag.ADP == orig_postag.ADP == "ADP"
         assert POSTag.AUX == orig_postag.AUX == "AUX"
@@ -39,12 +43,12 @@ class TestPOSTags:
         assert POSTag.PART == orig_postag.PART == "PART"
         assert POSTag.PRON == orig_postag.PRON == "PRON"
         assert POSTag.SCONJ == orig_postag.SCONJ == "SCONJ"
-        
+
         # Other
         assert POSTag.PUNCT == orig_postag.PUNCT == "PUNCT"
         assert POSTag.SYM == orig_postag.SYM == "SYM"
         assert POSTag.X == orig_postag.X == "X"
-    
+
     def test_postag_alias(self):
         """Test backwards compatibility alias."""
         assert postag is POSTag
@@ -52,11 +56,11 @@ class TestPOSTags:
 
 class TestDependencyRelationsV1:
     """Test UD v1 dependency relations match original exactly."""
-    
+
     def test_version(self):
         """Test version identifier."""
         assert DependencyRelationsV1.VERSION == orig_dep_v1.VERSION == "1.0"
-    
+
     def test_all_relations(self):
         """Test all individual relation values."""
         # Subject relations
@@ -64,11 +68,11 @@ class TestDependencyRelationsV1:
         assert DependencyRelationsV1.nsubjpass == orig_dep_v1.nsubjpass == "nsubjpass"
         assert DependencyRelationsV1.csubj == orig_dep_v1.csubj == "csubj"
         assert DependencyRelationsV1.csubjpass == orig_dep_v1.csubjpass == "csubjpass"
-        
+
         # Object relations
         assert DependencyRelationsV1.dobj == orig_dep_v1.dobj == "dobj"
         assert DependencyRelationsV1.iobj == orig_dep_v1.iobj == "iobj"
-        
+
         # Other relations
         assert DependencyRelationsV1.cop == orig_dep_v1.cop == "cop"
         assert DependencyRelationsV1.aux == orig_dep_v1.aux == "aux"
@@ -97,11 +101,13 @@ class TestDependencyRelationsV1:
         assert DependencyRelationsV1.acl == orig_dep_v1.acl == "acl"
         assert DependencyRelationsV1.aclrelcl == orig_dep_v1.aclrelcl == "acl:relcl"
         assert DependencyRelationsV1.dep == orig_dep_v1.dep == "dep"
-    
+
     def test_relation_sets(self):
         """Test relation sets match exactly."""
-        assert DependencyRelationsV1.SUBJ == orig_dep_v1.SUBJ
-        assert DependencyRelationsV1.OBJ == orig_dep_v1.OBJ
+        # Note: We use lowercase properties, external uses uppercase
+        v1_instance = DependencyRelationsV1()
+        assert v1_instance.subj == orig_dep_v1.SUBJ
+        assert v1_instance.obj == orig_dep_v1.OBJ
         assert DependencyRelationsV1.NMODS == orig_dep_v1.NMODS
         assert DependencyRelationsV1.ADJ_LIKE_MODS == orig_dep_v1.ADJ_LIKE_MODS
         assert DependencyRelationsV1.ARG_LIKE == orig_dep_v1.ARG_LIKE
@@ -109,7 +115,7 @@ class TestDependencyRelationsV1:
         assert DependencyRelationsV1.PRED_DEPS_TO_DROP == orig_dep_v1.PRED_DEPS_TO_DROP
         assert DependencyRelationsV1.SPECIAL_ARG_DEPS_TO_DROP == orig_dep_v1.SPECIAL_ARG_DEPS_TO_DROP
         assert DependencyRelationsV1.HARD_TO_FIND_ARGS == orig_dep_v1.HARD_TO_FIND_ARGS
-    
+
     def test_dep_v1_alias(self):
         """Test backwards compatibility alias."""
         assert dep_v1 is DependencyRelationsV1
@@ -117,11 +123,11 @@ class TestDependencyRelationsV1:
 
 class TestDependencyRelationsV2:
     """Test UD v2 dependency relations match original exactly."""
-    
+
     def test_version(self):
         """Test version identifier."""
         assert DependencyRelationsV2.VERSION == orig_dep_v2.VERSION == "2.0"
-    
+
     def test_all_relations(self):
         """Test all individual relation values."""
         # Subject relations
@@ -129,11 +135,11 @@ class TestDependencyRelationsV2:
         assert DependencyRelationsV2.nsubjpass == orig_dep_v2.nsubjpass == "nsubj:pass"
         assert DependencyRelationsV2.csubj == orig_dep_v2.csubj == "csubj"
         assert DependencyRelationsV2.csubjpass == orig_dep_v2.csubjpass == "csubj:pass"
-        
+
         # Object relations
         assert DependencyRelationsV2.dobj == orig_dep_v2.dobj == "obj"
         assert DependencyRelationsV2.iobj == orig_dep_v2.iobj == "iobj"
-        
+
         # Other relations
         assert DependencyRelationsV2.aux == orig_dep_v2.aux == "aux"
         assert DependencyRelationsV2.auxpass == orig_dep_v2.auxpass == "aux:pass"
@@ -162,11 +168,13 @@ class TestDependencyRelationsV2:
         assert DependencyRelationsV2.acl == orig_dep_v2.acl == "acl"
         assert DependencyRelationsV2.aclrelcl == orig_dep_v2.aclrelcl == "acl:relcl"
         assert DependencyRelationsV2.dep == orig_dep_v2.dep == "dep"
-    
+
     def test_relation_sets(self):
         """Test relation sets match exactly."""
-        assert DependencyRelationsV2.SUBJ == orig_dep_v2.SUBJ
-        assert DependencyRelationsV2.OBJ == orig_dep_v2.OBJ
+        # Note: We use lowercase properties, external uses uppercase
+        v2_instance = DependencyRelationsV2()
+        assert v2_instance.subj == orig_dep_v2.SUBJ
+        assert v2_instance.obj == orig_dep_v2.OBJ
         assert DependencyRelationsV2.NMODS == orig_dep_v2.NMODS
         assert DependencyRelationsV2.ADJ_LIKE_MODS == orig_dep_v2.ADJ_LIKE_MODS
         assert DependencyRelationsV2.ARG_LIKE == orig_dep_v2.ARG_LIKE
@@ -174,7 +182,7 @@ class TestDependencyRelationsV2:
         assert DependencyRelationsV2.PRED_DEPS_TO_DROP == orig_dep_v2.PRED_DEPS_TO_DROP
         assert DependencyRelationsV2.SPECIAL_ARG_DEPS_TO_DROP == orig_dep_v2.SPECIAL_ARG_DEPS_TO_DROP
         assert DependencyRelationsV2.HARD_TO_FIND_ARGS == orig_dep_v2.HARD_TO_FIND_ARGS
-    
+
     def test_dep_v2_alias(self):
         """Test backwards compatibility alias."""
         assert dep_v2 is DependencyRelationsV2
@@ -182,43 +190,43 @@ class TestDependencyRelationsV2:
 
 class TestVersionSpecificBehavior:
     """Test version-specific differences between v1 and v2."""
-    
+
     def test_version_differences(self):
         """Verify the key differences between v1 and v2."""
         # Passive subject
         assert DependencyRelationsV1.nsubjpass == "nsubjpass"
         assert DependencyRelationsV2.nsubjpass == "nsubj:pass"
-        
+
         # Clausal passive subject
         assert DependencyRelationsV1.csubjpass == "csubjpass"
         assert DependencyRelationsV2.csubjpass == "csubj:pass"
-        
+
         # Direct object
         assert DependencyRelationsV1.dobj == "dobj"
         assert DependencyRelationsV2.dobj == "obj"
-        
+
         # Passive auxiliary
         assert DependencyRelationsV1.auxpass == "auxpass"
         assert DependencyRelationsV2.auxpass == "aux:pass"
-        
+
         # Oblique nominal (v1 maps to nmod)
         assert DependencyRelationsV1.obl == "nmod"
         assert DependencyRelationsV2.obl == "obl"
-    
+
     def test_get_dependency_relations(self):
         """Test version selection function."""
         v1_class = get_dependency_relations("1.0")
         assert v1_class is DependencyRelationsV1
         assert v1_class.VERSION == "1.0"
-        
+
         v2_class = get_dependency_relations("2.0")
         assert v2_class is DependencyRelationsV2
         assert v2_class.VERSION == "2.0"
-        
+
         # Default is v2
         default_class = get_dependency_relations()
         assert default_class is DependencyRelationsV2
-        
+
         # Invalid version
         with pytest.raises(ValueError, match="Unsupported UD version"):
             get_dependency_relations("3.0")

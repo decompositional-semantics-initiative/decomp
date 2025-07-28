@@ -2,10 +2,14 @@
 # pylint: disable=R0903
 """Module for building/containing dependency trees from CoNLL"""
 
-from typing import Hashable, TypeAlias
-from numpy import array
+from collections.abc import Hashable
+from typing import TypeAlias
+
 from networkx import DiGraph
+from numpy import array
+
 from ..corpus import Corpus
+
 
 ConllRow: TypeAlias = list[str]
 ConllData: TypeAlias = list[ConllRow]
@@ -64,7 +68,6 @@ class DependencyGraphBuilder:
             the specification to assume of the conll representation
             ("u" or "x")
         """
-
         # handle null treeids
         treeid = treeid+'-' if treeid else ''
 

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     pass
 
 # Import at runtime to avoid circular dependency
-def _get_dep_v1():
+def _get_dep_v1() -> Any:
     from ..utils.ud_schema import dep_v1
     return dep_v1
 
@@ -118,14 +118,14 @@ class UDParse:
         for e in self.triples:
             self.dependents[e.gov].append(e)
 
-    def pprint(self, color: bool = False, K: int = 1) -> str:
+    def pprint(self, color: bool = False, k: int = 1) -> str:
         """Pretty-print list of dependencies.
 
         Parameters
         ----------
         color : bool, optional
             Whether to use colored output (default: False).
-        K : int, optional
+        k : int, optional
             Number of columns to use (default: 1).
 
         Returns
@@ -138,15 +138,15 @@ class UDParse:
         from termcolor import colored
 
         tokens1 = [*self.tokens, 'ROOT']
-        C = colored('/%s', 'magenta') if color else '/%s'
-        E = [f'{e.rel}({tokens1[e.dep]}{C % e.dep}, {tokens1[e.gov]}{C % e.gov})'
+        c = colored('/%s', 'magenta') if color else '/%s'
+        e = [f'{e.rel}({tokens1[e.dep]}{c % e.dep}, {tokens1[e.gov]}{c % e.gov})'
              for e in sorted(self.triples, key=lambda x: x.dep)]
-        cols = [[] for _ in range(K)]
-        for i, x in enumerate(E):
-            cols[i % K].append(x)
+        cols: list[list[str]] = [[] for _ in range(k)]
+        for i, x in enumerate(e):
+            cols[i % k].append(x)
         # add padding to columns because zip stops at shortest iterator.
-        for c in cols:
-            c.extend('' for _ in range(len(cols[0]) - len(c)))
+        for col in cols:
+            col.extend('' for _ in range(len(cols[0]) - len(col)))
         return tabulate(zip(*cols, strict=False), tablefmt='plain')
 
     def latex(self) -> bytes:

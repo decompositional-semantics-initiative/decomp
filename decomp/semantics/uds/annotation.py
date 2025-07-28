@@ -1,17 +1,17 @@
 """Module for representing UDS property annotations."""
 
 import json
-
-from typing import TextIO, Callable, Iterator, TypeVar, Any, TypeAlias, cast
-from os.path import basename, splitext
-from collections import defaultdict
 from abc import ABC, abstractmethod
-from overrides import overrides
+from collections import defaultdict
+from collections.abc import Callable, Iterator
 from logging import warning
+from os.path import basename, splitext
+from typing import Any, TextIO, TypeAlias, cast
 
-from .metadata import PrimitiveType
-from .metadata import UDSAnnotationMetadata
-from .metadata import UDSPropertyMetadata
+from overrides import overrides
+
+from .metadata import PrimitiveType, UDSAnnotationMetadata, UDSPropertyMetadata
+
 
 # Type aliases for annotation data structures
 NodeAttributes: TypeAlias = dict[str, dict[str, dict[str, PrimitiveType]]]
@@ -84,6 +84,7 @@ class UDSAnnotation(ABC):
         identifiers must be represented as NODEID1%%NODEID2, and node
         identifiers must not contain %%.
     """
+
     CACHE: dict[str, 'UDSAnnotation'] = {}
 
     @abstractmethod
@@ -151,7 +152,7 @@ class UDSAnnotation(ABC):
         if self._metadata.subspaces - subspaces:
             for ss in self._metadata.subspaces - subspaces:
                 warnmsg = 'The annotation metadata is specified for ' +\
-                          'subspace {}, which is not in the data.'.format(ss)
+                          f'subspace {ss}, which is not in the data.'
                 warning(warnmsg)
 
         if subspaces - self._metadata.subspaces:
@@ -204,7 +205,6 @@ class UDSAnnotation(ABC):
         jsonfile
             (path to) file containing annotations as JSON
         """
-
         if isinstance(jsonfile, str) and jsonfile in cls.CACHE:
             return cls.CACHE[jsonfile]
 
@@ -232,10 +232,10 @@ class UDSAnnotation(ABC):
         metadata = UDSAnnotationMetadata.from_dict(annotation['metadata'])
 
         result = cls(metadata, annotation['data'])
-        
+
         if isinstance(jsonfile, str):
             cls.CACHE[jsonfile] = result
-            
+
         return result
 
     def items(self, annotation_type: str | None = None) -> Iterator[tuple[str, tuple[NodeAttributes, EdgeAttributes]]]:
@@ -246,7 +246,6 @@ class UDSAnnotation(ABC):
         attributes (respectively); otherwise, this generator yields a
         graph identifier and a tuple of its node and edge attributes.
         """
-
         if annotation_type is None:
             for gid in self.graphids:
                 yield gid, self[gid]
@@ -289,7 +288,7 @@ class UDSAnnotation(ABC):
     @property
     def edge_subspaces(self) -> set[str]:
         """The subspaces for edge annotations"""
-        return self._edge_subspaces    
+        return self._edge_subspaces
 
     @property
     def subspaces(self) -> set[str]:
@@ -412,6 +411,7 @@ class RawUDSAnnotation(UDSAnnotation):
         each annotator. Edge identifiers must be represented as
         NODEID1%%NODEID2, and node identifiers must not contain %%.
     """
+
     @overrides
     def __init__(self, metadata: UDSAnnotationMetadata,
                  data: dict[str, dict[str, RawData]]):
@@ -439,7 +439,7 @@ class RawUDSAnnotation(UDSAnnotation):
             for nid, subspaces in attrs.items():
                 for subspace, properties in subspaces.items():
                     if subspace in self._excluded_attributes:
-                        continue                  
+                        continue
                     for prop, annotation in properties.items():
                         if prop in self._excluded_attributes:
                             continue
@@ -473,7 +473,7 @@ class RawUDSAnnotation(UDSAnnotation):
 
         for gid, attrs in self.edge_attributes.items():
             for nid, subspaces in attrs.items():
-                for subspace, properties in subspaces.items():                    
+                for subspace, properties in subspaces.items():
                     for prop, annotation in properties.items():
                         # In raw data, annotation is actually a dict with 'value' and 'confidence' keys
                         if 'value' in annotation and 'confidence' in annotation:  # type: ignore[operator]
@@ -623,7 +623,6 @@ class RawUDSAnnotation(UDSAnnotation):
             the relevant annotator gives no annotations of the
             relevant type, and exception is raised
         """
-
         if annotation_type not in [None, "node", "edge"]:
             errmsg = 'annotation_type must be None, "node", or "edge"'
             raise ValueError(errmsg)
@@ -640,7 +639,7 @@ class RawUDSAnnotation(UDSAnnotation):
                     yield gid, node_attrs
 
             else:
-                errmsg = '{} does not have associated '.format(annotator_id) +\
+                errmsg = f'{annotator_id} does not have associated ' +\
                          'node annotations'
                 raise ValueError(errmsg)
 
@@ -652,7 +651,7 @@ class RawUDSAnnotation(UDSAnnotation):
                     yield gid, edge_attrs
 
             else:
-                errmsg = '{} does not have associated '.format(annotator_id) +\
+                errmsg = f'{annotator_id} does not have associated ' +\
                          'edge annotations'
                 raise ValueError(errmsg)
 
@@ -664,7 +663,7 @@ class RawUDSAnnotation(UDSAnnotation):
                 else:
                     node_attrs = {}
 
-                if annotator_id in self.edge_attributes_by_annotator:    
+                if annotator_id in self.edge_attributes_by_annotator:
                     edge_attrs = self.edge_attributes_by_annotator[annotator_id][gid]
 
                 else:

@@ -1,17 +1,19 @@
 """Module for representing UDS sentence and document graphs."""
 
-from logging import info, warning
 from abc import ABC, abstractmethod
-from overrides import overrides
 from functools import lru_cache
+from logging import info, warning
 from typing import Any, TypeAlias
+
 from memoized_property import memoized_property
+from networkx import DiGraph, adjacency_data, adjacency_graph
+from overrides import overrides
 from pyparsing import ParseException
 from rdflib import Graph
-from rdflib.query import Result
-from rdflib.plugins.sparql.sparql import Query
 from rdflib.plugins.sparql import prepareQuery
-from networkx import DiGraph, adjacency_data, adjacency_graph
+from rdflib.plugins.sparql.sparql import Query
+from rdflib.query import Result
+
 
 # import RDFConverter - need to check if it exists first
 RDFConverter: Any
@@ -54,7 +56,6 @@ class UDSGraph(ABC):
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the graph to a dictionary"""
-
         return dict(adjacency_data(self.graph))
 
     @classmethod
@@ -112,15 +113,15 @@ class UDSSentenceGraph(UDSGraph):
         candidates: list[NodeID] = [nid for nid, attrs
                                    in self.graph.nodes.items()
                                    if attrs['type'] == 'root']
-        
+
         if len(candidates) > 1:
             errmsg = self.name + ' has more than one root'
             raise ValueError(errmsg)
 
         if len(candidates) == 0:
             errmsg = self.name + ' has no root'
-            raise ValueError(errmsg)        
-        
+            raise ValueError(errmsg)
+
         return candidates[0]
 
     def _add_performative_nodes(self) -> None:
@@ -222,7 +223,7 @@ class UDSSentenceGraph(UDSGraph):
 
         if not cache_rdf and hasattr(self, '_rdf'):
             delattr(self, '_rdf')
-        
+
         return results
 
     def _node_query(self, query: str | Query,
@@ -259,7 +260,6 @@ class UDSSentenceGraph(UDSGraph):
     @property
     def syntax_nodes(self) -> dict[str, dict[str, Any]]:
         """The syntax nodes in the graph"""
-
         return {nid: attrs for nid, attrs
                 in self.graph.nodes.items()
                 if attrs['domain'] == 'syntax'
@@ -268,7 +268,6 @@ class UDSSentenceGraph(UDSGraph):
     @property
     def semantics_nodes(self) -> dict[str, dict[str, Any]]:
         """The semantics nodes in the graph"""
-
         return {nid: attrs for nid, attrs
                 in self.graph.nodes.items()
                 if attrs['domain'] == 'semantics'}
@@ -276,7 +275,6 @@ class UDSSentenceGraph(UDSGraph):
     @property
     def predicate_nodes(self) -> dict[str, dict[str, Any]]:
         """The predicate (semantics) nodes in the graph"""
-
         return {nid: attrs for nid, attrs
                 in self.graph.nodes.items()
                 if attrs['domain'] == 'semantics'
@@ -285,7 +283,6 @@ class UDSSentenceGraph(UDSGraph):
     @property
     def argument_nodes(self) -> dict[str, dict[str, Any]]:
         """The argument (semantics) nodes in the graph"""
-
         return {nid: attrs for nid, attrs
                 in self.graph.nodes.items()
                 if attrs['domain'] == 'semantics'
@@ -294,13 +291,11 @@ class UDSSentenceGraph(UDSGraph):
     @property
     def syntax_subgraph(self) -> DiGraph:
         """The part of the graph with only syntax nodes"""
-
         return self.graph.subgraph(list(self.syntax_nodes))
 
     @property
     def semantics_subgraph(self) -> DiGraph:
         """The part of the graph with only semantics nodes"""
-
         return self.graph.subgraph(list(self.semantics_nodes))
 
     @lru_cache(maxsize=128)
@@ -316,18 +311,17 @@ class UDSSentenceGraph(UDSGraph):
         edgetype
             The type of edge ("dependency" or "head")
         """
-
         if nodeid is None:
             candidates = {eid: attrs for eid, attrs
                           in self.graph.edges.items()
                           if attrs['domain'] == 'semantics'}
- 
+
         else:
             candidates = {eid: attrs for eid, attrs
                           in self.graph.edges.items()
                           if attrs['domain'] == 'semantics'
                           if nodeid in eid}
-            
+
         if edgetype is None:
             return candidates
         else:
@@ -344,9 +338,8 @@ class UDSSentenceGraph(UDSGraph):
         nodeid
             The node that must be incident on an edge
         """
-
         return self.semantics_edges(nodeid, edgetype='dependency')
-        
+
     @lru_cache(maxsize=128)
     def argument_head_edges(self,
                             nodeid: str | None = None) -> dict[tuple[str, str], dict[str, Any]]:
@@ -357,7 +350,6 @@ class UDSSentenceGraph(UDSGraph):
         nodeid
             The node that must be incident on an edge
         """
-
         return self.semantics_edges(nodeid, edgetype='head')
 
     @lru_cache(maxsize=128)
@@ -365,13 +357,11 @@ class UDSSentenceGraph(UDSGraph):
                      nodeid: str | None = None) -> dict[tuple[str, str], dict[str, Any]]:
         """The edges between syntax nodes
 
-
         Parameters
         ----------
         nodeid
             The node that must be incident on an edge
         """
-
         if nodeid is None:
             return {eid: attrs for eid, attrs
                           in self.graph.edges.items()
@@ -393,7 +383,6 @@ class UDSSentenceGraph(UDSGraph):
         nodeid
             The node that must be incident on an edge
         """
-
         if nodeid is None:
             return {eid: attrs for eid, attrs
                           in self.graph.edges.items()
@@ -422,7 +411,6 @@ class UDSSentenceGraph(UDSGraph):
         a mapping from positions in the span to the requested
         attributes in those positions
         """
-
         if self.graph.nodes[nodeid]['domain'] != 'semantics':
             errmsg = 'Only semantics nodes have (nontrivial) spans'
             raise ValueError(errmsg)
@@ -431,12 +419,12 @@ class UDSSentenceGraph(UDSGraph):
                           'arg-author' in nodeid or\
                           'arg-addressee' in nodeid or\
                           'arg-0' in nodeid
-        
+
         if is_performative:
             errmsg = 'Performative nodes do not have spans'
             raise ValueError(errmsg)
 
-        
+
         return {self.graph.nodes[e[1]]['position']: [self.graph.nodes[e[1]][a]
                                                for a in attrs]
                 for e in self.instance_edges(nodeid)}
@@ -458,7 +446,6 @@ class UDSSentenceGraph(UDSGraph):
         a pairing of the head position and the requested
         attributes
         """
-
         if self.graph.nodes[nodeid]['domain'] != 'semantics':
             errmsg = 'Only semantics nodes have heads'
             raise ValueError(errmsg)
@@ -467,11 +454,11 @@ class UDSSentenceGraph(UDSGraph):
                           'arg-author' in nodeid or\
                           'arg-addressee' in nodeid or\
                           'arg-0' in nodeid
-        
+
         if is_performative:
             errmsg = 'Performative nodes do not have heads'
             raise ValueError(errmsg)
-        
+
         return [(self.graph.nodes[e[1]]['position'],
                  [self.graph.nodes[e[1]][a] for a in attrs])
                 for e, attr in self.instance_edges(nodeid).items()
@@ -479,7 +466,6 @@ class UDSSentenceGraph(UDSGraph):
 
     def maxima(self, nodeids: list[str] | None = None) -> list[str]:
         """The nodes in nodeids not dominated by any other nodes in nodeids"""
-
         if nodeids is None:
             nodeids = list(self.graph.nodes)
 
@@ -492,7 +478,6 @@ class UDSSentenceGraph(UDSGraph):
 
     def minima(self, nodeids: list[str] | None = None) -> list[str]:
         """The nodes in nodeids not dominating any other nodes in nodeids"""
-
         if nodeids is None:
             nodeids = list(self.graph.nodes)
 
@@ -683,6 +668,7 @@ class UDSDocumentGraph(UDSGraph):
     name
         the name of the graph
     """
+
     @overrides
     def __init__(self, graph: DiGraph, name: str):
         super().__init__(graph, name)

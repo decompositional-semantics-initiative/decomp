@@ -1,13 +1,11 @@
+import json
+import os
+
 import pytest
 
-import os, json
-
-from pprint import pprint
-
-from decomp.semantics.uds.metadata import UDSAnnotationMetadata
 from decomp.semantics.uds.annotation import UDSAnnotation
-from decomp.semantics.uds.annotation import NormalizedUDSAnnotation
-from decomp.semantics.uds.annotation import RawUDSAnnotation
+from decomp.semantics.uds.metadata import UDSAnnotationMetadata
+
 
 class TestUDSAnnotation:
 

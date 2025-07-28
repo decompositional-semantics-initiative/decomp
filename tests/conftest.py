@@ -1,9 +1,9 @@
-import pytest
-
 import os
 
-from decomp.semantics.uds.annotation import NormalizedUDSAnnotation
-from decomp.semantics.uds.annotation import RawUDSAnnotation
+import pytest
+
+from decomp.semantics.uds.annotation import NormalizedUDSAnnotation, RawUDSAnnotation
+
 
 def pytest_configure(config):
     config.addinivalue_line(
@@ -24,7 +24,7 @@ def pytest_collection_modifyitems(config, items):
 
     for item in items:
         if "slow" in item.keywords:
-            item.add_marker(skip_slow)    
+            item.add_marker(skip_slow)
 
 @pytest.fixture
 def test_dir():

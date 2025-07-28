@@ -1,17 +1,16 @@
 """Module for representing UDS corpora, documents, graphs, and annotations."""
 
+from .annotation import NormalizedUDSAnnotation, RawUDSAnnotation
 from .corpus import UDSCorpus
 from .document import UDSDocument
-from .graph import UDSDocumentGraph
-from .graph import UDSSentenceGraph
-from .annotation import RawUDSAnnotation
-from .annotation import NormalizedUDSAnnotation
+from .graph import UDSDocumentGraph, UDSSentenceGraph
+
 
 __all__ = [
-    'UDSCorpus',
-    'UDSDocument', 
-    'UDSDocumentGraph',
-    'UDSSentenceGraph',
+    'NormalizedUDSAnnotation',
     'RawUDSAnnotation',
-    'NormalizedUDSAnnotation'
+    'UDSCorpus',
+    'UDSDocument',
+    'UDSDocumentGraph',
+    'UDSSentenceGraph'
 ]

@@ -72,10 +72,14 @@ class H2(ArgumentRootRule):
     pass
 
 
-class I(ArgumentRootRule):
+class RuleI(ArgumentRootRule):
     """Extract an argument token from the governor of an adjectival modifier."""
 
     pass
+
+
+# Alias for compatibility
+I = RuleI
 
 
 class J(ArgumentRootRule):

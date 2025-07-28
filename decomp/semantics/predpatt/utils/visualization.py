@@ -66,7 +66,7 @@ def argument_names(args: list[Argument]) -> dict[Argument, str]:
 def format_predicate(
     predicate: Predicate,
     name: dict[Argument, str],
-    C: Callable[[str, str], str] = no_color
+    c: Callable[[str, str], str] = no_color
 ) -> str:
     """Format a predicate with its arguments interpolated.
 
@@ -76,7 +76,7 @@ def format_predicate(
         The predicate to format
     name : dict[Argument, str]
         Mapping from arguments to their names
-    C : Callable[[str, str], str], optional
+    c : Callable[[str, str], str], optional
         Color function for special predicate types
 
     Returns
@@ -91,7 +91,7 @@ def format_predicate(
     args = predicate.arguments
 
     if predicate.type == POSS:
-        return ' '.join([name[args[0]], C(POSS, 'yellow'), name[args[1]]])
+        return ' '.join([name[args[0]], c(POSS, 'yellow'), name[args[1]]])
 
     if predicate.type in {AMOD, APPOS}:
         # Special handling for `amod` and `appos` because the target
@@ -105,10 +105,10 @@ def format_predicate(
                 other_args.append(arg)
 
         if arg0 is not None:
-            ret = [name[arg0], C('is/are', 'yellow')]
+            ret = [name[arg0], c('is/are', 'yellow')]
             args = other_args
         else:
-            ret = [name[args[0]], C('is/are', 'yellow')]
+            ret = [name[args[0]], c('is/are', 'yellow')]
             args = args[1:]
 
     # Mix arguments with predicate tokens. Use word order to derive a
@@ -122,9 +122,9 @@ def format_predicate(
             if (predicate.root.gov_rel == predicate.ud.xcomp and
                 predicate.root.tag not in {postag.VERB, postag.ADJ} and
                 i == 0):
-                ret.append(C('is/are', 'yellow'))
+                ret.append(c('is/are', 'yellow'))
         else:
-            ret.append(C(y.text, 'green'))
+            ret.append(c(y.text, 'green'))
 
     return ' '.join(ret)
 
@@ -132,7 +132,7 @@ def format_predicate(
 def format_predicate_instance(
     predicate: Predicate,
     track_rule: bool = False,
-    C: Callable[[str, str], str] = no_color,
+    c: Callable[[str, str], str] = no_color,
     indent: str = '\t'
 ) -> str:
     """Format a single predicate instance with its arguments.
@@ -143,7 +143,7 @@ def format_predicate_instance(
         The predicate instance to format
     track_rule : bool, optional
         Whether to include rule tracking information
-    C : Callable[[str, str], str], optional
+    c : Callable[[str, str], str], optional
         Color function for output
     indent : str, optional
         Indentation string for formatting
@@ -163,23 +163,23 @@ def format_predicate_instance(
     if track_rule:
         rules_str = ','.join(sorted(map(str, predicate.rules)))
         rule = f',{rules_str}'
-        verbose = C(f'{indent}[{predicate.root.text}-{predicate.root.gov_rel}{rule}]',
+        verbose = c(f'{indent}[{predicate.root.text}-{predicate.root.gov_rel}{rule}]',
                     'magenta')
-    lines.append(f'{indent}{format_predicate(predicate, name, C=C)}{verbose}')
+    lines.append(f'{indent}{format_predicate(predicate, name, c=c)}{verbose}')
 
     # Format arguments
     for arg in predicate.arguments:
         if (arg.isclausal() and arg.root.gov in predicate.tokens and
                 predicate.type == NORMAL):
-            s = C('SOMETHING', 'yellow') + ' := ' + arg.phrase()
+            s = c('SOMETHING', 'yellow') + ' := ' + arg.phrase()
         else:
-            s = C(arg.phrase(), 'green')
+            s = c(arg.phrase(), 'green')
 
         verbose = ''
         if track_rule:
             rules_str = ','.join(sorted(map(str, arg.rules)))
             rule = f',{rules_str}'
-            verbose = C(f'{indent}[{arg.root.text}-{arg.root.gov_rel}{rule}]',
+            verbose = c(f'{indent}[{arg.root.text}-{arg.root.gov_rel}{rule}]',
                         'magenta')
         lines.append(f'{indent * 2}{name[arg]}: {s}{verbose}')
 
@@ -207,9 +207,9 @@ def pprint(
     str
         Formatted string representation of all predicates
     """
-    C = colored if color else no_color
+    c = colored if color else no_color
     return '\n'.join(
-        format_predicate_instance(p, track_rule=track_rule, C=C)
+        format_predicate_instance(p, track_rule=track_rule, c=c)
         for p in predpatt.instances
     )
 
@@ -217,7 +217,7 @@ def pprint(
 def pprint_ud_parse(
     parse,
     color: bool = False,
-    K: int = 1
+    k: int = 1
 ) -> str:
     """Pretty-print list of dependencies from a UDParse instance.
 
@@ -227,7 +227,7 @@ def pprint_ud_parse(
         The dependency parse to visualize
     color : bool, optional
         Whether to use colored output
-    K : int, optional
+    k : int, optional
         Number of columns for output
 
     Returns
@@ -238,13 +238,13 @@ def pprint_ud_parse(
     from tabulate import tabulate
 
     tokens1 = [*parse.tokens, 'ROOT']
-    C = colored('/%s', 'magenta') if color else '/%s'
-    E = [f'{e.rel}({tokens1[e.dep]}{C % e.dep}, {tokens1[e.gov]}{C % e.gov})'
+    c = colored('/%s', 'magenta') if color else '/%s'
+    e = [f'{e.rel}({tokens1[e.dep]}{c % e.dep}, {tokens1[e.gov]}{c % e.gov})'
          for e in sorted(parse.triples, key=lambda x: x.dep)]
 
-    cols = [[] for _ in range(K)]
-    for i, x in enumerate(E):
-        cols[i % K].append(x)
+    cols = [[] for _ in range(k)]
+    for i, x in enumerate(e):
+        cols[i % k].append(x)
 
     # add padding to columns because zip stops at shortest iterator.
     for c in cols:

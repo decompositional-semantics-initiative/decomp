@@ -73,13 +73,13 @@ class DependencyRelationsBase(ABC):
     # Relation sets that must be defined by subclasses
     @property
     @abstractmethod
-    def SUBJ(self) -> set[str]:
+    def subj(self) -> set[str]:
         """All subject relations."""
         pass
 
     @property
     @abstractmethod
-    def OBJ(self) -> set[str]:
+    def obj(self) -> set[str]:
         """All object relations."""
         pass
 
@@ -182,6 +182,16 @@ class DependencyRelationsV1(DependencyRelationsBase):
     # Predicates of these relations are hard to find arguments
     HARD_TO_FIND_ARGS: ClassVar[set[str]] = {amod, dep, conj, acl, aclrelcl, advcl}
 
+    @property
+    def subj(self) -> set[str]:
+        """All subject relations."""
+        return self.SUBJ
+
+    @property
+    def obj(self) -> set[str]:
+        """All object relations."""
+        return self.OBJ
+
 
 class DependencyRelationsV2(DependencyRelationsBase):
     """Universal Dependencies v2.0 relation definitions."""
@@ -280,6 +290,16 @@ class DependencyRelationsV2(DependencyRelationsBase):
 
     # Predicates of these relations are hard to find arguments
     HARD_TO_FIND_ARGS: ClassVar[set[str]] = {amod, dep, conj, acl, aclrelcl, advcl}
+
+    @property
+    def subj(self) -> set[str]:
+        """All subject relations."""
+        return self.SUBJ
+
+    @property
+    def obj(self) -> set[str]:
+        """All object relations."""
+        return self.OBJ
 
 
 # Convenience aliases for backwards compatibility

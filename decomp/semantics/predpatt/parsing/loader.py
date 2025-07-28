@@ -9,32 +9,10 @@ from __future__ import annotations
 
 import codecs
 import os
-from collections import namedtuple
 from collections.abc import Iterator
 from typing import Any
 
-from ..parsing.udparse import UDParse
-
-
-class DepTriple(namedtuple('DepTriple', 'rel gov dep')):
-    """Dependency triple for use within the loader.
-
-    Note: This is a separate DepTriple from the one in udparse.py.
-    The loader creates its own instances for internal use.
-
-    Attributes
-    ----------
-    rel : str
-        The dependency relation.
-    gov : int
-        The governor (head) token index.
-    dep : int
-        The dependent token index.
-    """
-
-    def __repr__(self) -> str:
-        """Return string representation in format rel(dep,gov)."""
-        return f'{self.rel}({self.dep},{self.gov})'
+from ..parsing.udparse import DepTriple, UDParse
 
 
 def load_comm(
@@ -117,17 +95,17 @@ def load_conllu(filename_or_content: str) -> Iterator[tuple[str, UDParse]]:
                     if not has_sent_id:   # don't take subsequent comments as sent_id
                         sent_id = line[1:].strip()
                 continue
-            line = line.split('\t') # data appears to use '\t'
-            if '-' in line[0]:      # skip multi-tokens, e.g., on Spanish UD bank
+            parts = line.split('\t') # data appears to use '\t'
+            if '-' in parts[0]:      # skip multi-tokens, e.g., on Spanish UD bank
                 continue
-            assert len(line) == 10, line
-            lines.append(line)
+            assert len(parts) == 10, parts
+            lines.append(parts)
         [_, tokens, _, tags, _, _, gov, gov_rel, _, _] = list(zip(*lines, strict=False))
         triples = [
             DepTriple(rel, int(gov)-1, dep)
             for dep, (rel, gov) in enumerate(zip(gov_rel, gov, strict=False))
         ]
-        parse = UDParse(list(tokens), tags, triples)
+        parse = UDParse(list(tokens), list(tags), triples)
         yield sent_id, parse
         sent_num += 1
 
@@ -147,11 +125,13 @@ def get_tags(tokenization: Any, tagging_type: str = 'POS') -> list[str]:
     list[str]
         List of tags in token order.
     """
-    for tokenTagging in tokenization.tokenTaggingList:
-        if tokenTagging.taggingType == tagging_type:
+    for token_tagging in tokenization.tokenTaggingList:
+        if token_tagging.taggingType == tagging_type:
             idx2pos = {taggedToken.tokenIndex: taggedToken.tag
-                       for taggedToken in tokenTagging.taggedTokenList}
+                       for taggedToken in token_tagging.taggedTokenList}
             return [idx2pos[idx] for idx in sorted(idx2pos.keys())]
+    # Return empty list if no matching tagging type found
+    return []
 
 
 def get_udparse(sent: Any, tool: str) -> UDParse:

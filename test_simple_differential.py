@@ -3,6 +3,7 @@
 
 import pytest
 
+
 print("Starting test file...")
 
 # Skip these tests if external predpatt is not installed
@@ -11,7 +12,9 @@ print(f"predpatt imported: {predpatt}")
 
 # Import from predpatt.patt
 print("Importing from predpatt.patt...")
-from predpatt.patt import Token, Argument
+from predpatt.patt import Argument, Token
+
+
 print("Import successful!")
 
 def test_simple():

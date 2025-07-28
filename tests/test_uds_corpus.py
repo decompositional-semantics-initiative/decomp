@@ -1,11 +1,11 @@
-import os
-import json
-import logging
-import pytest
 import importlib.resources
+import logging
+import os
 
-from glob import glob
+import pytest
+
 from decomp.semantics.uds import UDSCorpus
+
 
 test_document_name = 'answers-20111105112131AA6gIX6_ans'
 test_document_genre = 'answers'
@@ -89,7 +89,7 @@ def _assert_correct_corpus_initialization(uds, raw):
     assert test_doc.document_graph is not None
 
     print(test_doc.semantics_node(test_document_node))
-    
+
     if raw:
         assert uds.annotation_format == 'raw'
         #assert test_doc.semantics_node(test_document_node) == test_document_semantics_node_raw
@@ -140,10 +140,10 @@ class TestUDSCorpus:
     #     #_assert_document_annotation(uds_cached, raw)
 
 
-    # @pytest.mark.slow        
+    # @pytest.mark.slow
     # def test_load_v2_normalized(self, tmp_path, caplog):
     #     caplog.set_level(logging.WARNING)
-        
+
     #     uds = _load_corpus(tmp_path, '2.0', 'normalized')
 
     #     raw = False
@@ -158,7 +158,7 @@ class TestUDSCorpus:
     #     _assert_correct_corpus_initialization(uds_cached, raw)
     #     #_assert_document_annotation(uds_cached, raw)
 
-    # @pytest.mark.slow        
+    # @pytest.mark.slow
     # def test_load_v1_raw(self, tmp_path, caplog):
     #     caplog.set_level(logging.WARNING)
 
@@ -176,7 +176,7 @@ class TestUDSCorpus:
     #     _assert_correct_corpus_initialization(uds_cached, raw)
     #     #_assert_document_annotation(uds_cached, raw)
 
-    @pytest.mark.slow        
+    @pytest.mark.slow
     def test_load_v2_raw(self, tmp_path, caplog):
         caplog.set_level(logging.WARNING)
 
@@ -199,8 +199,8 @@ class TestUDSCorpus:
         #print(uds_cached.metadata.to_dict())
 
         raise Exception
-        
-        
+
+
         _assert_correct_corpus_initialization(uds_cached, raw)
         #_assert_document_annotation(uds_cached, raw)
 

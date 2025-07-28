@@ -29,7 +29,6 @@ from .argument_rules import (
     EmbeddedAdvcl,
     EmbeddedCcomp,
     EmbeddedUnknown,
-    I,
     J,
     K,
     L,
@@ -37,11 +36,15 @@ from .argument_rules import (
     MoveCaseTokenToPred,
     PredicateHas,
     PredResolveRelcl,
+    RuleI,
     ShareArgument,
     SpecialArgDropDirectDep,
 )
 from .argument_rules import (
     EnRelclDummyArgFilter as EnRelclDummyArgFilterArg,
+)
+from .argument_rules import (
+    RuleI as I,
 )
 
 # Import base rule class
@@ -105,7 +108,8 @@ h2 = H2
 i = I
 j = J
 k = K
-l = L
+l_rule = L
+l = L  # Keep for compatibility
 m = M
 w1 = W1
 w2 = W2
@@ -266,6 +270,7 @@ __all__ = [
     "j",
     "k",
     "l",
+    "l_rule",
     "m",
     "move_case_token_to_pred",
     # Lowercase aliases

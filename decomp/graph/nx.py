@@ -1,7 +1,7 @@
 """Module for converting from networkx to RDF"""
 
-from networkx import DiGraph, to_dict_of_dicts
-from rdflib import Graph, URIRef, Literal
+from networkx import DiGraph
+from rdflib import Graph
 
 
 class NXConverter:
@@ -26,7 +26,6 @@ class NXConverter:
         rdfgraph
             the RDFLib graph to convert
         """
-
         converter = cls(rdfgraph)
 
         raise NotImplementedError

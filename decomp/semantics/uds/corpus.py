@@ -6,31 +6,28 @@
 # pylint: disable=C0103
 """Module for representing UDS corpora."""
 
-import os
-import json
-import requests  # type: ignore[import-untyped]
 import importlib.resources
-
-from os.path import basename, splitext
-from logging import warn
-from glob import glob
-from random import sample
+import json
+import os
+from collections.abc import Sequence
 from functools import lru_cache
-from typing import Any, TextIO, Sequence, TypeAlias, cast
+from glob import glob
 from io import BytesIO
+from logging import warn
+from os.path import basename, splitext
+from random import sample
+from typing import Any, TextIO, TypeAlias, cast
 from zipfile import ZipFile
-from rdflib.query import Result
-from rdflib.plugins.sparql.sparql import Query
-from ..predpatt import PredPattCorpus
 
+import requests  # type: ignore[import-untyped]
+from rdflib.plugins.sparql.sparql import Query
+from rdflib.query import Result
+
+from ..predpatt import PredPattCorpus
+from .annotation import NormalizedUDSAnnotation, RawUDSAnnotation, UDSAnnotation
 from .document import UDSDocument
-from .annotation import UDSAnnotation
-from .annotation import RawUDSAnnotation
-from .annotation import NormalizedUDSAnnotation
 from .graph import UDSSentenceGraph
-from .metadata import UDSCorpusMetadata
-from .metadata import UDSAnnotationMetadata
-from .metadata import UDSPropertyMetadata
+from .metadata import UDSCorpusMetadata, UDSPropertyMetadata
 
 
 Location: TypeAlias = str | TextIO
@@ -83,7 +80,7 @@ class UDSCorpus(PredPattCorpus):
         self._metadata = UDSCorpusMetadata()
 
         # methods inherited from Corpus that reference the self._graphs
-        # attribute will operate on sentence-level graphs only        
+        # attribute will operate on sentence-level graphs only
         self._graphs: dict[str, UDSSentenceGraph] = {}  # type: ignore[assignment]
         self._sentences = self._graphs
         self._documents: dict[str, UDSDocument] = {}
@@ -335,15 +332,15 @@ class UDSCorpus(PredPattCorpus):
 
         # Create corpus and add annotations after creation
         uds_corpus: UDSCorpus = cls(predpatt_sentence_graphs, predpatt_documents)  # type: ignore[arg-type]
-        
+
         # Add sentence annotations
         for ann in processed_sentence_annotations:
             uds_corpus.add_sentence_annotation(ann)
-            
-        # Add document annotations    
+
+        # Add document annotations
         for ann in processed_document_annotations:
             uds_corpus.add_document_annotation(ann)
-            
+
         return uds_corpus
 
     @classmethod
@@ -543,7 +540,7 @@ class UDSCorpus(PredPattCorpus):
 
         else:
             json.dump(documents_serializable, documents_outfile)
-        
+
         return None
 
     @lru_cache(maxsize=128)
@@ -599,7 +596,6 @@ class UDSCorpus(PredPattCorpus):
         k
             the number of documents to sample
         """
-
         return {doc_id: self._documents[doc_id]
                 for doc_id
                 in sample(list(self._documents.keys()), k=k)}

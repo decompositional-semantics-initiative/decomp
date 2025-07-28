@@ -100,38 +100,36 @@ Order of Application
    - p1, p2, q, r applied to simplify patterns
 """
 
-import pytest
 from decomp.semantics.predpatt import rules
 from decomp.semantics.predpatt.rules import *
+
+
 R = rules  # Compatibility alias for existing tests
-from decomp.semantics.predpatt.parsing.udparse import UDParse, DepTriple
-from decomp.semantics.predpatt.extraction.engine import PredPattEngine as PredPatt
 from decomp.semantics.predpatt.core.options import PredPattOpts
-from decomp.semantics.predpatt.core.token import Token
-from decomp.semantics.predpatt.core.predicate import Predicate, NORMAL, APPOS, AMOD, POSS
-from decomp.semantics.predpatt.core.argument import Argument
-from decomp.semantics.predpatt.utils.ud_schema import dep_v1, dep_v2
+from decomp.semantics.predpatt.core.predicate import AMOD, APPOS, POSS
+from decomp.semantics.predpatt.extraction.engine import PredPattEngine as PredPatt
+from decomp.semantics.predpatt.parsing.udparse import DepTriple, UDParse
 
 
 class TestRuleClasses:
     """Test basic rule class functionality."""
-    
+
     def test_rule_name(self):
         """Test that rules return their class name."""
         assert R.a1.name() == 'a1'
         assert R.g1.name() == 'g1'
         assert R.borrow_subj.name() == 'borrow_subj'
-    
+
     def test_rule_repr(self):
         """Test rule string representation."""
         rule = R.a1()
         assert repr(rule) == 'a1'
-        
+
         # Test rules with parameters
         edge = DepTriple(rel="nsubj", gov=1, dep=0)
         rule_g1 = R.g1(edge)
         assert 'g1(nsubj)' in repr(rule_g1)
-    
+
     def test_rule_explain(self):
         """Test that rules have docstrings."""
         assert 'clausal relation' in R.a1.explain()
@@ -141,11 +139,11 @@ class TestRuleClasses:
 
 class TestPredicateExtractionRules:
     """Test predicate root identification rules."""
-    
+
     def create_parse(self, tokens, tags, triples):
         """Helper to create a UDParse."""
         return UDParse(tokens, tags, triples)
-    
+
     def test_rule_a1_ccomp(self):
         """Test a1: Extract predicate from ccomp dependent."""
         # "I think [he sleeps]"
@@ -157,20 +155,20 @@ class TestPredicateExtractionRules:
             DepTriple("ccomp", 1, 3),    # sleeps <- think (ccomp)
             DepTriple("root", -1, 1)     # think <- ROOT
         ]
-        
+
         parse = self.create_parse(tokens, tags, triples)
         pp = PredPatt(parse)
-        
+
         # Should extract "think" and "sleeps" as predicates
         assert len(pp.events) == 2
         pred_roots = [p.root.text for p in pp.events]
         assert "think" in pred_roots
         assert "sleeps" in pred_roots
-        
+
         # Check that a1 rule was applied
         sleeps_pred = [p for p in pp.events if p.root.text == "sleeps"][0]
         assert any(isinstance(r, R.a1) for r in sleeps_pred.rules)
-    
+
     def test_rule_a2_xcomp(self):
         """Test a2: Extract predicate from xcomp dependent."""
         # "I want [to sleep]"
@@ -182,20 +180,20 @@ class TestPredicateExtractionRules:
             DepTriple("mark", 3, 2),     # to <- sleep
             DepTriple("root", -1, 1)     # want <- ROOT
         ]
-        
+
         parse = self.create_parse(tokens, tags, triples)
         pp = PredPatt(parse)
-        
+
         # Should extract "want" as predicate
         # Note: xcomp dependent is not extracted as a separate predicate in standard mode
         assert len(pp.events) == 1
         pred_roots = [p.root.text for p in pp.events]
         assert "want" in pred_roots
-        
+
         # Check that the predicate has an xcomp argument extracted by rule l
         want_pred = pp.events[0]
         assert any(isinstance(r, R.l) for r in want_pred.rules)
-    
+
     def test_rule_b_advcl(self):
         """Test b: Extract predicate from clausal modifier."""
         # "I run [when he sleeps]"
@@ -208,21 +206,21 @@ class TestPredicateExtractionRules:
             DepTriple("nsubj", 4, 3),    # he <- sleeps
             DepTriple("root", -1, 1)     # run <- ROOT
         ]
-        
+
         parse = self.create_parse(tokens, tags, triples)
         opts = PredPattOpts(resolve_relcl=True)
         pp = PredPatt(parse, opts=opts)
-        
+
         # Should extract "run" and "sleeps" as predicates
         assert len(pp.events) == 2
         pred_roots = [p.root.text for p in pp.events]
         assert "run" in pred_roots
         assert "sleeps" in pred_roots
-        
+
         # Check that b rule was applied
         sleeps_pred = [p for p in pp.events if p.root.text == "sleeps"][0]
         assert any(isinstance(r, R.b) for r in sleeps_pred.rules)
-    
+
     def test_rule_c_governor(self):
         """Test c: Extract predicate from governor of core arguments."""
         # "The dog barks"
@@ -233,17 +231,17 @@ class TestPredicateExtractionRules:
             DepTriple("nsubj", 2, 1),    # dog <- barks
             DepTriple("root", -1, 2)     # barks <- ROOT
         ]
-        
+
         parse = self.create_parse(tokens, tags, triples)
         pp = PredPatt(parse)
-        
+
         # Should extract "barks" as predicate
         assert len(pp.events) == 1
         assert pp.events[0].root.text == "barks"
-        
+
         # Check that c rule was applied
         assert any(isinstance(r, R.c) for r in pp.events[0].rules)
-    
+
     def test_rule_d_appos(self):
         """Test d: Extract predicate from apposition dependent."""
         # "Sam, [the CEO], arrived"
@@ -257,22 +255,22 @@ class TestPredicateExtractionRules:
             DepTriple("punct", 3, 4),    # , <- CEO
             DepTriple("root", -1, 5)     # arrived <- ROOT
         ]
-        
+
         parse = self.create_parse(tokens, tags, triples)
         opts = PredPattOpts(resolve_appos=True)
         pp = PredPatt(parse, opts=opts)
-        
+
         # Should extract "arrived" and "CEO" as predicates
         assert len(pp.events) == 2
         pred_roots = [p.root.text for p in pp.events]
         assert "arrived" in pred_roots
         assert "CEO" in pred_roots
-        
+
         # Check that d rule was applied and type is APPOS
         ceo_pred = [p for p in pp.events if p.root.text == "CEO"][0]
         assert any(isinstance(r, R.d) for r in ceo_pred.rules)
         assert ceo_pred.type == APPOS
-    
+
     def test_rule_e_amod(self):
         """Test e: Extract predicate from adjectival modifier."""
         # "The [red] car"
@@ -282,20 +280,20 @@ class TestPredicateExtractionRules:
             DepTriple("det", 2, 0),      # The <- car
             DepTriple("amod", 2, 1),     # red <- car (amod)
         ]
-        
+
         # Create parse with strings (not Token objects)
         parse = UDParse(tokens, tags, triples)
         opts = PredPattOpts(resolve_amod=True)
         pp = PredPatt(parse, opts=opts)
-        
-        # Should extract "red" as predicate  
+
+        # Should extract "red" as predicate
         assert len(pp.events) == 1
         assert pp.events[0].root.text == "red"
-        
+
         # Check that e rule was applied and type is AMOD
         assert any(isinstance(r, R.e) for r in pp.events[0].rules)
         assert pp.events[0].type == AMOD
-    
+
     def test_rule_v_poss(self):
         """Test v: Extract predicate from nmod:poss dependent."""
         # "[John's] car"
@@ -305,19 +303,19 @@ class TestPredicateExtractionRules:
             DepTriple("nmod:poss", 2, 0),  # John <- car (nmod:poss)
             DepTriple("case", 0, 1),       # 's <- John
         ]
-        
+
         parse = self.create_parse(tokens, tags, triples)
         opts = PredPattOpts(resolve_poss=True)
         pp = PredPatt(parse, opts=opts)
-        
+
         # Should extract "John" as predicate
         assert len(pp.events) == 1
         assert pp.events[0].root.text == "John"
-        
+
         # Check that v rule was applied and type is POSS
         assert any(isinstance(r, R.v) for r in pp.events[0].rules)
         assert pp.events[0].type == POSS
-    
+
     def test_rule_f_conj(self):
         """Test f: Extract conjunct token of predicate."""
         # "I [run] and [jump]"
@@ -329,16 +327,16 @@ class TestPredicateExtractionRules:
             DepTriple("conj", 1, 3),     # jump <- run (conj)
             DepTriple("root", -1, 1)     # run <- ROOT
         ]
-        
+
         parse = self.create_parse(tokens, tags, triples)
         pp = PredPatt(parse)
-        
+
         # Should extract "run" and "jump" as predicates
         assert len(pp.events) == 2
         pred_roots = [p.root.text for p in pp.events]
         assert "run" in pred_roots
         assert "jump" in pred_roots
-        
+
         # Check that f rule was applied to jump
         jump_pred = [p for p in pp.events if p.root.text == "jump"][0]
         assert any(isinstance(r, R.f) for r in jump_pred.rules)
@@ -346,12 +344,12 @@ class TestPredicateExtractionRules:
 
 class TestArgumentExtractionRules:
     """Test argument root identification rules."""
-    
+
     def create_parse_with_tokens(self, tokens, tags, triples):
         """Helper to create a UDParse with proper Token objects."""
         # UDParse expects tokens to be strings, not Token objects
         return UDParse(tokens, tags, triples)
-    
+
     def test_rule_g1_core_args(self):
         """Test g1: Extract arguments from core dependencies."""
         # "[I] eat [apples]"
@@ -362,23 +360,23 @@ class TestArgumentExtractionRules:
             DepTriple("dobj", 1, 2),     # apples <- eat
             DepTriple("root", -1, 1)     # eat <- ROOT
         ]
-        
+
         parse = self.create_parse_with_tokens(tokens, tags, triples)
         pp = PredPatt(parse)
-        
+
         # Should have one predicate with two arguments
         assert len(pp.events) == 1
         pred = pp.events[0]
         assert len(pred.arguments) == 2
-        
+
         # Check arguments and g1 rules
         arg_texts = [a.root.text for a in pred.arguments]
         assert "I" in arg_texts
         assert "apples" in arg_texts
-        
+
         for arg in pred.arguments:
             assert any(isinstance(r, R.g1) for r in arg.rules)
-    
+
     def test_rule_h1_nmod(self):
         """Test h1: Extract nmod arguments."""
         # "I eat [in the park]"
@@ -391,19 +389,19 @@ class TestArgumentExtractionRules:
             DepTriple("det", 4, 3),      # the <- park
             DepTriple("root", -1, 1)     # eat <- ROOT
         ]
-        
+
         parse = self.create_parse_with_tokens(tokens, tags, triples)
         pp = PredPatt(parse)
-        
+
         # Should have arguments including "park"
         pred = pp.events[0]
         arg_texts = [a.root.text for a in pred.arguments]
         assert "park" in arg_texts
-        
+
         # Check h1 rule
         park_arg = [a for a in pred.arguments if a.root.text == "park"][0]
         assert any(isinstance(r, R.h1) for r in park_arg.rules)
-    
+
     def test_rule_h2_indirect_nmod(self):
         """Test h2: Extract indirect nmod arguments through advmod."""
         # "I turned away [from the market]"
@@ -417,19 +415,19 @@ class TestArgumentExtractionRules:
             DepTriple("det", 5, 4),      # the <- market
             DepTriple("root", -1, 1)     # turned <- ROOT
         ]
-        
+
         parse = self.create_parse_with_tokens(tokens, tags, triples)
         pp = PredPatt(parse)
-        
+
         # Should extract "market" as argument via h2
         pred = pp.events[0]
         arg_texts = [a.root.text for a in pred.arguments]
         assert "market" in arg_texts
-        
+
         # Check h2 rule
         market_arg = [a for a in pred.arguments if a.root.text == "market"][0]
         assert any(isinstance(r, R.h2) for r in market_arg.rules)
-    
+
     def test_rule_i_amod_governor(self):
         """Test i: Extract argument from governor of amod."""
         # "The [red] [car]"
@@ -439,21 +437,21 @@ class TestArgumentExtractionRules:
             DepTriple("det", 2, 0),      # The <- car
             DepTriple("amod", 2, 1),     # red <- car
         ]
-        
+
         parse = self.create_parse_with_tokens(tokens, tags, triples)
         opts = PredPattOpts(resolve_amod=True)
         pp = PredPatt(parse, opts=opts)
-        
+
         # "red" should be predicate with "car" as argument
         assert len(pp.events) == 1
         pred = pp.events[0]
         assert pred.root.text == "red"
         assert len(pred.arguments) == 1
         assert pred.arguments[0].root.text == "car"
-        
+
         # Check i rule
         assert any(isinstance(r, R.i) for r in pred.arguments[0].rules)
-    
+
     def test_rule_j_appos_governor(self):
         """Test j: Extract argument from governor of apposition."""
         # "[Sam], the CEO"
@@ -464,21 +462,21 @@ class TestArgumentExtractionRules:
             DepTriple("det", 3, 2),      # the <- CEO
             DepTriple("punct", 3, 1),    # , <- CEO
         ]
-        
+
         parse = self.create_parse_with_tokens(tokens, tags, triples)
         opts = PredPattOpts(resolve_appos=True)
         pp = PredPatt(parse, opts=opts)
-        
+
         # "CEO" should be predicate with "Sam" as argument
         assert len(pp.events) == 1
         pred = pp.events[0]
         assert pred.root.text == "CEO"
         assert len(pred.arguments) == 1
         assert pred.arguments[0].root.text == "Sam"
-        
+
         # Check j rule
         assert any(isinstance(r, R.j) for r in pred.arguments[0].rules)
-    
+
     def test_rule_w1_w2_poss(self):
         """Test w1/w2: Extract arguments from nmod:poss relation."""
         # "[John]'s [car]"
@@ -488,27 +486,27 @@ class TestArgumentExtractionRules:
             DepTriple("nmod:poss", 2, 0),  # John <- car
             DepTriple("case", 0, 1),       # 's <- John
         ]
-        
+
         parse = self.create_parse_with_tokens(tokens, tags, triples)
         opts = PredPattOpts(resolve_poss=True)
         pp = PredPatt(parse, opts=opts)
-        
+
         # "John" should be predicate with both "car" (w1) and "John" (w2) as arguments
         assert len(pp.events) == 1
         pred = pp.events[0]
         assert pred.root.text == "John"
         assert len(pred.arguments) == 2
-        
+
         arg_texts = [a.root.text for a in pred.arguments]
         assert "car" in arg_texts
         assert "John" in arg_texts
-        
+
         # Check w1 and w2 rules
         car_arg = [a for a in pred.arguments if a.root.text == "car"][0]
         john_arg = [a for a in pred.arguments if a.root.text == "John"][0]
         assert any(isinstance(r, R.w1) for r in car_arg.rules)
         assert any(isinstance(r, R.w2) for r in john_arg.rules)
-    
+
     def test_rule_k_ccomp_arg(self):
         """Test k: Extract argument from ccomp dependent."""
         # "They said [he left]"
@@ -520,16 +518,16 @@ class TestArgumentExtractionRules:
             DepTriple("nsubj", 3, 2),    # he <- left
             DepTriple("root", -1, 1)     # said <- ROOT
         ]
-        
+
         parse = self.create_parse_with_tokens(tokens, tags, triples)
         pp = PredPatt(parse)
-        
+
         # "said" should have "They" and "left" as arguments
         said_pred = [p for p in pp.events if p.root.text == "said"][0]
         arg_texts = [a.root.text for a in said_pred.arguments]
         assert "They" in arg_texts
         assert "left" in arg_texts
-        
+
         # Check k rule
         left_arg = [a for a in said_pred.arguments if a.root.text == "left"][0]
         assert any(isinstance(r, R.k) for r in left_arg.rules)
@@ -537,12 +535,12 @@ class TestArgumentExtractionRules:
 
 class TestArgumentResolutionRules:
     """Test argument borrowing and resolution rules."""
-    
+
     def create_parse_with_tokens(self, tokens, tags, triples):
         """Helper to create a UDParse with proper Token objects."""
         # UDParse expects tokens to be strings, not Token objects
         return UDParse(tokens, tags, triples)
-    
+
     def test_borrow_subj_from_conj(self):
         """Test borrowing subject from conjoined predicate."""
         # "[I] run and jump"  (jump should borrow "I")
@@ -554,21 +552,21 @@ class TestArgumentResolutionRules:
             DepTriple("conj", 1, 3),     # jump <- run
             DepTriple("root", -1, 1)     # run <- ROOT
         ]
-        
+
         parse = self.create_parse_with_tokens(tokens, tags, triples)
         pp = PredPatt(parse)
-        
+
         # Both predicates should have "I" as subject
         run_pred = [p for p in pp.events if p.root.text == "run"][0]
         jump_pred = [p for p in pp.events if p.root.text == "jump"][0]
-        
+
         assert any(a.root.text == "I" for a in run_pred.arguments)
         assert any(a.root.text == "I" for a in jump_pred.arguments)
-        
+
         # Check borrow_subj rule on jump's argument
         jump_subj = [a for a in jump_pred.arguments if a.root.text == "I"][0]
         assert any(isinstance(r, R.borrow_subj) for r in jump_subj.rules)
-    
+
     def test_l_merge_xcomp_args(self):
         """Test l: Merge xcomp arguments to governor."""
         # "I want to eat apples" with options.cut=True
@@ -581,36 +579,36 @@ class TestArgumentResolutionRules:
             DepTriple("dobj", 3, 4),     # apples <- eat
             DepTriple("root", -1, 1)     # want <- ROOT
         ]
-        
+
         parse = self.create_parse_with_tokens(tokens, tags, triples)
         opts = PredPattOpts(cut=True)
         pp = PredPatt(parse, opts=opts)
-        
+
         # With cut=True, xcomp creates a separate predicate but borrows arguments
         assert len(pp.events) == 2
-        
+
         # Find the predicates
         want_pred = [p for p in pp.events if p.root.text == "want"][0]
         eat_pred = [p for p in pp.events if p.root.text == "eat"][0]
-        
+
         # Check that eat borrowed subject from want
         eat_arg_texts = [a.root.text for a in eat_pred.arguments]
         assert "I" in eat_arg_texts  # borrowed subject
         assert "apples" in eat_arg_texts  # own object
-        
+
         # Check cut borrow rules
-        assert any(isinstance(r, R.cut_borrow_subj) for arg in eat_pred.arguments 
+        assert any(isinstance(r, R.cut_borrow_subj) for arg in eat_pred.arguments
                   for r in arg.rules)
 
 
 class TestPhraseRules:
     """Test predicate and argument phrase building rules."""
-    
+
     def create_parse_with_tokens(self, tokens, tags, triples):
         """Helper to create a UDParse with proper Token objects."""
         # UDParse expects tokens to be strings, not Token objects
         return UDParse(tokens, tags, triples)
-    
+
     def test_predicate_phrase_rules(self):
         """Test n1-n6 predicate phrase building rules."""
         # "I quickly eat"
@@ -621,15 +619,15 @@ class TestPhraseRules:
             DepTriple("advmod", 2, 1),   # quickly <- eat
             DepTriple("root", -1, 2)     # eat <- ROOT
         ]
-        
+
         parse = self.create_parse_with_tokens(tokens, tags, triples)
         pp = PredPatt(parse)
-        
+
         # Predicate phrase should include both "quickly" and "eat"
         pred = pp.events[0]
         assert "quickly" in pred.phrase()
         assert "eat" in pred.phrase()
-    
+
     def test_argument_phrase_rules(self):
         """Test argument phrase building rules."""
         # "the big dog"
@@ -641,10 +639,10 @@ class TestPhraseRules:
             DepTriple("nsubj", 3, 2),    # dog <- barks
             DepTriple("root", -1, 3)     # barks <- ROOT
         ]
-        
+
         parse = self.create_parse_with_tokens(tokens, tags, triples)
         pp = PredPatt(parse)
-        
+
         # Argument phrase should include all modifiers
         pred = pp.events[0]
         arg = pred.arguments[0]
@@ -653,12 +651,12 @@ class TestPhraseRules:
 
 class TestSimplificationRules:
     """Test pattern simplification rules."""
-    
+
     def create_parse_with_tokens(self, tokens, tags, triples):
         """Helper to create a UDParse with proper Token objects."""
         # UDParse expects tokens to be strings, not Token objects
         return UDParse(tokens, tags, triples)
-    
+
     def test_simple_predicate_rules(self):
         """Test q (remove advmod) and r (remove aux) rules."""
         # "I have quickly eaten"
@@ -670,15 +668,15 @@ class TestSimplificationRules:
             DepTriple("advmod", 3, 2),   # quickly <- eaten
             DepTriple("root", -1, 3)     # eaten <- ROOT
         ]
-        
+
         parse = self.create_parse_with_tokens(tokens, tags, triples)
         opts = PredPattOpts(simple=True)
         pp = PredPatt(parse, opts=opts)
-        
+
         # With simple=True, predicate phrase is simplified but still includes arguments
         pred = pp.events[0]
         assert pred.phrase() == "?a eaten"  # phrase() includes argument placeholders
-        
+
         # Check q and r rules were applied
         assert any(isinstance(r, R.q) for r in pred.rules)
         assert any(isinstance(r, R.r) for r in pred.rules)

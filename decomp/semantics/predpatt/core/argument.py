@@ -57,11 +57,7 @@ class Argument:
         self,
         root: Token,
         ud: Any = dep_v1,
-        rules: list[Any] = [],  # NOTE: Mutable default to match original
-                               # WARNING: This mutable default is INTENTIONAL and REQUIRED
-                               #          for exact compatibility with original PredPatt.
-                               #          Instances share the same list when rules is not provided.
-                               #          DO NOT CHANGE to None - this would break compatibility!
+        rules: list[Any] | None = None,
         share: bool = False
     ) -> None:
         """Initialize an Argument.
@@ -80,7 +76,7 @@ class Argument:
         """
         # maintain exact initialization order as original
         self.root = root
-        self.rules = rules  # intentionally using mutable default
+        self.rules = rules if rules is not None else []
         self.position = root.position
         self.ud = ud
         self.tokens: list[Token] = []

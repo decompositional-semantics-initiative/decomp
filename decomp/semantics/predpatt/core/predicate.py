@@ -260,14 +260,14 @@ class Predicate:
             return True
         return None
 
-    def _format_predicate(self, name: dict[Any, str], C: Any = no_color) -> str:
+    def _format_predicate(self, name: dict[Any, str], c: Any = no_color) -> str:
         """Format predicate with argument placeholders.
 
         Parameters
         ----------
         name : dict[Any, str]
             Mapping from arguments to their names.
-        C : callable, optional
+        c : callable, optional
             Color function for formatting.
 
         Returns
@@ -276,7 +276,7 @@ class Predicate:
             Formatted predicate string.
         """
         # collect tokens and arguments
-        X = sort_by_position(self.tokens + self.arguments)
+        x = sort_by_position(self.tokens + self.arguments)
 
         if self.type == POSS:
             # possessive format: "?a 's ?b"
@@ -295,7 +295,7 @@ class Predicate:
             if gov_arg:
                 # format: gov_arg is/are other_tokens_and_args
                 rest = []
-                for item in X:
+                for item in x:
                     if item == gov_arg:
                         continue
                     if item in self.arguments:
@@ -306,7 +306,7 @@ class Predicate:
                 return f'{name[gov_arg]} is/are {rest_str}'
             else:
                 # fallback if no governor argument found
-                return ' '.join(name[item] if item in self.arguments else item.text for item in X)
+                return ' '.join(name[item] if item in self.arguments else item.text for item in x)
 
         else:
             # normal predicate or xcomp special case
@@ -317,7 +317,7 @@ class Predicate:
                 self.root.tag not in {postag.VERB, postag.ADJ}):
                 # add is/are after first argument
                 first_arg_added = False
-                for item in X:
+                for item in x:
                     if item in self.arguments:
                         result.append(name[item])
                         if not first_arg_added:
@@ -327,7 +327,7 @@ class Predicate:
                         result.append(item.text)
             else:
                 # normal formatting
-                for item in X:
+                for item in x:
                     if item in self.arguments:
                         result.append(name[item])
                     else:
@@ -338,7 +338,7 @@ class Predicate:
     def format(
         self,
         track_rule: bool = False,
-        C: Any = no_color,
+        c: Any = no_color,
         indent: str = '\t'
     ) -> str:
         """Format predicate with arguments for display.
@@ -347,7 +347,7 @@ class Predicate:
         ----------
         track_rule : bool, optional
             Whether to include rule tracking information.
-        C : callable, optional
+        c : callable, optional
             Color function for formatting.
         indent : str, optional
             Indentation string to use.
@@ -362,9 +362,9 @@ class Predicate:
         verbose = ''
         if track_rule:
             rules_str = ','.join(sorted(map(str, self.rules)))
-            verbose = ' ' + C(f'[{self.root.text}-{self.root.gov_rel},{rules_str}]', 'magenta')
+            verbose = ' ' + c(f'[{self.root.text}-{self.root.gov_rel},{rules_str}]', 'magenta')
 
-        pred_str = self._format_predicate(argument_names(self.arguments), C)
+        pred_str = self._format_predicate(argument_names(self.arguments), c)
         lines.append(f'{indent}{pred_str}{verbose}')
 
         # format arguments
@@ -372,14 +372,14 @@ class Predicate:
         for arg in self.arguments:
             if (arg.isclausal() and arg.root.gov in self.tokens and
                     self.type == NORMAL):
-                s = C('SOMETHING', 'yellow') + ' := ' + arg.phrase()
+                s = c('SOMETHING', 'yellow') + ' := ' + arg.phrase()
             else:
-                s = C(arg.phrase(), 'green')
+                s = c(arg.phrase(), 'green')
             rule = ''
             if track_rule:
                 rules_str = ','.join(sorted(map(str, arg.rules)))
                 rule = f',{rules_str}'
-                verbose = C(f' [{arg.root.text}-{arg.root.gov_rel}{rule}]',
+                verbose = c(f' [{arg.root.text}-{arg.root.gov_rel}{rule}]',
                             'magenta')
             else:
                 verbose = ''

@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from ..core.predicate import Predicate
 
 
-def isSbjOrObj(arg: Argument) -> bool:
+def is_sbj_or_obj(arg: Argument) -> bool:
     """Filter to accept core arguments (subjects and objects).
 
     Accepts arguments with core grammatical relations: nsubj, dobj, iobj.
@@ -32,12 +32,12 @@ def isSbjOrObj(arg: Argument) -> bool:
     """
     if arg.root.gov_rel in ('nsubj', 'dobj', 'iobj'):
         filter_rules = getattr(arg, 'rules', [])
-        filter_rules.append(isSbjOrObj.__name__)
+        filter_rules.append(is_sbj_or_obj.__name__)
         return True
     return False
 
 
-def isNotPronoun(arg: Argument) -> bool:
+def is_not_pronoun(arg: Argument) -> bool:
     """Filter out pronoun arguments.
 
     Excludes arguments that are pronouns (PRP tag) or specific
@@ -59,7 +59,7 @@ def isNotPronoun(arg: Argument) -> bool:
         return False
     else:
         filter_rules = getattr(arg, 'rules', [])
-        filter_rules.append(isNotPronoun.__name__)
+        filter_rules.append(is_not_pronoun.__name__)
         return True
 
 

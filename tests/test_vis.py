@@ -1,18 +1,12 @@
 import json
-import os 
+import os
 import shutil
-from decomp.semantics.predpatt import PredPatt, PredPattOpts, load_conllu
-from decomp.syntax.dependency import DependencyGraphBuilder
-from decomp.semantics.predpatt import PredPattGraphBuilder
-from decomp.semantics.uds import UDSSentenceGraph, UDSCorpus
-from decomp.vis.uds_vis import UDSVisualization
-from decomp import NormalizedUDSAnnotation
-import pdb 
 
-from test_uds_graph import raw_sentence_graph, rawtree, listtree
 import pytest
-import dash 
-from dash.testing.application_runners import import_app
+
+from decomp.semantics.uds import UDSSentenceGraph
+from decomp.vis.uds_vis import UDSVisualization
+
 
 # check if chromedriver is available
 requires_chromedriver = pytest.mark.skipif(

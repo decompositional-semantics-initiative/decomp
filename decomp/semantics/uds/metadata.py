@@ -24,7 +24,6 @@ def _dtype(name: str) -> type[PrimitiveType]:
     name
         A string representing the type
     """
-
     if name == 'str':
         return str
     elif name == 'int':
@@ -35,7 +34,7 @@ def _dtype(name: str) -> type[PrimitiveType]:
         return float
     else:
         errmsg = 'name must be "str", "int",' +\
-                 ' "bool", or "float"'        
+                 ' "bool", or "float"'
         raise ValueError(errmsg)
 
 
@@ -103,10 +102,10 @@ class UDSDataType:
         elif lower_bound is not None or upper_bound is not None:
             self._ordered = True
 
-    def _validate(self, datatype: type[PrimitiveType], 
+    def _validate(self, datatype: type[PrimitiveType],
                   categories: list[PrimitiveType] | None,
                   ordered: bool | None,
-                  lower_bound: float | None, 
+                  lower_bound: float | None,
                   upper_bound: float | None) -> None:
         if ordered is not None and\
            categories is None and\
@@ -369,16 +368,16 @@ class UDSPropertyMetadata:
 
         value_data_raw = metadata['value']
         confidence_data_raw = metadata['confidence']
-        
+
         if not isinstance(value_data_raw, dict):
             raise TypeError('value must be a dictionary')
         if not isinstance(confidence_data_raw, dict):
             raise TypeError('confidence must be a dictionary')
-        
+
         # these should be UDSDataTypeDict, not nested dicts
         value_data: UDSDataTypeDict = value_data_raw  # type: ignore[assignment]
         confidence_data: UDSDataTypeDict = confidence_data_raw  # type: ignore[assignment]
-            
+
         value = UDSDataType.from_dict(value_data)
         confidence = UDSDataType.from_dict(confidence_data)
 
@@ -441,7 +440,7 @@ class UDSAnnotationMetadata:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, UDSAnnotationMetadata):
             return NotImplemented
-        
+
         if self.subspaces != other.subspaces:
             return False
 
@@ -471,7 +470,7 @@ class UDSAnnotationMetadata:
     @property
     def metadata(self) -> dict[str, dict[str, UDSPropertyMetadata]]:
         """The metadata dictionary"""
-        return self._metadata   
+        return self._metadata
 
     @property
     def subspaces(self) -> set[str]:
@@ -585,11 +584,11 @@ class UDSCorpusMetadata:
 
     @property
     def sentence_metadata(self) -> UDSAnnotationMetadata:
-        return self._sentence_metadata   
+        return self._sentence_metadata
 
     @property
     def document_metadata(self) -> UDSAnnotationMetadata:
-        return self._document_metadata   
+        return self._document_metadata
 
     @property
     def sentence_subspaces(self) -> set[str]:

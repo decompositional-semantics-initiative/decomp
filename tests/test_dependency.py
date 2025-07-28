@@ -1,6 +1,8 @@
-from numpy import array
 from networkx import DiGraph
-from decomp.syntax.dependency import DependencyGraphBuilder, CoNLLDependencyTreeCorpus
+from numpy import array
+
+from decomp.syntax.dependency import CoNLLDependencyTreeCorpus, DependencyGraphBuilder
+
 
 rawtree = '''1       I       I       PRON    PRP     Case=Nom|Number=Sing|Person=1|PronType=Prs      4       nsubj   _       _
 2       ca      can     AUX     MD      VerbForm=Fin    4       aux     _       SpaceAfter=No
