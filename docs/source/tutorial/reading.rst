@@ -18,8 +18,8 @@ graphs across all splits in the data.
 As noted in :doc:`quick-start`, the first time you do read UDS, it
 will take several minutes to complete while the dataset is built from
 the `Universal Dependencies English Web Treebank`_ (UD-EWT), which is not
-shipped with the package (but is downloaded automatically on import in
-the background), and the `UDS annotations`_, which are shipped with
+shipped with the package (but is downloaded automatically when first
+creating a corpus instance), and the `UDS annotations`_, which are shipped with
 the package as package data. Normalized annotations are loaded by default.
 To load raw annotations, specify ``"raw"`` as the argument to the UDSCorpus
 ``annotation_format`` keyword arugment as follows:

@@ -137,7 +137,7 @@ The first time you read UDS, it will take several minutes to complete
 while the dataset is built from the [Universal Dependencies English Web
 Treebank](https://github.com/UniversalDependencies/UD_English-EWT),
 which is not shipped with the package (but is downloaded automatically
-on import in the background), and the [UDS
+when first creating a corpus instance), and the [UDS
 annotations](http://decomp.io/data/), which are shipped with the
 package. Subsequent uses will be faster, since the dataset is cached on
 build.

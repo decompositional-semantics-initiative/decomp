@@ -19,7 +19,7 @@ e.g., containing only a particular split, see other loading options in
 The first time you read UDS, it will take several minutes to
 complete while the dataset is built from the `Universal Dependencies
 English Web Treebank`_, which is not shipped with the package (but is
-downloaded automatically on import in the background), and the `UDS
+downloaded automatically when first creating a corpus instance), and the `UDS
 annotations`_, which are shipped with the package. Subsequent uses
 will be faster, since the dataset is cached on build.
 
