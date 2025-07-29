@@ -14,25 +14,24 @@ and their constituent sentences while enabling document-level semantic annotatio
 
 import re
 from functools import cached_property
-from typing import TypeAlias, cast
+from typing import cast
 
 from networkx import DiGraph
 
-from .types import NetworkXGraphData, BasicNodeAttrs
-
 from .graph import EdgeAttributes, EdgeKey, NodeAttributes, UDSDocumentGraph, UDSSentenceGraph
+from .types import BasicNodeAttrs, NetworkXGraphData
 
 
 # type aliases
-SentenceGraphDict: TypeAlias = dict[str, UDSSentenceGraph]
+type SentenceGraphDict = dict[str, UDSSentenceGraph]
 """Mapping from graph names to their UDSSentenceGraph objects."""
 
-SentenceIDDict: TypeAlias = dict[str, str]
+type SentenceIDDict = dict[str, str]
 """Mapping from graph names to their UD sentence identifiers."""
 
 
 class UDSDocument:
-    """A Universal Decompositional Semantics document
+    """A Universal Decompositional Semantics document.
 
     Parameters
     ----------
@@ -82,7 +81,7 @@ class UDSDocument:
     @classmethod
     def from_dict(cls, document: dict[str, dict], sentence_graphs: dict[str, UDSSentenceGraph],
                        sentence_ids: dict[str, str], name: str = 'UDS') -> 'UDSDocument':
-        """Construct a UDSDocument from a dictionary
+        """Construct a UDSDocument from a dictionary.
 
         Since only the document graphs are serialized, the sentence
         graphs must also be provided to this method call in order

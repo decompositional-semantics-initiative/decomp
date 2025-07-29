@@ -24,7 +24,7 @@ from io import BytesIO
 from logging import warn
 from os.path import basename, splitext
 from random import sample
-from typing import Literal, TextIO, TypeAlias, cast
+from typing import Literal, TextIO, cast
 from zipfile import ZipFile
 
 import requests
@@ -38,12 +38,12 @@ from .graph import EdgeAttributes, EdgeKey, NodeAttributes, UDSSentenceGraph
 from .metadata import AnnotationMetadataDict, UDSCorpusMetadata, UDSPropertyMetadata
 
 
-Location: TypeAlias = str | TextIO
+type Location = str | TextIO
 """File location as either a file path string or an open file handle."""
 
 
 class UDSCorpus(PredPattCorpus):
-    """A collection of Universal Decompositional Semantics graphs
+    """A collection of Universal Decompositional Semantics graphs.
 
     Parameters
     ----------
@@ -54,7 +54,7 @@ class UDSCorpus(PredPattCorpus):
     sentence_annotations
         additional annotations to associate with predpatt nodes on
         sentence-level graphs; in most cases, no such annotations
-        will be passed, since the standard UDS annotations are 
+        will be passed, since the standard UDS annotations are
         automatically loaded
     document_annotations
         additional annotations to associate with predpatt nodes on
@@ -67,16 +67,18 @@ class UDSCorpus(PredPattCorpus):
         which annotation type to load ("raw" or "normalized")
     """
 
-    UD_URL = 'https://github.com/UniversalDependencies/' +\
-             'UD_English-EWT/archive/r1.2.zip'
-    ANN_DIR = str(importlib.resources.files('decomp') / 'data') + '/'
-    CACHE_DIR = str(importlib.resources.files('decomp') / 'data') + '/'
+    UD_URL = (
+        'https://github.com/UniversalDependencies/'
+        'UD_English-EWT/archive/r1.2.zip'
+    )
+    ANN_DIR = f"{importlib.resources.files('decomp') / 'data'}/"
+    CACHE_DIR = f"{importlib.resources.files('decomp') / 'data'}/"
 
     def __init__(self,
                  sentences: PredPattCorpus | dict[str, UDSSentenceGraph] | None = None,
                  documents: dict[str, UDSDocument] | None = None,
-                 sentence_annotations: list[UDSAnnotation] = [],
-                 document_annotations: list[UDSAnnotation] = [],
+                 sentence_annotations: list[UDSAnnotation] | None = None,
+                 document_annotations: list[UDSAnnotation] | None = None,
                  version: str = '2.0',
                  split: str | None = None,
                  annotation_format: str = 'normalized'):
@@ -128,10 +130,19 @@ class UDSCorpus(PredPattCorpus):
             self._documents = documents or {}
 
             if sentence_annotations or document_annotations:
-                self.add_annotation(sentence_annotations, document_annotations)
+                self.add_annotation(
+                    sentence_annotations or [],
+                    document_annotations or []
+                )
 
-    def _validate_arguments(self, sentences: PredPattCorpus | dict[str, UDSSentenceGraph] | None, documents: dict[str, UDSDocument] | None,
-                            version: str, split: str | None, annotation_format: str) -> None:
+    def _validate_arguments(
+        self,
+        sentences: PredPattCorpus | dict[str, UDSSentenceGraph] | None,
+        documents: dict[str, UDSDocument] | None,
+        version: str,
+        split: str | None,
+        annotation_format: str
+    ) -> None:
         """Validate constructor arguments for consistency.
 
         Parameters
@@ -309,16 +320,16 @@ class UDSCorpus(PredPattCorpus):
                                                                     self._document_annotation_paths,
                                                                     annotation_format=self.annotation_format,
                                                                     version=self.version,
-                                                                    name='ewt-'+sname)
+                                                                    name=f'ewt-{sname}')
 
                     if sname == split or split is None:
                         # add metadata
                         self._metadata += spl.metadata
 
                         # prepare sentences
-                        sentences_json_name = '-'.join(['uds', 'ewt', 'sentences',
-                                                        sname, self.annotation_format]) +\
-                                              '.json'
+                        sentences_json_name = (
+                            f'uds-ewt-sentences-{sname}-{self.annotation_format}.json'
+                        )
                         sentences_json_path = os.path.join(self.__class__.CACHE_DIR,
                                                            self.version,
                                                            self.annotation_format,
@@ -329,9 +340,9 @@ class UDSCorpus(PredPattCorpus):
                         self._sentences_paths[sname] = sentences_json_path
 
                         # prepare documents
-                        documents_json_name = '-'.join(['uds', 'ewt', 'documents',
-                                                        sname, self.annotation_format]) +\
-                                              '.json'
+                        documents_json_name = (
+                            f'uds-ewt-documents-{sname}-{self.annotation_format}.json'
+                        )
                         documents_json_path = os.path.join(self.__class__.CACHE_DIR,
                                                            self.version,
                                                            self.annotation_format,
@@ -352,7 +363,7 @@ class UDSCorpus(PredPattCorpus):
                                    annotation_format: str = 'normalized',
                                    version: str = '2.0',
                                    name: str = 'ewt') -> 'UDSCorpus':
-        """Load UDS graph corpus from CoNLL (dependencies) and JSON (annotations)
+        """Load UDS graph corpus from CoNLL (dependencies) and JSON (annotations).
 
         This method should only be used if the UDS corpus is being
         (re)built. Otherwise, loading the corpus from the JSON shipped
@@ -406,8 +417,12 @@ class UDSCorpus(PredPattCorpus):
             processed_document_annotations.append(ann)
 
         # create corpus and add annotations after creation
-        # cast needed because constructor expects PredPattCorpus but we have dict[str, UDSSentenceGraph]
-        uds_corpus: UDSCorpus = cls(cast(PredPattCorpus | None, predpatt_sentence_graphs), predpatt_documents)
+        # cast needed because constructor expects PredPattCorpus but we have
+        # dict[str, UDSSentenceGraph]
+        uds_corpus: UDSCorpus = cls(
+            cast(PredPattCorpus | None, predpatt_sentence_graphs),
+            predpatt_documents
+        )
 
         # add sentence annotations
         for ann in processed_sentence_annotations:
@@ -420,7 +435,9 @@ class UDSCorpus(PredPattCorpus):
         return uds_corpus
 
     @classmethod
-    def _load_ud_ids(cls, sentence_ids_only: bool = False) -> dict[str, dict[str, str]] | dict[str, str]:
+    def _load_ud_ids(
+        cls, sentence_ids_only: bool = False
+    ) -> dict[str, dict[str, str]] | dict[str, str]:
         """Load Universal Dependencies IDs for sentences and documents.
 
         Parameters
@@ -448,7 +465,7 @@ class UDSCorpus(PredPattCorpus):
     @classmethod
     def from_json(cls, sentences_jsonfile: Location,
                   documents_jsonfile: Location) -> 'UDSCorpus':
-        """Load annotated UDS graph corpus (including annotations) from JSON
+        """Load annotated UDS graph corpus (including annotations) from JSON.
 
         This is the suggested method for loading the UDS corpus.
 
@@ -461,8 +478,12 @@ class UDSCorpus(PredPattCorpus):
             file containing Universal Decompositional Semantics corpus
             document-level graphs in JSON format
         """
-        sentences_ext = splitext(basename(sentences_jsonfile if isinstance(sentences_jsonfile, str) else 'dummy.json'))[-1]
-        documents_ext = splitext(basename(documents_jsonfile if isinstance(documents_jsonfile, str) else 'dummy.json'))[-1]
+        sentences_ext = splitext(
+            basename(sentences_jsonfile if isinstance(sentences_jsonfile, str) else 'dummy.json')
+        )[-1]
+        documents_ext = splitext(
+            basename(documents_jsonfile if isinstance(documents_jsonfile, str) else 'dummy.json')
+        )[-1]
         sent_ids = cast(dict[str, str], cls._load_ud_ids(sentence_ids_only=True))
 
         # process sentence-level graphs
@@ -522,7 +543,7 @@ class UDSCorpus(PredPattCorpus):
 
     def add_annotation(self, sentence_annotation: list[UDSAnnotation] | None = None,
                        document_annotation: list[UDSAnnotation] | None = None) -> None:
-        """Add annotations to UDS sentence and document graphs
+        """Add annotations to UDS sentence and document graphs.
 
         Parameters
         ----------
@@ -540,7 +561,7 @@ class UDSCorpus(PredPattCorpus):
                 self.add_document_annotation(ann)
 
     def add_sentence_annotation(self, annotation: UDSAnnotation) -> None:
-        """Add annotations to UDS sentence graphs
+        """Add annotations to UDS sentence graphs.
 
         Parameters
         ----------
@@ -551,16 +572,13 @@ class UDSCorpus(PredPattCorpus):
 
         for gname, (node_attrs, edge_attrs) in annotation.items():
             if gname in self._sentences:
-                from typing import cast
-
-                from .graph import EdgeAttributes, EdgeKey, NodeAttributes
                 self._sentences[gname].add_annotation(
                     cast(dict[str, NodeAttributes], node_attrs),
                     cast(dict[EdgeKey, EdgeAttributes], edge_attrs)
                 )
 
     def add_document_annotation(self, annotation: UDSAnnotation) -> None:
-        """Add annotations to UDS documents
+        """Add annotations to UDS documents.
 
         Parameters
         ----------
@@ -571,7 +589,6 @@ class UDSCorpus(PredPattCorpus):
 
         for dname, (node_attrs, edge_attrs) in annotation.items():
             if dname in self._documents:
-                from .graph import EdgeAttributes, EdgeKey, NodeAttributes
                 self._documents[dname].add_annotation(
                     cast(dict[str, NodeAttributes], node_attrs),
                     cast(dict[EdgeKey, EdgeAttributes], edge_attrs)
@@ -619,7 +636,7 @@ class UDSCorpus(PredPattCorpus):
     def to_json(self,
                 sentences_outfile: Location | None = None,
                 documents_outfile: Location | None = None) -> str | None:
-        """Serialize corpus to json
+        """Serialize corpus to json.
 
         Parameters
         ----------
@@ -666,12 +683,13 @@ class UDSCorpus(PredPattCorpus):
 
         return None
 
-    @lru_cache(maxsize=128)
+    @lru_cache(maxsize=128)  # noqa: B019
     def query(self, query: str | Query,
               query_type: str | None = None,
               cache_query: bool = True,
-              cache_rdf: bool = True) -> dict[str, Result | dict[str, NodeAttributes] | dict[EdgeKey, EdgeAttributes]]:
-        """Query all graphs in the corpus using SPARQL 1.1
+              cache_rdf: bool = True
+    ) -> dict[str, Result | dict[str, NodeAttributes] | dict[EdgeKey, EdgeAttributes]]:
+        """Query all graphs in the corpus using SPARQL 1.1.
 
         Parameters
         ----------
@@ -730,7 +748,7 @@ class UDSCorpus(PredPattCorpus):
         return len(self._documents)
 
     def sample_documents(self, k: int) -> dict[str, UDSDocument]:
-        """Sample k documents without replacement
+        """Sample k documents without replacement.
 
         Parameters
         ----------
@@ -836,7 +854,7 @@ class UDSCorpus(PredPattCorpus):
                self.document_edge_subspaces
 
     def sentence_properties(self, subspace: str | None = None) -> set[str]:
-        """The properties in a sentence subspace.
+        """Return the properties in a sentence subspace.
 
         Parameters
         ----------
@@ -857,7 +875,7 @@ class UDSCorpus(PredPattCorpus):
 
     def sentence_property_metadata(self, subspace: str,
                                    prop: str) -> UDSPropertyMetadata:
-        """The metadata for a property in a sentence subspace
+        """Return the metadata for a property in a sentence subspace.
 
         Parameters
         ----------
@@ -869,7 +887,7 @@ class UDSCorpus(PredPattCorpus):
         raise NotImplementedError
 
     def document_properties(self, subspace: str | None = None) -> set[str]:
-        """The properties in a document subspace.
+        """Return the properties in a document subspace.
 
         Parameters
         ----------
@@ -890,7 +908,7 @@ class UDSCorpus(PredPattCorpus):
 
     def document_property_metadata(self, subspace: str,
                                    prop: str) -> UDSPropertyMetadata:
-        """The metadata for a property in a document subspace
+        """Return the metadata for a property in a document subspace.
 
         Parameters
         ----------

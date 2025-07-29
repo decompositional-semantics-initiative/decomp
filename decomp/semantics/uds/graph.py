@@ -1,21 +1,45 @@
-"""Module for representing UDS sentence and document graphs with NetworkX and RDF support.
+"""Graph representations for Universal Decompositional Semantics (UDS) annotations.
 
-This module provides graph representations for Universal Decompositional Semantics (UDS)
-at both sentence and document levels. It includes:
+This module provides the core graph infrastructure for representing UDS annotations
+at both sentence and document levels using NetworkX directed graphs. The graphs
+capture syntactic structure, semantic predicates and arguments, and the interfaces
+between them.
 
-- Type aliases for graph elements (nodes, edges, attributes)
-- UDSGraph: Abstract base class for all UDS graphs
-- UDSSentenceGraph: Sentence-level graphs with syntax/semantics nodes and edges
-- UDSDocumentGraph: Document-level graphs connecting sentence graphs
+Key Components
+--------------
+Type Aliases
+    - :data:`NodeID`: String identifiers for graph nodes
+    - :data:`EdgeKey`: Tuples identifying edges between nodes
+    - :data:`NodeAttributes`, :data:`EdgeAttributes`: Dictionaries storing node/edge properties
+    - :data:`DomainType`: The domain a node belongs to ('syntax', 'semantics', 'document')
+    - :data:`NodeType`: The type of node ('token', 'predicate', 'argument', 'root')
+    - :data:`EdgeType`: The type of edge ('head', 'dependency', 'interface')
 
-The graphs support querying via SPARQL, conversion to/from RDF, and various
-graph operations like finding maxima/minima and extracting subgraphs.
+Classes
+    - :class:`UDSGraph`: Abstract base class providing core graph functionality
+    - :class:`UDSSentenceGraph`: Sentence-level graphs with syntax and semantics layers
+    - :class:`UDSDocumentGraph`: Document-level graphs connecting multiple sentences
+
+The graphs use a consistent naming scheme where node IDs incorporate the graph name
+and domain (e.g., 'ewt-001-1-syntax-1' for a syntax token). Edge attributes specify
+the domain and type of relationship between nodes.
+
+Features include SPARQL querying via RDF conversion, graph operations for finding
+maximal/minimal nodes, extracting subgraphs by domain, and adding UDS annotations
+to existing graph structures. The sentence graphs automatically add performative
+nodes representing the speaker/addressee for discourse representation.
+
+See Also
+--------
+decomp.semantics.uds.annotation : UDS annotation classes
+decomp.semantics.uds.corpus : Corpus-level UDS graph collections
+decomp.graph.nx : NetworkX graph utilities
 """
 
 from abc import ABC, abstractmethod
 from functools import cached_property, lru_cache
 from logging import info, warning
-from typing import TYPE_CHECKING, Literal, TypeAlias
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 from networkx import DiGraph, adjacency_data, adjacency_graph
 from overrides import overrides
@@ -37,41 +61,51 @@ else:
         RDFConverter = None
 
 # type aliases
-NodeID: TypeAlias = str
+type NodeID = str
 """Unique identifier for a node in the graph."""
 
-EdgeKey: TypeAlias = tuple[NodeID, NodeID]
+type EdgeKey = tuple[NodeID, NodeID]
 """Edge identifier as (source_node, target_node) tuple."""
 
 # domain and type literals
-DomainType: TypeAlias = Literal['syntax', 'semantics', 'document']
+type DomainType = Literal['syntax', 'semantics', 'document']
 """The domain a node or edge belongs to."""
 
-NodeType: TypeAlias = Literal['token', 'predicate', 'argument', 'root']
+type NodeType = Literal['token', 'predicate', 'argument', 'root']
 """The type of a node within its domain."""
 
-EdgeType: TypeAlias = Literal['head', 'nonhead', 'dependency', 'interface']
+type EdgeType = Literal['head', 'nonhead', 'dependency', 'interface']
 """The type of relationship an edge represents."""
 
 # node attributes can vary based on domain
 # common attributes: domain, type, position, form, frompredpatt, semantics
 # also includes UDS annotation subspaces and properties
-NodeAttributes: TypeAlias = dict[str, str | int | bool | dict[str, str] | dict[str, dict[str, dict[str, str | int | bool | float]]] | dict[str, dict[str, dict[str, dict[str, str | int | bool | float]]]]]
+type NodeAttributes = dict[
+    str,
+    str | int | bool | dict[str, str] |
+    dict[str, dict[str, dict[str, str | int | bool | float]]] |
+    dict[str, dict[str, dict[str, dict[str, str | int | bool | float]]]]
+]
 """Dictionary of node attributes including domain, type, and annotation data."""
 
-EdgeAttributes: TypeAlias = dict[str, str | int | bool | dict[str, str] | dict[str, dict[str, dict[str, str | int | bool | float]]] | dict[str, dict[str, dict[str, dict[str, str | int | bool | float]]]]]
+type EdgeAttributes = dict[
+    str,
+    str | int | bool | dict[str, str] |
+    dict[str, dict[str, dict[str, str | int | bool | float]]] |
+    dict[str, dict[str, dict[str, dict[str, str | int | bool | float]]]]
+]
 """Dictionary of edge attributes including domain, type, and annotation data."""
 
 # Attribute values can be various types
-AttributeValue: TypeAlias = str | int | bool | float | dict[str, str]
+type AttributeValue = str | int | bool | float | dict[str, str]
 """Union of possible attribute value types."""
 
-QueryResult: TypeAlias = dict[str, NodeAttributes] | dict[EdgeKey, EdgeAttributes]
+type QueryResult = dict[str, NodeAttributes] | dict[EdgeKey, EdgeAttributes]
 """Result type for graph queries, either nodes or edges."""
 
 
 class UDSGraph(ABC):
-    """Abstract base class for sentence- and document-level graphs
+    """Abstract base class for sentence- and document-level graphs.
 
     Parameters
     ----------
@@ -119,8 +153,12 @@ class UDSGraph(ABC):
         return dict(adjacency_data(self.graph))
 
     @classmethod
-    def from_dict(cls, graph: dict[str, dict[str, dict[str, str | int | bool | dict[str, str]]]], name: str = 'UDS') -> 'UDSGraph':
-        """Construct a UDSGraph from a dictionary
+    def from_dict(
+        cls,
+        graph: dict[str, dict[str, dict[str, str | int | bool | dict[str, str]]]],
+        name: str = 'UDS'
+    ) -> 'UDSGraph':
+        """Construct a UDSGraph from a dictionary.
 
         Parameters
         ----------
@@ -133,7 +171,7 @@ class UDSGraph(ABC):
 
 
 class UDSSentenceGraph(UDSGraph):
-    """A Universal Decompositional Semantics sentence-level graph
+    """A Universal Decompositional Semantics sentence-level graph.
 
     Parameters
     ----------
@@ -148,7 +186,7 @@ class UDSSentenceGraph(UDSGraph):
         the UD identifier for the document associated with this graph
     """
 
-    QUERIES: dict[str, Query] = {}
+    QUERIES: ClassVar[dict[str, Query]] = {}
 
     @overrides
     def __init__(self, graph: DiGraph, name: str, sentence_id: str | None = None,
@@ -200,11 +238,11 @@ class UDSSentenceGraph(UDSGraph):
                                    if attrs['type'] == 'root']
 
         if len(candidates) > 1:
-            errmsg = self.name + ' has more than one root'
+            errmsg = f'{self.name} has more than one root'
             raise ValueError(errmsg)
 
         if len(candidates) == 0:
-            errmsg = self.name + ' has no root'
+            errmsg = f'{self.name} has no root'
             raise ValueError(errmsg)
 
         return candidates[0]
@@ -268,12 +306,15 @@ class UDSSentenceGraph(UDSGraph):
                             domain='interface', type='dependency',
                             frompredpatt=False)
 
-    @lru_cache(maxsize=128)
-    def query(self, query: str | Query,
-              query_type: str | None = None,
-              cache_query: bool = True,
-              cache_rdf: bool = True) -> Result | dict[str, NodeAttributes] | dict[EdgeKey, EdgeAttributes]:
-        """Query graph using SPARQL 1.1
+    @lru_cache(maxsize=128)  # noqa: B019
+    def query(
+        self,
+        query: str | Query,
+        query_type: str | None = None,
+        cache_query: bool = True,
+        cache_rdf: bool = True
+    ) -> Result | dict[str, NodeAttributes] | dict[EdgeKey, EdgeAttributes]:
+        """Query graph using SPARQL 1.1.
 
         Parameters
         ----------
@@ -312,7 +353,7 @@ class UDSSentenceGraph(UDSGraph):
 
         except ParseException:
             errmsg = 'invalid SPARQL 1.1 query'
-            raise ValueError(errmsg)
+            raise ValueError(errmsg) from None
 
         if not cache_rdf and hasattr(self, '_rdf'):
             delattr(self, '_rdf')
@@ -351,7 +392,7 @@ class UDSSentenceGraph(UDSGraph):
                 'invalid node query: your query must be guaranteed '
                 'to capture only nodes, but it appears to also '
                 'capture edges and/or properties'
-            )
+            ) from None
 
     def _edge_query(self, query: str | Query,
                     cache_query: bool) -> dict[EdgeKey, EdgeAttributes]:
@@ -387,7 +428,7 @@ class UDSSentenceGraph(UDSGraph):
                 'invalid edge query: your query must be guaranteed '
                 'to capture only edges, but it appears to also '
                 'capture nodes and/or properties'
-            )
+            ) from None
 
     @property
     def syntax_nodes(self) -> dict[str, NodeAttributes]:
@@ -467,12 +508,12 @@ class UDSSentenceGraph(UDSGraph):
         """
         return self.graph.subgraph(list(self.semantics_nodes))
 
-    @lru_cache(maxsize=128)
+    @lru_cache(maxsize=128)  # noqa: B019
     def semantics_edges(self,
                         nodeid: str | None = None,
                         edgetype: str | None = None) -> dict[EdgeKey, EdgeAttributes]:
-        """The edges between semantics nodes
-        
+        """The edges between semantics nodes.
+
         Parameters
         ----------
         nodeid
@@ -497,11 +538,11 @@ class UDSSentenceGraph(UDSGraph):
             return {eid: attrs for eid, attrs in candidates.items()
                     if attrs['type'] == edgetype}
 
-    @lru_cache(maxsize=128)
+    @lru_cache(maxsize=128)  # noqa: B019
     def argument_edges(self,
                        nodeid: str | None = None) -> dict[EdgeKey, EdgeAttributes]:
-        """The edges between predicates and their arguments
-        
+        """The edges between predicates and their arguments.
+
         Parameters
         ----------
         nodeid
@@ -509,10 +550,10 @@ class UDSSentenceGraph(UDSGraph):
         """
         return self.semantics_edges(nodeid, edgetype='dependency')
 
-    @lru_cache(maxsize=128)
+    @lru_cache(maxsize=128)  # noqa: B019
     def argument_head_edges(self,
                             nodeid: str | None = None) -> dict[EdgeKey, EdgeAttributes]:
-        """The edges between nodes and their semantic heads
+        """The edges between nodes and their semantic heads.
 
         Parameters
         ----------
@@ -521,10 +562,10 @@ class UDSSentenceGraph(UDSGraph):
         """
         return self.semantics_edges(nodeid, edgetype='head')
 
-    @lru_cache(maxsize=128)
+    @lru_cache(maxsize=128)  # noqa: B019
     def syntax_edges(self,
                      nodeid: str | None = None) -> dict[EdgeKey, EdgeAttributes]:
-        """The edges between syntax nodes
+        """The edges between syntax nodes.
 
         Parameters
         ----------
@@ -543,10 +584,10 @@ class UDSSentenceGraph(UDSGraph):
                           if attrs['domain'] == 'syntax'
                           if nodeid in eid}
 
-    @lru_cache(maxsize=128)
+    @lru_cache(maxsize=128)  # noqa: B019
     def instance_edges(self,
                        nodeid: str | None = None) -> dict[EdgeKey, EdgeAttributes]:
-        """The edges between syntax nodes and semantics nodes
+        """The edges between syntax nodes and semantics nodes.
 
         Parameters
         ----------
@@ -564,10 +605,12 @@ class UDSSentenceGraph(UDSGraph):
                           if attrs['domain'] == 'interface'
                           if nodeid in eid}
 
-    def span(self,
-             nodeid: str,
-             attrs: list[str] = ['form']) -> dict[int, list[AttributeValue]]:
-        """The span corresponding to a semantics node
+    def span(
+        self,
+        nodeid: str,
+        attrs: list[str] | None = None
+    ) -> dict[int, list[AttributeValue]]:
+        """The span corresponding to a semantics node.
 
         Parameters
         ----------
@@ -581,6 +624,9 @@ class UDSSentenceGraph(UDSGraph):
         a mapping from positions in the span to the requested
         attributes in those positions
         """
+        if attrs is None:
+            attrs = ['form']
+
         if self.graph.nodes[nodeid]['domain'] != 'semantics':
             raise ValueError('Only semantics nodes have (nontrivial) spans')
 
@@ -597,10 +643,12 @@ class UDSSentenceGraph(UDSGraph):
                                                for a in attrs]
                 for e in self.instance_edges(nodeid)}
 
-    def head(self,
-             nodeid: str,
-             attrs: list[str] = ['form']) -> tuple[int, list[AttributeValue]]:
-        """The head corresponding to a semantics node
+    def head(
+        self,
+        nodeid: str,
+        attrs: list[str] | None = None
+    ) -> tuple[int, list[AttributeValue]]:
+        """The head corresponding to a semantics node.
 
         Parameters
         ----------
@@ -614,6 +662,9 @@ class UDSSentenceGraph(UDSGraph):
         a pairing of the head position and the requested
         attributes
         """
+        if attrs is None:
+            attrs = ['form']
+
         if self.graph.nodes[nodeid]['domain'] != 'semantics':
             raise ValueError('Only semantics nodes have heads')
 
@@ -625,10 +676,12 @@ class UDSSentenceGraph(UDSGraph):
         if is_performative:
             raise ValueError('Performative nodes do not have heads')
 
-        return [(self.graph.nodes[e[1]]['position'],
-                 [self.graph.nodes[e[1]][a] for a in attrs])
-                for e, attr in self.instance_edges(nodeid).items()
-                if attr['type'] == 'head'][0]
+        return next(
+            (self.graph.nodes[e[1]]['position'],
+             [self.graph.nodes[e[1]][a] for a in attrs])
+            for e, attr in self.instance_edges(nodeid).items()
+            if attr['type'] == 'head'
+        )
 
     def maxima(self, nodeids: list[str] | None = None) -> list[str]:
         """Find nodes not dominated by any other nodes in the set.
@@ -683,7 +736,7 @@ class UDSSentenceGraph(UDSGraph):
                        add_subargs: bool = False,
                        add_subpreds: bool = False,
                        add_orphans: bool = False) -> None:
-        """Add node and or edge annotations to the graph
+        """Add node and or edge annotations to the graph.
 
         Parameters
         ----------
@@ -735,8 +788,7 @@ class UDSSentenceGraph(UDSGraph):
                 )
 
             else:
-                infomsg = 'adding head edge ' + str(edge) + ' to ' + self.name
-                info(infomsg)
+                info(f'adding head edge {edge} to {self.name}')
 
                 attrs = dict(attrs,
                              **{'domain': 'semantics',
@@ -763,14 +815,13 @@ class UDSSentenceGraph(UDSGraph):
             edge = (attrs['subargof'], node)
 
             if not add_subargs:
-                infomsg = 'subarg edge ' + str(edge) + ' in ' + self.name +\
-                          ' found in annotations but not added'
-                info(infomsg)
+                info(
+                    f'subarg edge {edge} in {self.name} '
+                    'found in annotations but not added'
+                )
 
             else:
-                infomsg = 'adding subarg edge ' + str(edge) + ' to ' +\
-                          self.name
-                info(infomsg)
+                info(f'adding subarg edge {edge} to {self.name}')
 
                 attrs = dict(attrs,
                              **{'domain': 'semantics',
@@ -826,8 +877,7 @@ class UDSSentenceGraph(UDSGraph):
             )
 
         else:
-            warnmsg = 'adding orphan node ' + node + ' in ' + self.name
-            warning(warnmsg)
+            warning(f'adding orphan node {node} in {self.name}')
 
             attrs = dict(attrs,
                          **{'domain': 'semantics',
@@ -864,8 +914,7 @@ class UDSSentenceGraph(UDSGraph):
         if edge in self.graph.edges:
             self.graph.edges[edge].update(attrs)
         else:
-            warnmsg = 'adding unlabeled edge ' + str(edge) + ' to ' + self.name
-            warning(warnmsg)
+            warning(f'adding unlabeled edge {edge} to {self.name}')
             self.graph.add_edge(*edge, **attrs)
 
     @cached_property
@@ -878,7 +927,7 @@ class UDSSentenceGraph(UDSGraph):
             The sentence text with tokens in surface order
         """
         id_word = {}
-        for nodeid, nodeattr in self.syntax_nodes.items():
+        for _, nodeattr in self.syntax_nodes.items():
             pos = nodeattr.get('position')
             form = nodeattr.get('form')
             if isinstance(pos, int) and isinstance(form, str):
@@ -890,7 +939,7 @@ class UDSSentenceGraph(UDSGraph):
 
 
 class UDSDocumentGraph(UDSGraph):
-    """A Universal Decompositional Semantics document-level graph
+    """A Universal Decompositional Semantics document-level graph.
 
     Parameters
     ----------
@@ -911,7 +960,7 @@ class UDSDocumentGraph(UDSGraph):
         edge_attrs: dict[EdgeKey, EdgeAttributes],
         sentence_ids: dict[str, str]
     ) -> None:
-        """Add node and or edge annotations to the graph
+        """Add node and or edge annotations to the graph.
 
         Parameters
         ----------
@@ -928,7 +977,12 @@ class UDSDocumentGraph(UDSGraph):
         for edge, attrs in edge_attrs.items():
             self._add_edge_annotation(edge, attrs, sentence_ids)
 
-    def _add_edge_annotation(self, edge: EdgeKey, attrs: EdgeAttributes, sentence_ids: dict[str, str]) -> None:
+    def _add_edge_annotation(
+        self,
+        edge: EdgeKey,
+        attrs: EdgeAttributes,
+        sentence_ids: dict[str, str]
+    ) -> None:
         """Add annotation to a document-level edge.
 
         Parameters
