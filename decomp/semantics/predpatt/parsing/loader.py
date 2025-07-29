@@ -10,7 +10,10 @@ from __future__ import annotations
 import codecs
 import os
 from collections.abc import Iterator
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from concrete import Sentence, Tokenization
 
 from ..parsing.udparse import DepTriple, UDParse
 
@@ -110,7 +113,7 @@ def load_conllu(filename_or_content: str) -> Iterator[tuple[str, UDParse]]:
         sent_num += 1
 
 
-def get_tags(tokenization: Any, tagging_type: str = 'POS') -> list[str]:
+def get_tags(tokenization: 'Tokenization', tagging_type: str = 'POS') -> list[str]:
     """Extract tags of a specific type from a tokenization.
 
     Parameters
@@ -134,7 +137,7 @@ def get_tags(tokenization: Any, tagging_type: str = 'POS') -> list[str]:
     return []
 
 
-def get_udparse(sent: Any, tool: str) -> UDParse:
+def get_udparse(sent: 'Sentence', tool: str) -> UDParse:
     """Create a ``UDParse`` from a sentence extracted from a Communication.
 
     Parameters

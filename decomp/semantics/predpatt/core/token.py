@@ -14,9 +14,8 @@ from ..utils.ud_schema import dep_v1, postag
 
 
 if TYPE_CHECKING:
-    from typing import Any
-
     from ..parsing.udparse import DepTriple
+    from ..typing import UDSchema
 
 
 class Token:
@@ -40,12 +39,12 @@ class Token:
     gov_rel : str | None
         The dependency relation to the governing token.
         Initially set to None.
-    ud : Any
+    ud : UDSchema
         The Universal Dependencies module (dep_v1 or dep_v2) that defines
         relation types and constants.
     """
 
-    def __init__(self, position: int, text: str, tag: str, ud: Any = dep_v1) -> None:
+    def __init__(self, position: int, text: str, tag: str, ud: 'UDSchema' = dep_v1) -> None:
         """
         Initialize a Token.
 
@@ -57,7 +56,7 @@ class Token:
             The text content of the token.
         tag : str
             The part-of-speech tag of the token.
-        ud : Any, optional
+        ud : UDSchema, optional
             The Universal Dependencies module, by default dep_v1.
         """
         # maintain exact initialization order as original
@@ -67,7 +66,7 @@ class Token:
         self.dependents: list[DepTriple] | None = None
         self.gov: Token | None = None
         self.gov_rel: str | None = None
-        self.ud: Any = ud
+        self.ud: UDSchema = ud
 
     def __repr__(self) -> str:
         """

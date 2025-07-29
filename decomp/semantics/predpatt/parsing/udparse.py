@@ -7,14 +7,25 @@ and the DepTriple namedtuple for representing individual dependencies.
 from __future__ import annotations
 
 from collections import defaultdict, namedtuple
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
     pass
 
+if TYPE_CHECKING:
+    from ..core.token import Token
+    from ..typing import UDSchema
+
 # Import at runtime to avoid circular dependency
-def _get_dep_v1() -> Any:
+def _get_dep_v1() -> 'UDSchema':
+    """Get the dep_v1 module dynamically.
+    
+    Returns
+    -------
+    UDSchema
+        The dep_v1 module containing UD v1 constants.
+    """
     from ..utils.ud_schema import dep_v1
     return dep_v1
 
@@ -86,16 +97,16 @@ class UDParse:
 
     def __init__(
         self,
-        tokens: list[Any],
+        tokens: list[str | 'Token'],
         tags: list[str],
         triples: list[DepTriple],
-        ud: Any = None
+        ud: 'UDSchema' | None = None
     ) -> None:
         """Initialize UDParse with tokens, tags, and dependency triples.
 
         Parameters
         ----------
-        tokens : list
+        tokens : list[str | Token]
             List of tokens (strings or Token objects).
         tags : list[str]
             List of POS tags.
@@ -111,10 +122,10 @@ class UDParse:
         self.triples = triples
 
         # build governor mapping: dependent -> DepTriple
-        self.governor: dict[Any, DepTriple] = {e.dep: e for e in triples}
+        self.governor: dict[int | 'Token', DepTriple] = {e.dep: e for e in triples}
 
         # build dependents mapping: governor -> [DepTriple]
-        self.dependents: defaultdict[Any, list[DepTriple]] = defaultdict(list)
+        self.dependents: defaultdict[int | 'Token', list[DepTriple]] = defaultdict(list)
         for e in self.triples:
             self.dependents[e.gov].append(e)
 
@@ -174,7 +185,7 @@ class UDParse:
 %s
 \end{dependency}
 \end{document}"""
-        tok = ' \\& '.join(x.replace('&', r'and').replace('_', ' ') for x in self.tokens)
+        tok = ' \\& '.join((x if isinstance(x, str) else x.text).replace('&', r'and').replace('_', ' ') for x in self.tokens)
         tag = ' \\& '.join(self.tags).lower()
         dep = '\n'.join(rf'\depedge{{{e.gov+1}}}{{{e.dep+1}}}{{{e.rel}}}'
                         for e in self.triples if e.gov >= 0)
@@ -203,7 +214,7 @@ class UDParse:
         was = os.getcwd()
         try:
             os.chdir('/tmp')
-            tokens_str = ' '.join(self.tokens)
+            tokens_str = ' '.join(x if isinstance(x, str) else x.text for x in self.tokens)
             hash_str = md5(tokens_str.encode('ascii', errors='ignore')).hexdigest()
             base = f'parse_{hash_str}'
             pdf = f'{base}.pdf'

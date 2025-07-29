@@ -6,17 +6,18 @@ associated with predicates in the PredPatt system.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
+from ..typing import HasPosition, T
 from ..utils.ud_schema import dep_v1
 from .token import Token
 
-
 if TYPE_CHECKING:
-    pass
+    from ..rules.base import Rule
+    from ..typing import UDSchema
 
 
-def sort_by_position(x: list[Any]) -> list[Any]:
+def sort_by_position(x: list[T]) -> list[T]:
     """Sort items by their position attribute."""
     return list(sorted(x, key=lambda y: y.position))
 
@@ -56,8 +57,8 @@ class Argument:
     def __init__(
         self,
         root: Token,
-        ud: Any = dep_v1,
-        rules: list[Any] | None = None,
+        ud: 'UDSchema' = dep_v1,
+        rules: list['Rule'] | None = None,
         share: bool = False
     ) -> None:
         """Initialize an Argument.

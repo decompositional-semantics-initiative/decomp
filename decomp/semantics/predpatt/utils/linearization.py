@@ -632,7 +632,7 @@ def construct_pred_from_flat(tokens: list[str]) -> list[Predicate]:
     # Initialize a predicate in advance, because argument or sub-level
     # predicates may come before we meet the first predicate token, and
     # they need to build connection with the predicate.
-    current_predicate = Predicate(empty_token, [])
+    current_predicate = Predicate(empty_token)
     tokens_iter = enumerate(iter(tokens))
     for idx, t in tokens_iter:
         if t  == ARG_ENC[0]:
@@ -855,7 +855,7 @@ def test(data: str) -> None:
     for _sent_id, ud_parse in load_conllu(data):
         count += 1
         pp = PredPatt(ud_parse)
-        sent = ' '.join(t.text for t in pp.tokens)
+        sent = ' '.join((t if isinstance(t, str) else t.text) for t in pp.tokens)
         linearized_pp = linearize(pp)
         gold_preds = [predicate.format(c=no_color, track_rule=False)
                 for predicate in pp.instances if likely_to_be_pred(predicate)]

@@ -7,19 +7,11 @@ the entire predicate-argument extraction pipeline from Universal Dependencies pa
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
-from typing import TYPE_CHECKING, Protocol, TypeVar
+from typing import TYPE_CHECKING
 
 from ..core.options import PredPattOpts
+from ..typing import HasPosition, T, UDSchema
 from ..utils.ud_schema import dep_v1, dep_v2, postag
-
-
-class HasPosition(Protocol):
-    """Protocol for objects that have a position attribute."""
-
-    position: int
-
-
-T = TypeVar('T', bound=HasPosition)
 
 
 if TYPE_CHECKING:
@@ -28,9 +20,6 @@ if TYPE_CHECKING:
     from ..core.token import Token
     from ..parsing.udparse import DepTriple, UDParse
     from ..rules.base import Rule
-    from ..utils.ud_schema import DependencyRelationsV1, DependencyRelationsV2
-
-    UDSchema = type[DependencyRelationsV1] | type[DependencyRelationsV2]
 
 # predicate type constants
 NORMAL, POSS, APPOS, AMOD = ("normal", "poss", "appos", "amod")
@@ -98,9 +87,10 @@ def convert_parse(parse: UDParse, ud: UDSchema) -> UDParse:
     from ..parsing.udparse import DepTriple
     from ..parsing.udparse import UDParse as ModernUDParse
 
-    tokens = []
+    tokens: list[Token] = []
     for i, w in enumerate(parse.tokens):
-        tokens.append(Token(i, w, parse.tags[i], ud))
+        text = w if isinstance(w, str) else w.text
+        tokens.append(Token(i, text, parse.tags[i], ud))
 
     def convert_edge(e: DepTriple) -> DepTriple:
         return DepTriple(gov=tokens[e.gov], dep=tokens[e.dep], rel=e.rel)
@@ -111,7 +101,9 @@ def convert_parse(parse: UDParse, ud: UDSchema) -> UDParse:
         tokens[i].gov_rel = parse.governor[i].rel if i in parse.governor else 'root'
         tokens[i].dependents = [convert_edge(e) for e in parse.dependents[i]]
 
-    return ModernUDParse(tokens, parse.tags, [convert_edge(e) for e in parse.triples], ud)
+    # Cast to list[str | Token] using list() to satisfy type checker
+    tokens_for_parse: list[str | Token] = list(tokens)
+    return ModernUDParse(tokens_for_parse, parse.tags, [convert_edge(e) for e in parse.triples], ud)
 
 
 class PredPattEngine:
@@ -169,7 +161,7 @@ class PredPattEngine:
         self.tokens = parse.tokens
         self.instances: list[Predicate] = []
         self.events: list[Predicate] | None = None
-        self.event_dict: dict | None = None  # map from token position to Predicate
+        self.event_dict: dict[int, Predicate] | None = None  # map from token position to Predicate
 
         # trigger extraction pipeline
         self.extract()
@@ -261,7 +253,7 @@ class PredPattEngine:
         events = self.identify_predicate_roots()
 
         # Phase 2: Event Dictionary Creation
-        self.event_dict = {p.root: p for p in events}
+        self.event_dict = {p.root.position: p for p in events}
 
         # Phase 3: Argument Root Extraction
         for e in events:
@@ -589,7 +581,7 @@ class PredPattEngine:
         for p in sort_by_position(events):
             if p.root.gov_rel == self.ud.conj:
                 assert self.event_dict is not None, "event_dict should be initialized by phase 2"
-                g = self.event_dict.get(p.root.gov)
+                g = self.event_dict.get(p.root.gov.position) if p.root.gov else None
                 if g is not None:
                     if not p.has_subj():
                         if g.has_subj():
@@ -616,7 +608,10 @@ class PredPattEngine:
                             # If an event governed by a conjunction is missing an
                             # argument, try borrowing the object from the other
                             # event.
-                            new_arg = g.obj().reference()
+                            obj = g.obj()
+                            if obj is None:
+                                raise ValueError(f"Expected object for predicate {g.root.text} but found None")
+                            new_arg = obj.reference()
                             new_arg.rules.append(R.BorrowObj(new_arg, g))
                             p.arguments.append(new_arg)
 
@@ -629,7 +624,7 @@ class PredPattEngine:
 
             if p.root.gov_rel == self.ud.advcl and not p.has_subj() and not from_for:
                 assert self.event_dict is not None, "event_dict should be initialized by phase 2"
-                g = self.event_dict.get(p.root.gov)
+                g = self.event_dict.get(p.root.gov.position) if p.root.gov else None
                 if g is not None and g.has_subj():
                     subj = g.subj()
                     if subj is None:
@@ -688,7 +683,7 @@ class PredPattEngine:
                                     for e in p.root.dependents])
                 ):
                 assert self.event_dict is not None, "event_dict should be initialized by phase 2"
-                g = self.event_dict.get(p.root.gov)
+                g = self.event_dict.get(p.root.gov.position) if p.root.gov else None
                 # set to the OBJECT not SUBJECT
                 if g is not None and g.has_obj():
                     obj = g.obj()
@@ -710,7 +705,7 @@ class PredPattEngine:
                 #and p.root.gov.text not in exclude
             ):
                 assert self.event_dict is not None, "event_dict should be initialized by phase 2"
-                g = self.event_dict.get(p.root.gov)
+                g = self.event_dict.get(p.root.gov.position) if p.root.gov else None
                 if g is not None:
                     if g.has_subj():
                         subj = g.subj()
@@ -751,9 +746,9 @@ class PredPattEngine:
         """
         c = predicate.root.gov
         assert self.event_dict is not None, "event_dict should be initialized before calling _get_top_xcomp"
-        while c is not None and c.gov_rel == self.ud.xcomp and c in self.event_dict:
+        while c is not None and c.gov_rel == self.ud.xcomp and c.position in self.event_dict:
             c = c.gov
-        return self.event_dict.get(c)
+        return self.event_dict.get(c.position) if c else None
 
     def parents(self, predicate: Predicate) -> Iterator[Predicate]:
         """Iterate over the chain of parents (governing predicates).
@@ -774,8 +769,8 @@ class PredPattEngine:
         c = predicate.root.gov
         assert self.event_dict is not None, "event_dict should be initialized before calling parents"
         while c is not None:
-            if c in self.event_dict:
-                yield self.event_dict[c]
+            if c.position in self.event_dict:
+                yield self.event_dict[c.position]
             c = c.gov
 
     def expand_coord(self, predicate: Predicate) -> list[Predicate]:  # noqa: C901
@@ -848,17 +843,19 @@ class PredPattEngine:
 
         # pull aux and neg from governing predicate.
         assert self.event_dict is not None, "event_dict should be initialized before _conjunction_resolution"
-        g = self.event_dict.get(p.root.gov)
+        g = self.event_dict.get(p.root.gov.position) if p.root.gov else None
         if g is not None and p.share_subj(g):
             # Only applied when p and g share subj. For example,
             # He did make mistakes, but that was okay .
             #         ^                           ^
             #         -----------conj--------------
             # No need to add "did" to "okay" in this case.
+            if g.root.dependents is None:
+                raise TypeError(f"Cannot borrow aux/neg from predicate {g.root.text}: root token has no dependency information")
             for d in g.root.dependents:
                 if d.rel in {self.ud.neg}: # {ud.aux, ud.neg}:
                     p.tokens.append(d.dep)
-                    p.rules.append(R.PredConjBorrowAuxNeg(g, d))
+                    p.rules.append(R.PredConjBorrowAuxNeg(g, d.dep))
 
         # Post-processing of predicate name for predicate conjunctions
         # involving xcomp.

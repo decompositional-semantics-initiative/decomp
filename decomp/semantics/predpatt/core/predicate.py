@@ -7,14 +7,19 @@ various predicate types (normal, possessive, appositive, adjectival).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, TypeVar
 
+from ..typing import HasPosition, T
 from ..utils.ud_schema import dep_v1, postag
 from .token import Token
 
-
 if TYPE_CHECKING:
+    from typing import Callable
     from .argument import Argument
+    from ..rules.base import Rule
+    from ..typing import UDSchema
+    
+    ColorFunc = Callable[[str, str], str]
 
 # Predicate type constants
 NORMAL = "normal"
@@ -23,17 +28,17 @@ APPOS = "appos"
 AMOD = "amod"
 
 
-def argument_names(args: list[Any]) -> dict[Any, str]:
+def argument_names(args: list[T]) -> dict[T, str]:
     """Give arguments alpha-numeric names.
 
     Parameters
     ----------
-    args : list[Any]
+    args : list[T]
         List of arguments to name.
 
     Returns
     -------
-    dict[Any, str]
+    dict[T, str]
         Mapping from argument to its name (e.g., '?a', '?b', etc.).
 
     Examples
@@ -53,7 +58,7 @@ def argument_names(args: list[Any]) -> dict[Any, str]:
     return name
 
 
-def sort_by_position(x: list[Any]) -> list[Any]:
+def sort_by_position(x: list[T]) -> list[T]:
     """Sort items by their position attribute."""
     return list(sorted(x, key=lambda y: y.position))
 
@@ -101,8 +106,8 @@ class Predicate:
     def __init__(
         self,
         root: Token,
-        ud: Any = dep_v1,
-        rules: list[Any] | None = None,
+        ud: 'UDSchema' = dep_v1,
+        rules: list['Rule'] | None = None,
         type_: str = NORMAL
     ) -> None:
         """Initialize a Predicate."""
@@ -263,12 +268,12 @@ class Predicate:
             return True
         return None
 
-    def _format_predicate(self, name: dict[Any, str], c: Any = no_color) -> str:  # noqa: C901
+    def _format_predicate(self, name: dict['Argument', str], c: 'ColorFunc' = no_color) -> str:  # noqa: C901
         """Format predicate with argument placeholders.
 
         Parameters
         ----------
-        name : dict[Any, str]
+        name : dict[Argument, str]
             Mapping from arguments to their names.
         c : callable, optional
             Color function for formatting.
@@ -341,7 +346,7 @@ class Predicate:
     def format(
         self,
         track_rule: bool = False,
-        c: Any = no_color,
+        c: 'ColorFunc' = no_color,
         indent: str = '\t'
     ) -> str:
         """Format predicate with arguments for display.

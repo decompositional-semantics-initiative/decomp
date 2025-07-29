@@ -1,7 +1,19 @@
 # pylint: disable=W0221
 # pylint: disable=R0903
 # pylint: disable=R1704
-"""Module for converting PredPatt objects to networkx digraphs."""
+"""Module for extracting predicates and arguments from dependency parses using PredPatt.
+
+This module provides the core functionality for semantic role labeling by extracting
+predicate-argument structures from Universal Dependencies parses. It includes:
+
+- PredPattCorpus: Container for managing collections of PredPatt graphs
+- PredPattGraphBuilder: Converts PredPatt extractions to NetworkX graphs
+- Integration with UDS (Universal Decompositional Semantics) framework
+
+The module identifies verbal predicates and their arguments using linguistic rules
+applied to dependency parse trees, creating a semantic representation that can be
+further annotated with UDS properties.
+"""
 
 from __future__ import annotations
 
@@ -30,20 +42,41 @@ DEFAULT_PREDPATT_OPTIONS = PredPattOpts(resolve_relcl=True,
 
 
 class PredPattCorpus(Corpus[tuple[PredPatt, DiGraph], DiGraph]):
-    """Container for predpatt graphs."""
+    """Container for managing collections of PredPatt semantic graphs.
+    
+    This class extends the base Corpus class to handle PredPatt extractions
+    paired with their dependency graphs. It provides methods for loading
+    corpora from CoNLL format and converting them to NetworkX graphs with
+    semantic annotations.
+    
+    Attributes
+    ----------
+    _graphs : dict[Hashable, DiGraph]
+        Mapping from graph identifiers to NetworkX directed graphs
+        containing both syntactic and semantic information
+    """
 
     def _graphbuilder(self,
                       graphid: Hashable,
                       predpatt_depgraph: tuple[PredPatt, DiGraph]) -> DiGraph:
-        """Build graph from predpatt and dependency graph.
+        """Build a unified graph from PredPatt extraction and dependency parse.
+
+        Combines syntactic information from the dependency graph with semantic
+        predicate-argument structures extracted by PredPatt into a single
+        NetworkX graph representation.
 
         Parameters
         ----------
-        treeid
-            an identifier for the tree
-        predpatt_depgraph
-            a pairing of the predpatt for a dependency parse and the graph
-            representing that dependency parse
+        graphid : Hashable
+            Unique identifier for the graph, used as prefix for node IDs
+        predpatt_depgraph : tuple[PredPatt, DiGraph]
+            Tuple containing the PredPatt extraction and its source
+            dependency graph
+            
+        Returns
+        -------
+        DiGraph
+            NetworkX graph containing both syntactic and semantic layers
         """
         predpatt, depgraph = predpatt_depgraph
 
@@ -54,16 +87,32 @@ class PredPattCorpus(Corpus[tuple[PredPatt, DiGraph], DiGraph]):
                    corpus: str | TextIO,
                    name: str = 'ewt',
                    options: PredPattOpts | None = None) -> PredPattCorpus:
-        """Load a CoNLL dependency corpus and apply predpatt.
+        """Load a CoNLL-U dependency corpus and extract predicate-argument structures.
+
+        Parses Universal Dependencies format data and applies PredPatt extraction
+        rules to identify predicates and their arguments. Each sentence in the
+        corpus is processed to create a semantic graph.
 
         Parameters
         ----------
-        corpus
-            (path to) a .conllu file
-        name
-            the name of the corpus; used in constructing treeids
-        options
-            options for predpatt extraction
+        corpus : str | TextIO
+            Path to a .conllu file, raw CoNLL-U formatted string, or open file handle
+        name : str, optional
+            Corpus name used as prefix for graph identifiers. Default is 'ewt'
+        options : PredPattOpts | None, optional
+            Configuration options for PredPatt extraction. If None, uses default
+            options with relative clause resolution and argument borrowing enabled
+            
+        Returns
+        -------
+        PredPattCorpus
+            Corpus containing PredPatt extractions and their graphs
+            
+        Raises
+        ------
+        ValueError
+            If PredPatt cannot parse the provided CoNLL-U data, likely due to
+            incompatible Universal Dependencies version
         """
         options = DEFAULT_PREDPATT_OPTIONS if options is None else options
 
@@ -106,24 +155,42 @@ class PredPattCorpus(Corpus[tuple[PredPatt, DiGraph], DiGraph]):
 
 
 class PredPattGraphBuilder:
-    """A predpatt graph builder."""
+    """Constructs NetworkX graphs from PredPatt extractions.
+    
+    This class provides static methods for converting PredPatt's predicate
+    and argument objects into a unified graph representation that includes
+    both syntactic dependencies and semantic relations.
+    """
 
     @classmethod
     def from_predpatt(cls,
                       predpatt: PredPatt,
                       depgraph: DiGraph,
                       graphid: str = '') -> DiGraph:
-        """Build a DiGraph from a PredPatt object and another DiGraph.
+        """Build a unified graph from PredPatt extraction and dependency parse.
+
+        Creates a NetworkX graph that contains:
+        - All syntax nodes and edges from the original dependency parse
+        - Semantic predicate and argument nodes extracted by PredPatt
+        - Interface edges linking semantic nodes to their syntactic heads
+        - Semantic edges connecting predicates to their arguments
 
         Parameters
         ----------
-        predpatt
-            the predpatt extraction for the dependency parse
-        depgraph
-            the dependency graph
-        graphid
-            the tree indentifier; will be a prefix of all node
-            identifiers
+        predpatt : PredPatt
+            The PredPatt extraction containing identified predicates and arguments
+        depgraph : DiGraph
+            The source dependency graph with syntactic relations
+        graphid : str, optional
+            Identifier prefix for all nodes in the graph. Default is empty string
+            
+        Returns
+        -------
+        DiGraph
+            NetworkX graph with nodes in three domains:
+            - syntax: original dependency parse nodes
+            - semantics: predicate and argument nodes
+            - interface: edges linking syntax and semantics
         """
         # handle null graphids
         graphid = graphid+'-' if graphid else ''
@@ -184,7 +251,29 @@ class PredPattGraphBuilder:
         return predpattgraph
 
     @staticmethod
-    def _instantiation_edges(graphid, node, typ):
+    def _instantiation_edges(graphid: str, node: Predicate | Argument, typ: str) -> list[tuple[str, str, dict[str, str]]]:
+        """Create edges linking semantic nodes to their syntactic realizations.
+        
+        Generates interface edges from a semantic node (predicate or argument)
+        to its head token and span tokens in the syntax layer.
+        
+        Parameters
+        ----------
+        graphid : str
+            Graph identifier prefix for node IDs
+        node : Predicate | Argument
+            Semantic node to link to syntax
+        typ : str
+            Node type ('pred' for predicate, 'arg' for argument)
+            
+        Returns
+        -------
+        list[tuple[str, str, dict[str, str]]]
+            List of edge tuples (source, target, attributes) where:
+            - source is the semantic node ID
+            - target is a syntax token ID
+            - attributes mark domain as 'interface' and type as 'head' or 'nonhead'
+        """
         parent_id = graphid+'semantics-'+typ+'-'+str(node.position+1)
         child_head_token_id = graphid+'syntax-'+str(node.position+1)
         child_span_token_ids = [graphid+'syntax-'+str(tok.position+1)
@@ -200,7 +289,31 @@ class PredPattGraphBuilder:
                 for tokid in child_span_token_ids]
 
     @staticmethod
-    def _predarg_edges(graphid, parent_node, child_node, pred_child):
+    def _predarg_edges(graphid: str, parent_node: Predicate, child_node: Argument, pred_child: bool) -> list[tuple[str, str, dict[str, str | bool]]]:
+        """Create semantic edges between predicates and their arguments.
+        
+        Generates edges in the semantics domain connecting predicate nodes
+        to their argument nodes. Handles special case where an argument
+        is itself a predicate (e.g., in control constructions).
+        
+        Parameters
+        ----------
+        graphid : str
+            Graph identifier prefix for node IDs
+        parent_node : Predicate
+            The predicate node
+        child_node : Argument  
+            The argument node
+        pred_child : bool
+            Whether the argument position corresponds to a predicate
+            
+        Returns
+        -------
+        list[tuple[str, str, dict[str, str | bool]]]
+            List of semantic edges with 'dependency' type. If pred_child
+            is True, also includes a 'head' edge from argument to its
+            predicate realization
+        """
         parent_id = graphid+'semantics-pred-'+str(parent_node.position+1)
         child_id = graphid+'semantics-arg-'+str(child_node.position+1)
 

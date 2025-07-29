@@ -1,28 +1,61 @@
-"""Classes for representing UDS annotation metadata."""
+"""Module for UDS metadata including data types, properties, and corpus metadata.
+
+This module provides classes and utilities for representing metadata associated with
+Universal Decompositional Semantics (UDS) annotations. It includes:
+
+- Type aliases for primitive types and metadata dictionaries
+- UDSDataType: Wrapper for builtin datatypes with categorical support
+- UDSPropertyMetadata: Metadata for individual UDS properties
+- UDSAnnotationMetadata: Collection of property metadata by subspace
+- UDSCorpusMetadata: Metadata for both sentence and document annotations
+"""
 
 from collections import defaultdict
 from typing import TypeAlias, cast
 
 
+# Type aliases for UDS metadata structures
 PrimitiveType: TypeAlias = str | int | bool | float
+"""Union of primitive types supported in UDS annotations: str, int, bool, float."""
 
-UDSDataTypeDict: TypeAlias = dict[str, str | list[PrimitiveType] | bool | float]
-PropertyMetadataDict: TypeAlias = dict[str,
-                                       set[str] |
-                                       dict[str, UDSDataTypeDict]]
-AnnotationMetadataDict: TypeAlias = dict[str,
-                                         dict[str, PropertyMetadataDict]]
+UDSDataTypeDict: TypeAlias = dict[
+    str, 
+    str | list[PrimitiveType] | bool | float
+]
+"""Dictionary representation of a UDS data type with optional categories and bounds."""
+
+PropertyMetadataDict: TypeAlias = dict[
+    str,
+    set[str] | dict[str, UDSDataTypeDict]
+]
+"""Dictionary representation of property metadata including value/confidence types."""
+
+AnnotationMetadataDict: TypeAlias = dict[
+    str,
+    dict[str, PropertyMetadataDict]
+]
+"""Dictionary mapping subspaces to their property metadata."""
 
 
 def _dtype(name: str) -> type[PrimitiveType]:
-    """Convert string to a type
+    """Convert string representation to a primitive type class.
 
-    Only ``str``, ``int``, ``bool``, and ``float`` are supported. 
+    Only ``str``, ``int``, ``bool``, and ``float`` are supported.
 
     Parameters
     ----------
-    name
-        A string representing the type
+    name : str
+        A string representing the type ("str", "int", "bool", or "float")
+
+    Returns
+    -------
+    type[PrimitiveType]
+        The corresponding type class
+
+    Raises
+    ------
+    ValueError
+        If name is not one of the supported type strings
     """
     if name == 'str':
         return str
@@ -33,49 +66,69 @@ def _dtype(name: str) -> type[PrimitiveType]:
     elif name == 'float':
         return float
     else:
-        errmsg = 'name must be "str", "int",' +\
-                 ' "bool", or "float"'
-        raise ValueError(errmsg)
+        raise ValueError(
+            'name must be "str", "int", "bool", or "float", '
+            f'not {name}'
+        )
 
 
 class UDSDataType:
-    """A thin wrapper around builtin datatypes
+    """A wrapper around builtin datatypes with support for categorical values.
 
-    This class is mainly intended to provide a minimal extension of
-    basic builtin datatypes for representing categorical
-    datatypes. ``pandas`` provides a more fully featured version of
-    such a categorical datatype but would add an additional dependency
-    that is heavyweight and otherwise unnecessary.
+    This class provides a minimal extension of basic builtin datatypes for
+    representing categorical datatypes with optional ordering and bounds.
+    It serves as a lightweight alternative to `pandas` categorical types.
 
     Parameters
     ----------
-    datatype
-        A builtin datatype
-    categories
-        The values the datatype can take on (if applicable)
-    ordered
-        If this is a categorical datatype, whether it is ordered
-    lower_bound
-        The lower bound value. Neither ``categories`` nor ``ordered``
-        need be specified for this to be specified, though if both
-        ``categories`` and this are specified, the datatype must be
-        ordered and the lower bound must match the lower bound of the
-        categories.
-    upper_bound
-        The upper bound value. Neither ``categories`` nor ``ordered``
-        need be specified for this to be specified, though if both
-        ``categories`` and this are specified, the datatype must be
-        ordered and the upper bound must match the upper bound of the
-        categories.
+    datatype : type[PrimitiveType]
+        A builtin datatype (str, int, bool, or float)
+    categories : list[PrimitiveType] | None, optional
+        The allowed values for categorical datatypes. Required if ordered is True.
+    ordered : bool | None, optional
+        Whether this categorical datatype has an ordering. Required if categories
+        is specified.
+    lower_bound : float | None, optional
+        The lower bound value for numeric types. Can be specified independently
+        of categories. If both categories and lower_bound are specified, the
+        datatype must be ordered and bounds must match category bounds.
+    upper_bound : float | None, optional
+        The upper bound value for numeric types. Can be specified independently
+        of categories. If both categories and upper_bound are specified, the
+        datatype must be ordered and bounds must match category bounds.
+
+    Attributes
+    ----------
+    datatype : type[PrimitiveType]
+        The underlying primitive type
+    is_categorical : bool
+        Whether this represents a categorical datatype
+    is_ordered_categorical : bool
+        Whether this is an ordered categorical datatype
+    is_ordered_noncategorical : bool
+        Whether this is ordered but not categorical (has bounds)
+    lower_bound : float | None
+        The lower bound if specified
+    upper_bound : float | None
+        The upper bound if specified
+    categories : set[PrimitiveType] | list[PrimitiveType] | None
+        The categories as a set (unordered) or list (ordered)
     """
 
-    def __init__(self, datatype: type[PrimitiveType],
-                 categories: list[PrimitiveType] | None = None,
-                 ordered: bool | None = None,
-                 lower_bound: float | None = None,
-                 upper_bound: float | None = None):
-        self._validate(datatype, categories, ordered,
-                       lower_bound, upper_bound)
+    def __init__(
+        self, datatype: type[PrimitiveType],
+        categories: list[PrimitiveType] | None = None,
+        ordered: bool | None = None,
+        lower_bound: float | None = None,
+        upper_bound: float | None = None
+    ) -> None:
+        self._validate(
+            datatype,
+            categories,
+            ordered,
+            lower_bound,
+            upper_bound
+        )
 
         self._datatype: type[PrimitiveType] = datatype
         self._categories: list[PrimitiveType] | set[PrimitiveType] | None = categories
@@ -102,48 +155,87 @@ class UDSDataType:
         elif lower_bound is not None or upper_bound is not None:
             self._ordered = True
 
-    def _validate(self, datatype: type[PrimitiveType],
-                  categories: list[PrimitiveType] | None,
-                  ordered: bool | None,
-                  lower_bound: float | None,
-                  upper_bound: float | None) -> None:
+    def _validate(
+        self, datatype: type[PrimitiveType],
+        categories: list[PrimitiveType] | None,
+        ordered: bool | None,
+        lower_bound: float | None,
+        upper_bound: float | None
+    ) -> None:
+        """Validate datatype parameters for consistency.
+
+        Parameters
+        ----------
+        datatype : type[PrimitiveType]
+            The primitive type
+        categories : list[PrimitiveType] | None
+            Optional category values
+        ordered : bool | None
+            Whether categories are ordered
+        lower_bound : float | None
+            Optional lower bound
+        upper_bound : float | None
+            Optional upper bound
+
+        Raises
+        ------
+        ValueError
+            If the parameter combination is invalid
+        """
         if ordered is not None and\
            categories is None and\
            lower_bound is None and\
            upper_bound is None:
-            errmsg = "if ordered is specified either categories or "\
-                     "lower_bound and/or upper_bound must be also"
-            raise ValueError(errmsg)
+            raise ValueError(
+                'if ordered is specified either categories or '
+                'lower_bound and/or upper_bound must be also'
+            )
 
         if categories is not None and ordered is None:
-            errmsg = "if categories is specified ordered must "\
-                     "be specified also"
-            raise ValueError(errmsg)
+            raise ValueError(
+                'if categories is specified ordered must '
+                'be specified also'
+            )
 
         if categories is not None and datatype not in [str, int]:
-            errmsg = "categorical variable must be str- "\
-                     "or int-valued"
-            raise ValueError(errmsg)
+            raise ValueError(
+                'categorical variable must be str- or int-valued'
+            )
 
         if lower_bound is not None or upper_bound is not None:
             if categories is not None and not ordered:
-                errmsg = "if categorical datatype is unordered, upper "\
-                         "and lower bounds should not be specified"
-                raise ValueError(errmsg)
+                raise ValueError(
+                    'if categorical datatype is unordered, upper '
+                    'and lower bounds should not be specified'
+                )
 
             if categories is not None and\
                lower_bound is not None and\
                lower_bound != categories[0]:
-                errmsg = "lower bound does not match categories lower bound"
-                raise ValueError(errmsg)
+                raise ValueError(
+                    'lower bound does not match categories lower bound'
+                )
 
             if categories is not None and\
                upper_bound is not None and\
                upper_bound != categories[-1]:
-                errmsg = "upper bound does not match categories upper bound"
-                raise ValueError(errmsg)
+                raise ValueError(
+                    'upper bound does not match categories upper bound'
+                )
 
     def __eq__(self, other: object) -> bool:
+        """Check equality based on dictionary representation.
+
+        Parameters
+        ----------
+        other : object
+            Object to compare with
+
+        Returns
+        -------
+        bool
+            True if both objects have the same dictionary representation
+        """
         if not isinstance(other, UDSDataType):
             return NotImplemented
         self_dict = self.to_dict()
@@ -153,42 +245,89 @@ class UDSDataType:
 
     @property
     def datatype(self) -> type[PrimitiveType]:
+        """The underlying primitive type.
+
+        Returns
+        -------
+        type[PrimitiveType]
+            The primitive type (str, int, bool, or float)
+        """
         return self._datatype
 
     @property
     def is_categorical(self) -> bool:
+        """Whether this datatype has defined categories.
+
+        Returns
+        -------
+        bool
+            True if categories are defined
+        """
         return self._categories is not None
 
     @property
     def is_ordered_categorical(self) -> bool:
+        """Whether this is a categorical datatype with ordering.
+
+        Returns
+        -------
+        bool
+            True if categorical and ordered
+        """
         return self.is_categorical and bool(self._ordered)
 
     @property
     def is_ordered_noncategorical(self) -> bool:
+        """Whether this has ordering but no categories (bounded numeric).
+
+        Returns
+        -------
+        bool
+            True if ordered but not categorical
+        """
         return not self.is_categorical and bool(self._ordered)
 
     @property
     def lower_bound(self) -> float | None:
+        """The lower bound value if specified.
+
+        Returns
+        -------
+        float | None
+            The lower bound or None
+        """
         return self._lower_bound
 
     @property
     def upper_bound(self) -> float | None:
+        """The upper bound value if specified.
+
+        Returns
+        -------
+        float | None
+            The upper bound or None
+        """
         return self._upper_bound
 
     @property
     def categories(self) -> set[PrimitiveType] | list[PrimitiveType] | None:
-        """The categories
+        """The allowed category values.
 
-        A set of the datatype is unordered and a list if it is ordered
+        Returns a set if the datatype is unordered categorical and a list
+        if it is ordered categorical.
+
+        Returns
+        -------
+        set[PrimitiveType] | list[PrimitiveType] | None
+            Categories as set (unordered), list (ordered), or None
 
         Raises
         ------
-        ValueError
-            If this is not a categorical datatype, an error is raised
+        AttributeError
+            If this is not a categorical datatype
         """
         if self._categories is None:
-            errmsg = "not a categorical dtype"
-            raise AttributeError(errmsg)
+            raise AttributeError('not a categorical dtype')
 
         return self._categories
 
@@ -210,12 +349,12 @@ class UDSDataType:
                          'lower_bound',
                          'upper_bound']
                for k in datatype):
-            errmsg = 'dictionary defining datatype has keys ' +\
-                     ', '.join('"' + k + '"' for k in datatype.keys()) +\
-                     'but it may only have "datatype", "categories", ' +\
-                     '"ordered", "lower_bound", and "upper_bound" as keys'
-
-            raise KeyError(errmsg)
+            raise KeyError(
+                'dictionary defining datatype has keys ' +
+                ', '.join('"' + k + '"' for k in datatype.keys()) +
+                'but it may only have "datatype", "categories", ' +
+                '"ordered", "lower_bound", and "upper_bound" as keys'
+            )
 
         if 'datatype' in datatype:
             datatype_value = datatype['datatype']
@@ -224,11 +363,9 @@ class UDSDataType:
             typ = _dtype(datatype_value)
 
         else:
-            errmsg = 'must specify "datatype" field'
-            raise KeyError(errmsg)
+            raise KeyError('must specify "datatype" field')
 
-        if 'categories' in datatype and\
-           datatype['categories'] is not None:
+        if 'categories' in datatype and datatype['categories'] is not None:
             categories_value = datatype['categories']
             if not isinstance(categories_value, list):
                 raise TypeError('categories must be a list')
@@ -241,23 +378,38 @@ class UDSDataType:
         ordered = bool(ordered_value) if ordered_value is not None else None
 
         lower_bound_value = datatype.get('lower_bound')
+        
         if lower_bound_value is not None and isinstance(lower_bound_value, (int, float, str)):
             lower_bound = float(lower_bound_value)
+        
         else:
             lower_bound = None
 
         upper_bound_value = datatype.get('upper_bound')
+        
         if upper_bound_value is not None and isinstance(upper_bound_value, (int, float, str)):
             upper_bound = float(upper_bound_value)
+        
         else:
             upper_bound = None
 
         return cls(typ, cats, ordered, lower_bound, upper_bound)
 
     def to_dict(self) -> UDSDataTypeDict:
+        """Convert to dictionary representation.
+
+        Returns
+        -------
+        UDSDataTypeDict
+            Dictionary with datatype info, excluding None values
+        """
         with_null: dict[str, str | list[PrimitiveType] | bool | float | None] = {
             'datatype': self._datatype.__name__,
-            'categories': list(self._categories) if isinstance(self._categories, set) else self._categories,
+            'categories': (
+                list(self._categories)
+                if isinstance(self._categories, set)
+                else self._categories
+            ),
             'ordered': self._ordered,
             'lower_bound': self._lower_bound,
             'upper_bound': self._upper_bound
@@ -271,11 +423,36 @@ class UDSDataType:
         return result
 
 class UDSPropertyMetadata:
-    """The metadata for a UDS property"""
+    """Metadata for a UDS property including value and confidence datatypes.
 
-    def __init__(self, value: UDSDataType,
-                 confidence: UDSDataType,
-                 annotators: set[str] | None = None):
+    This class encapsulates the metadata for a single UDS property, including
+    the datatypes for both the property value and the confidence score, as well
+    as optional annotator information.
+
+    Parameters
+    ----------
+    value : UDSDataType
+        The datatype for property values
+    confidence : UDSDataType
+        The datatype for confidence scores
+    annotators : set[str] | None, optional
+        Set of annotator identifiers who provided annotations for this property
+
+    Attributes
+    ----------
+    value : UDSDataType
+        The value datatype
+    confidence : UDSDataType
+        The confidence datatype
+    annotators : set[str] | None
+        The annotator identifiers
+    """
+
+    def __init__(
+        self, value: UDSDataType,
+        confidence: UDSDataType,
+        annotators: set[str] | None = None
+    ) -> None:
         self._value = value
         self._confidence = confidence
         self._annotators = annotators
@@ -332,27 +509,60 @@ class UDSPropertyMetadata:
 
     @property
     def value(self) -> UDSDataType:
+        """The datatype for property values.
+
+        Returns
+        -------
+        UDSDataType
+            The value datatype
+        """
         return self._value
 
     @property
     def confidence(self) -> UDSDataType:
+        """The datatype for confidence scores.
+
+        Returns
+        -------
+        UDSDataType
+            The confidence datatype
+        """
         return self._confidence
 
     @property
     def annotators(self) -> set[str] | None:
+        """The set of annotator identifiers.
+
+        Returns
+        -------
+        set[str] | None
+            Annotator IDs or None if not tracked
+        """
         return self._annotators
 
     @classmethod
     def from_dict(cls,
                   metadata: PropertyMetadataDict) -> 'UDSPropertyMetadata':
-        """
+        """Build UDSPropertyMetadata from a dictionary.
+
         Parameters
         ----------
-        metadata
+        metadata : PropertyMetadataDict
             A mapping from ``"value"`` and ``"confidence"`` to
-            :class:`decomp.semantics.uds.metadata.UDSDataType`. This
-            mapping may optionally specify a mapping from
-            ``"annotators"`` to a set of annotator identifiers.
+            datatype dictionaries. May optionally include ``"annotators"``
+            mapping to a set of annotator identifiers.
+
+        Returns
+        -------
+        UDSPropertyMetadata
+            The constructed metadata object
+
+        Raises
+        ------
+        ValueError
+            If required fields (value, confidence) are missing
+        TypeError
+            If fields have incorrect types
         """
         required = {'value', 'confidence'}
         missing = required - set(metadata)
@@ -382,17 +592,27 @@ class UDSPropertyMetadata:
 
         else:
             annotators_data = metadata['annotators']
+            
             # handle various types - annotators can be set or list
             if isinstance(annotators_data, set):
                 return UDSPropertyMetadata(value, confidence, annotators_data)
+            
             # check if it's a list and convert to set
             # mypy has trouble with type narrowing here
             try:
                 return UDSPropertyMetadata(value, confidence, set(annotators_data))
+            
             except TypeError:
                 raise TypeError('annotators must be a set or list')
 
     def to_dict(self) -> PropertyMetadataDict:
+        """Convert to dictionary representation.
+
+        Returns
+        -------
+        PropertyMetadataDict
+            Dictionary with value, confidence, and optional annotators
+        """
         datatypes: dict[str, UDSDataTypeDict] = {
             'value': self._value.to_dict(),
             'confidence': self._confidence.to_dict()
@@ -401,9 +621,14 @@ class UDSPropertyMetadata:
         if self._annotators is not None:
             # return type needs to match PropertyMetadataDict
             result: PropertyMetadataDict = {'annotators': self._annotators}
-            # Cast datatypes to the appropriate type for PropertyMetadataDict
-            result.update(cast(PropertyMetadataDict, datatypes))
+            
+            # cast datatypes to the appropriate type for PropertyMetadataDict
+            result.update(
+                cast(PropertyMetadataDict, datatypes)
+            )
+            
             return result
+        
         else:
             return cast(PropertyMetadataDict, datatypes)
 
@@ -421,18 +646,54 @@ class UDSAnnotationMetadata:
     def __init__(self, metadata: dict[str, dict[str, UDSPropertyMetadata]]):
         self._metadata = metadata
 
-    def __getitem__(self,
-                    k: str | tuple[str, str]) -> dict[str, UDSPropertyMetadata] | UDSPropertyMetadata:
+    def __getitem__(
+        self,
+        k: str | tuple[str, str]
+    ) -> dict[str, UDSPropertyMetadata] | UDSPropertyMetadata:
+        """Get metadata by subspace or (subspace, property) tuple.
+
+        Parameters
+        ----------
+        k : str | tuple[str, str]
+            Either a subspace name or a (subspace, property) tuple
+
+        Returns
+        -------
+        dict[str, UDSPropertyMetadata] | UDSPropertyMetadata
+            Property dict for subspace or specific property metadata
+
+        Raises
+        ------
+        TypeError
+            If key is not a string or 2-tuple
+        KeyError
+            If subspace or property not found
+        """
         if isinstance(k, str):
             return self._metadata[k]
+        
         elif isinstance(k, tuple) and len(k) == 2:
             # for tuple access like metadata[subspace, property]
             subspace, prop = k
+            
             return self._metadata[subspace][prop]
+        
         else:
             raise TypeError("Key must be a string or 2-tuple")
 
     def __eq__(self, other: object) -> bool:
+        """Check equality by comparing all subspaces and properties.
+
+        Parameters
+        ----------
+        other : object
+            Object to compare with
+
+        Returns
+        -------
+        bool
+            True if all subspaces, properties, and metadata match
+        """
         if not isinstance(other, UDSAnnotationMetadata):
             return NotImplemented
 
@@ -449,8 +710,22 @@ class UDSAnnotationMetadata:
 
         return True
 
-    def __add__(self,
-                other: 'UDSAnnotationMetadata') -> 'UDSAnnotationMetadata':
+    def __add__(
+        self,
+        other: 'UDSAnnotationMetadata'
+    ) -> 'UDSAnnotationMetadata':
+        """Merge two metadata objects, combining annotators for shared properties.
+
+        Parameters
+        ----------
+        other : UDSAnnotationMetadata
+            Metadata to merge with this one
+
+        Returns
+        -------
+        UDSAnnotationMetadata
+            New metadata with merged properties and annotators
+        """
         new_metadata = defaultdict(dict, self.metadata)
 
         for subspace, propdict in other.metadata.items():
@@ -464,12 +739,24 @@ class UDSAnnotationMetadata:
 
     @property
     def metadata(self) -> dict[str, dict[str, UDSPropertyMetadata]]:
-        """The metadata dictionary"""
+        """The underlying metadata dictionary.
+
+        Returns
+        -------
+        dict[str, dict[str, UDSPropertyMetadata]]
+            Mapping from subspaces to properties to metadata
+        """
         return self._metadata
 
     @property
     def subspaces(self) -> set[str]:
-        """The subspaces in the metadata"""
+        """Set of all subspace names.
+
+        Returns
+        -------
+        set[str]
+            The subspace identifiers
+        """
         return set(self._metadata.keys())
 
     def properties(self, subspace: str | None = None) -> set[str]:
@@ -489,20 +776,43 @@ class UDSAnnotationMetadata:
 
     def annotators(self, subspace: str | None = None,
                    prop: str | None = None) -> set[str] | None:
+        """Get annotator IDs for a subspace and/or property.
+
+        Parameters
+        ----------
+        subspace : str | None, optional
+            Subspace to filter by. If None, gets all annotators.
+        prop : str | None, optional
+            Property to filter by. Requires subspace if specified.
+
+        Returns
+        -------
+        set[str] | None
+            Union of annotator IDs, or None if no annotators found
+
+        Raises
+        ------
+        ValueError
+            If prop is specified without subspace
+        """
         if subspace is None and prop is not None:
             errmsg = 'subspace must be specified if prop is specified'
             raise ValueError(errmsg)
 
         if subspace is None:
-            annotators: list[set[str]] = [md.annotators
-                                          for propdict in self._metadata.values()
-                                          for md in propdict.values()
-                                          if md.annotators is not None]
+            annotators: list[set[str]] = [
+                md.annotators
+                for propdict in self._metadata.values()
+                for md in propdict.values()
+                if md.annotators is not None
+            ]
 
         elif prop is None:
-            annotators = [md.annotators
-                          for md in self._metadata[subspace].values()
-                          if md.annotators is not None]
+            annotators = [
+                md.annotators
+                for md in self._metadata[subspace].values()
+                if md.annotators is not None
+            ]
 
         elif self._metadata[subspace][prop].annotators is None:
             annotators = []
@@ -519,20 +829,60 @@ class UDSAnnotationMetadata:
 
     def has_annotators(self, subspace: str | None = None,
                        prop: str | None = None) -> bool:
+        """Check if annotators exist for a subspace and/or property.
+
+        Parameters
+        ----------
+        subspace : str | None, optional
+            Subspace to check
+        prop : str | None, optional
+            Property to check
+
+        Returns
+        -------
+        bool
+            True if any annotators exist
+        """
         return bool(self.annotators(subspace, prop))
 
     @classmethod
     def from_dict(cls, metadata: AnnotationMetadataDict) -> 'UDSAnnotationMetadata':
-        return cls({subspace: {prop: UDSPropertyMetadata.from_dict(md)
-                               for prop, md
-                               in propdict.items()}
-                    for subspace, propdict in metadata.items()})
+        """Build from nested dictionary structure.
+
+        Parameters
+        ----------
+        metadata : AnnotationMetadataDict
+            Nested dict mapping subspaces to properties to metadata dicts
+
+        Returns
+        -------
+        UDSAnnotationMetadata
+            The constructed metadata object
+        """
+        return cls({
+            subspace: {
+                prop: UDSPropertyMetadata.from_dict(md)
+                for prop, md
+                in propdict.items()
+            }
+            for subspace, propdict in metadata.items()
+        })
 
     def to_dict(self) -> AnnotationMetadataDict:
-        return {subspace: {prop: md.to_dict()
-                           for prop, md
-                           in propdict.items()}
-                for subspace, propdict in self._metadata.items()}
+        """Convert to nested dictionary structure.
+
+        Returns
+        -------
+        AnnotationMetadataDict
+            Nested dict representation
+        """
+        return {
+            subspace: {
+                prop: md.to_dict()
+                for prop, md in propdict.items()
+            }
+            for subspace, propdict in self._metadata.items()
+        }
 
 class UDSCorpusMetadata:
     """The metadata for UDS properties by subspace
@@ -549,48 +899,133 @@ class UDSCorpusMetadata:
         The metadata for document_annotations
     """
 
-    def __init__(self,
-                 sentence_metadata: UDSAnnotationMetadata = UDSAnnotationMetadata({}),
-                 document_metadata: UDSAnnotationMetadata = UDSAnnotationMetadata({})):
+    def __init__(
+        self,
+        sentence_metadata: UDSAnnotationMetadata = UDSAnnotationMetadata({}),
+        document_metadata: UDSAnnotationMetadata = UDSAnnotationMetadata({})
+    ) -> None:
         self._sentence_metadata = sentence_metadata
         self._document_metadata = document_metadata
 
     @classmethod
-    def from_dict(cls,
-                  metadata: dict[str, AnnotationMetadataDict]) -> 'UDSCorpusMetadata':
-        return cls(UDSAnnotationMetadata.from_dict(metadata['sentence_metadata']),
-                   UDSAnnotationMetadata.from_dict(metadata['document_metadata']))
+    def from_dict(
+        cls,
+        metadata: dict[str, AnnotationMetadataDict]
+    ) -> 'UDSCorpusMetadata':
+        """Build from dictionary with sentence and document metadata.
+
+        Parameters
+        ----------
+        metadata : dict[str, AnnotationMetadataDict]
+            Dict with 'sentence_metadata' and 'document_metadata' keys
+
+        Returns
+        -------
+        UDSCorpusMetadata
+            The constructed corpus metadata
+        """
+        return cls(
+            UDSAnnotationMetadata.from_dict(
+                metadata['sentence_metadata']
+            ),
+            UDSAnnotationMetadata.from_dict(
+                metadata['document_metadata']
+            )
+        )
 
     def to_dict(self) -> dict[str, AnnotationMetadataDict]:
-        return {'sentence_metadata': self._sentence_metadata.to_dict(),
-                'document_metadata': self._document_metadata.to_dict()}
+        """Convert to dictionary with sentence and document metadata.
+
+        Returns
+        -------
+        dict[str, AnnotationMetadataDict]
+            Dict with 'sentence_metadata' and 'document_metadata' keys
+        """
+        return {
+            'sentence_metadata': self._sentence_metadata.to_dict(),
+            'document_metadata': self._document_metadata.to_dict()
+        }
 
     def __add__(self, other: 'UDSCorpusMetadata') -> 'UDSCorpusMetadata':
+        """Merge two corpus metadata objects.
+
+        Parameters
+        ----------
+        other : UDSCorpusMetadata
+            Metadata to merge
+
+        Returns
+        -------
+        UDSCorpusMetadata
+            New metadata with merged sentence and document metadata
+        """
         new_sentence_metadata = self._sentence_metadata + other._sentence_metadata
         new_document_metadata = self._document_metadata + other._document_metadata
 
         return self.__class__(new_sentence_metadata, new_document_metadata)
 
     def add_sentence_metadata(self, metadata: UDSAnnotationMetadata) -> None:
+        """Add sentence annotation metadata.
+
+        Parameters
+        ----------
+        metadata : UDSAnnotationMetadata
+            Metadata to merge with existing sentence metadata
+        """
         self._sentence_metadata += metadata
 
     def add_document_metadata(self, metadata: UDSAnnotationMetadata) -> None:
+        """Add document annotation metadata.
+
+        Parameters
+        ----------
+        metadata : UDSAnnotationMetadata
+            Metadata to merge with existing document metadata
+        """
         self._document_metadata += metadata
 
     @property
     def sentence_metadata(self) -> UDSAnnotationMetadata:
+        """The sentence-level annotation metadata.
+
+        Returns
+        -------
+        UDSAnnotationMetadata
+            Metadata for sentence annotations
+        """
         return self._sentence_metadata
 
     @property
     def document_metadata(self) -> UDSAnnotationMetadata:
+        """The document-level annotation metadata.
+
+        Returns
+        -------
+        UDSAnnotationMetadata
+            Metadata for document annotations
+        """
         return self._document_metadata
 
     @property
     def sentence_subspaces(self) -> set[str]:
+        """Set of sentence-level subspaces.
+
+        Returns
+        -------
+        set[str]
+            Sentence subspace identifiers
+        """
         return self._sentence_metadata.subspaces
 
     @property
     def document_subspaces(self) -> set[str]:
+        """Set of document-level subspaces.
+
+        Returns
+        -------
+        set[str]
+            Document subspace identifiers
+        """
         return self._document_metadata.subspaces
 
     def sentence_properties(self, subspace: str | None = None) -> set[str]:
@@ -641,8 +1076,36 @@ class UDSCorpusMetadata:
 
     def has_sentence_annotators(self, subspace: str | None = None,
                                 prop: str | None = None) -> bool:
+        """Check if sentence-level annotators exist.
+
+        Parameters
+        ----------
+        subspace : str | None, optional
+            Subspace to check
+        prop : str | None, optional
+            Property to check
+
+        Returns
+        -------
+        bool
+            True if annotators exist
+        """
         return self._sentence_metadata.has_annotators(subspace, prop)
 
     def has_document_annotators(self, subspace: str | None = None,
                                 prop: str | None = None) -> bool:
+        """Check if document-level annotators exist.
+
+        Parameters
+        ----------
+        subspace : str | None, optional
+            Subspace to check
+        prop : str | None, optional
+            Property to check
+
+        Returns
+        -------
+        bool
+            True if annotators exist
+        """
         return self._document_metadata.has_annotators(subspace, prop)
