@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from collections.abc import Hashable
 from os.path import basename, splitext
-from typing import TextIO
+from typing import TextIO, cast
 
 from networkx import DiGraph
 
@@ -80,7 +80,7 @@ class PredPattCorpus(Corpus[tuple[PredPatt, DiGraph], DiGraph]):
         """
         predpatt, depgraph = predpatt_depgraph
 
-        return PredPattGraphBuilder.from_predpatt(predpatt, depgraph, graphid)
+        return PredPattGraphBuilder.from_predpatt(predpatt, depgraph, str(graphid))
 
     @classmethod
     def from_conll(cls,
@@ -118,23 +118,24 @@ class PredPattCorpus(Corpus[tuple[PredPatt, DiGraph], DiGraph]):
 
         corp_is_str = isinstance(corpus, str)
 
-        if corp_is_str and splitext(basename(corpus))[1] == '.conllu':
-            with open(corpus) as infile:
+        if corp_is_str and splitext(basename(cast(str, corpus)))[1] == '.conllu':
+            with open(cast(str, corpus)) as infile:
                 data = infile.read()
 
         elif corp_is_str:
-            data = corpus
+            data = cast(str, corpus)
 
         else:
-            data = corpus.read()
+            data = cast(TextIO, corpus).read()
 
         # load the CoNLL dependency parses as graphs
-        ud_corp = {name+'-'+str(i+1): [line.split()
+        ud_corp_dict = {name+'-'+str(i+1): [line.split()
                                        for line in block.split('\n')
                                        if len(line) > 0
                                        if line[0] != '#']
                    for i, block in enumerate(data.split('\n\n'))}
-        ud_corp = CoNLLDependencyTreeCorpus(ud_corp)
+        ud_corp_hashable = {cast(Hashable, k): v for k, v in ud_corp_dict.items()}
+        ud_corp = CoNLLDependencyTreeCorpus(ud_corp_hashable)
 
         # extract the predpatt for those dependency parses
         try:
@@ -208,8 +209,9 @@ class PredPattGraphBuilder:
                                       in depgraph.edges.items()])
 
         # add links between predicate nodes and syntax nodes
+        events_list = predpatt.events or []
         predpattgraph.add_edges_from([edge
-                                      for event in predpatt.events
+                                      for event in events_list
                                       for edge
                                       in cls._instantiation_edges(graphid,
                                                                   event,
@@ -217,7 +219,7 @@ class PredPattGraphBuilder:
 
         # add links between argument nodes and syntax nodes
         edges = [edge
-                 for event in predpatt.events
+                 for event in events_list
                  for arg in event.arguments
                  for edge
                  in cls._instantiation_edges(graphid, arg, 'arg')]
@@ -225,16 +227,16 @@ class PredPattGraphBuilder:
         predpattgraph.add_edges_from(edges)
 
         # add links between predicate nodes and argument nodes
-        edges = [edge
-                 for event in predpatt.events
+        predarg_edges: list[tuple[str, str, dict[str, str | bool]]] = [edge
+                 for event in events_list
                  for arg in event.arguments
                  for edge in cls._predarg_edges(graphid, event, arg,
                                                 arg.position
                                                 in [e.position
                                                     for e
-                                                    in predpatt.events])]
+                                                    in events_list])]
 
-        predpattgraph.add_edges_from(edges)
+        predpattgraph.add_edges_from(predarg_edges)
 
         # mark that all the semantic nodes just added were from predpatt
         # this is done to distinguish them from nodes added through annotations
