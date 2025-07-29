@@ -24,7 +24,7 @@ from io import BytesIO
 from logging import warn
 from os.path import basename, splitext
 from random import sample
-from typing import TextIO, TypeAlias, cast
+from typing import Literal, TextIO, TypeAlias, cast
 from zipfile import ZipFile
 
 import requests
@@ -35,7 +35,7 @@ from ..predpatt import PredPattCorpus
 from .annotation import NormalizedUDSAnnotation, RawUDSAnnotation, UDSAnnotation
 from .document import SentenceGraphDict, UDSDocument
 from .graph import EdgeAttributes, EdgeKey, NodeAttributes, UDSSentenceGraph
-from .metadata import UDSCorpusMetadata, UDSPropertyMetadata
+from .metadata import AnnotationMetadataDict, UDSCorpusMetadata, UDSPropertyMetadata
 
 
 Location: TypeAlias = str | TextIO
@@ -69,8 +69,8 @@ class UDSCorpus(PredPattCorpus):
 
     UD_URL = 'https://github.com/UniversalDependencies/' +\
              'UD_English-EWT/archive/r1.2.zip'
-    ANN_DIR = str(importlib.resources.files('decomp') / 'data')
-    CACHE_DIR = str(importlib.resources.files('decomp') / 'data')
+    ANN_DIR = str(importlib.resources.files('decomp') / 'data') + '/'
+    CACHE_DIR = str(importlib.resources.files('decomp') / 'data') + '/'
 
     def __init__(self,
                  sentences: PredPattCorpus | None = None,
@@ -120,16 +120,15 @@ class UDSCorpus(PredPattCorpus):
                 self._sentences = {str(name): UDSSentenceGraph(g, str(name))
                                   for name, g in sentences.items()}
                 self._graphs = self._sentences
+            else:
+                # When sentences is already a dict of UDSSentenceGraph objects
+                self._sentences = sentences
+                self._graphs = self._sentences
 
             self._documents = documents or {}
 
-            if sentence_annotations:
-                for ann in sentence_annotations:
-                    self.add_annotation(ann)
-
-            if document_annotations:
-                for ann in document_annotations:
-                    self.add_annotation(document_annotation=ann)
+            if sentence_annotations or document_annotations:
+                self.add_annotation(sentence_annotations, document_annotations)
 
     def _validate_arguments(self, sentences: PredPattCorpus | None, documents: dict[str, UDSDocument] | None,
                             version: str, split: str | None, annotation_format: str) -> None:
@@ -497,11 +496,16 @@ class UDSCorpus(PredPattCorpus):
                                                  sent_ids, name)
                      for name, d_json in documents_json['data'].items()}
 
-        corpus = cls(cast(PredPattCorpus | None, sentences), documents)
+        corpus = cls(sentences, documents)
 
-        metadata_dict = {'sentence_metadata': sentences_json['metadata'],
-                         'document_metadata': documents_json['metadata']}
-        metadata = UDSCorpusMetadata.from_dict(metadata_dict)
+        metadata_dict = {
+            'sentence_metadata': sentences_json['metadata'],
+            'document_metadata': documents_json['metadata']
+        }
+        metadata = UDSCorpusMetadata.from_dict(cast(
+            dict[Literal['sentence_metadata', 'document_metadata'], AnnotationMetadataDict],
+            metadata_dict
+        ))
         corpus.add_corpus_metadata(metadata)
 
         return corpus
@@ -516,8 +520,8 @@ class UDSCorpus(PredPattCorpus):
         """
         self._metadata += metadata
 
-    def add_annotation(self, sentence_annotation: UDSAnnotation | None = None,
-                       document_annotation: UDSAnnotation | None = None) -> None:
+    def add_annotation(self, sentence_annotation: list[UDSAnnotation] | None = None,
+                       document_annotation: list[UDSAnnotation] | None = None) -> None:
         """Add annotations to UDS sentence and document graphs
 
         Parameters
@@ -528,10 +532,12 @@ class UDSCorpus(PredPattCorpus):
             the annotations to add to the document graphs in the corpus
         """
         if sentence_annotation:
-            self.add_sentence_annotation(sentence_annotation)
+            for ann in sentence_annotation:
+                self.add_sentence_annotation(ann)
 
         if document_annotation:
-            self.add_document_annotation(document_annotation)
+            for ann in document_annotation:
+                self.add_document_annotation(ann)
 
     def add_sentence_annotation(self, annotation: UDSAnnotation) -> None:
         """Add annotations to UDS sentence graphs

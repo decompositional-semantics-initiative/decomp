@@ -22,7 +22,7 @@ from typing import TextIO, TypeAlias, cast, overload
 from overrides import overrides
 
 from .metadata import PrimitiveType, UDSAnnotationMetadata, UDSPropertyMetadata
-from .types import AnnotatorValue as TypedAnnotatorValue
+from .types import AnnotatorValue as TypedAnnotatorValue, UDSSubspace
 
 
 # type aliases for annotation data structures
@@ -209,11 +209,13 @@ class UDSAnnotation(ABC):
 
         # Some attributes are not property subspaces and are thus excluded
         self._excluded_attributes = {'subpredof', 'subargof', 'headof', 'span', 'head'}
-        self._node_subspaces = {ss for gid, nodedict
-                                in self._node_attributes.items()
-                                for nid, subspaces in nodedict.items()
-                                for ss in subspaces}
-        self._node_subspaces = self._node_subspaces - self._excluded_attributes
+        self._node_subspaces: set[UDSSubspace] = {
+            cast(UDSSubspace, ss) for gid, nodedict
+            in self._node_attributes.items()
+            for nid, subspaces in nodedict.items()
+            for ss in subspaces
+            if ss not in self._excluded_attributes
+        }
 
     def _process_edge_data(self, data: dict[str, dict[str, NormalizedData | RawData]]) -> None:
         """Extract edge attributes from annotation data.
@@ -231,10 +233,12 @@ class UDSAnnotation(ABC):
                   if '%%' in edge}
             for gid, attrs in data.items()}
 
-        self._edge_subspaces = {ss for gid, edgedict
-                                in self._edge_attributes.items()
-                                for eid, subspaces in edgedict.items()
-                                for ss in subspaces}
+        self._edge_subspaces: set[UDSSubspace] = {
+            cast(UDSSubspace, ss) for gid, edgedict
+            in self._edge_attributes.items()
+            for eid, subspaces in edgedict.items()
+            for ss in subspaces
+        }
 
     def _validate(self) -> None:
         """Validate annotation data consistency.
@@ -454,39 +458,39 @@ class UDSAnnotation(ABC):
         return self._metadata
 
     @property
-    def node_subspaces(self) -> set[str]:
+    def node_subspaces(self) -> set[UDSSubspace]:
         """Set of subspaces used in node annotations.
 
         Returns
         -------
-        set[str]
+        set[UDSSubspace]
             Subspace names excluding structural attributes
         """
         return self._node_subspaces
 
     @property
-    def edge_subspaces(self) -> set[str]:
+    def edge_subspaces(self) -> set[UDSSubspace]:
         """Set of subspaces used in edge annotations.
 
         Returns
         -------
-        set[str]
+        set[UDSSubspace]
             Subspace names for edges
         """
         return self._edge_subspaces
 
     @property
-    def subspaces(self) -> set[str]:
+    def subspaces(self) -> set[UDSSubspace]:
         """Set of all subspaces (node and edge).
 
         Returns
         -------
-        set[str]
+        set[UDSSubspace]
             Union of node and edge subspaces
         """
         return self.node_subspaces | self._edge_subspaces
 
-    def properties(self, subspace: str | None = None) -> set[str]:
+    def properties(self, subspace: UDSSubspace | None = None) -> set[str]:
         """Get properties for a subspace.
 
         Parameters
@@ -501,7 +505,7 @@ class UDSAnnotation(ABC):
         """
         return self._metadata.properties(subspace)
 
-    def property_metadata(self, subspace: str,
+    def property_metadata(self, subspace: UDSSubspace,
                           prop: str) -> UDSPropertyMetadata:
         """Get metadata for a specific property.
 
@@ -650,11 +654,13 @@ class RawUDSAnnotation(UDSAnnotation):
 
         # some attributes are not property subspaces and are thus excluded
         self._excluded_attributes = {'subpredof', 'subargof', 'headof', 'span', 'head'}
-        self._node_subspaces = {ss for gid, nodedict
-                                in self._node_attributes.items()
-                                for nid, subspaces in nodedict.items()
-                                for ss in subspaces}
-        self._node_subspaces = self._node_subspaces - self._excluded_attributes
+        self._node_subspaces: set[UDSSubspace] = {
+            cast(UDSSubspace, ss) for gid, nodedict
+            in self._node_attributes.items()
+            for nid, subspaces in nodedict.items()
+            for ss in subspaces
+            if ss not in self._excluded_attributes
+        }
 
         # initialize as nested defaultdict, will be frozen to regular dict later
         # the actual type is a nested defaultdict but we'll treat it as the final dict type
@@ -692,10 +698,12 @@ class RawUDSAnnotation(UDSAnnotation):
                                        if '%%' in edge}
                                  for gid, attrs in data.items()}
 
-        self._edge_subspaces = {ss for gid, edgedict
-                                in self._edge_attributes.items()
-                                for eid, subspaces in edgedict.items()
-                                for ss in subspaces}
+        self._edge_subspaces: set[UDSSubspace] = {
+            cast(UDSSubspace, ss) for gid, edgedict
+            in self._edge_attributes.items()
+            for eid, subspaces in edgedict.items()
+            for ss in subspaces
+        }
 
         # initialize as nested defaultdict, will be frozen to regular dict later
         # the actual type is a nested defaultdict but we'll treat it as the final dict type
@@ -820,7 +828,7 @@ class RawUDSAnnotation(UDSAnnotation):
         """
         return cast('RawUDSAnnotation', super().from_json(jsonfile))
 
-    def annotators(self, subspace: str | None = None,
+    def annotators(self, subspace: UDSSubspace | None = None,
                    prop: str | None = None) -> set[str] | None:
         """Get annotator IDs for a subspace and property.
 

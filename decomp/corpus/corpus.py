@@ -1,26 +1,56 @@
-"""Module for defining abstract graph corpus readers"""
+"""Abstract base class for graph corpus readers.
+
+This module provides the foundational :class:`Corpus` class for managing collections
+of graphs in the decomp framework. The Corpus class serves as an abstract base that
+concrete corpus implementations extend to handle specific graph formats.
+
+The module defines a generic corpus container that:
+- Accepts raw graphs in an input format
+- Transforms them to an output format via an abstract graph builder
+- Provides dictionary-like access to the processed graphs
+- Handles errors during graph construction gracefully
+
+Type Variables
+--------------
+InGraph
+    The input graph type that will be processed by the corpus reader.
+
+OutGraph
+    The output graph type produced after processing.
+
+Type Aliases
+------------
+GraphDict[T]
+    Generic dictionary mapping hashable identifiers to graphs of type T.
+
+Classes
+-------
+Corpus
+    Abstract base class for graph corpus containers with generic type parameters
+    for input and output graph formats.
+"""
 
 from abc import ABCMeta, abstractmethod
 from collections.abc import Hashable, ItemsView, Iterator
 from logging import warning
 from random import sample
-from typing import Generic, TypeAlias, TypeVar
+from typing import TypeVar
 
 
 InGraph = TypeVar('InGraph')  # the input graph type
 OutGraph = TypeVar('OutGraph')  # the output graph type
 
-GraphDict: TypeAlias = dict[Hashable, OutGraph]
+type GraphDict[T] = dict[Hashable, T]
 
 
-class Corpus(Generic[InGraph, OutGraph], metaclass=ABCMeta):
-    """Container for graphs
+class Corpus[InGraph, OutGraph](metaclass=ABCMeta):
+    """Container for graphs.
 
     Parameters
     ----------
     graphs_raw
-        a sequence of graphs in a format that the graphbuilder for a
-        subclass of this abstract class can process
+        A sequence of graphs in a format that the graphbuilder for a
+        subclass of this abstract class can process.
     """
 
     def __init__(self, graphs_raw: dict[Hashable, InGraph]):
@@ -32,7 +62,7 @@ class Corpus(Generic[InGraph, OutGraph], metaclass=ABCMeta):
         return iter(self._graphs)
 
     def items(self) -> ItemsView[Hashable, OutGraph]:
-        """Dictionary-like iterator for (graphid, graph) pairs"""
+        """Dictionary-like iterator for (graphid, graph) pairs."""
         return self._graphs.items()
 
     def __getitem__(self, k: Hashable) -> OutGraph:
@@ -56,14 +86,16 @@ class Corpus(Generic[InGraph, OutGraph], metaclass=ABCMeta):
                 warning(f'{graphid} has loops')
 
     @abstractmethod
-    def _graphbuilder(self,
-                      graphid: Hashable,
-                      rawgraph: InGraph) -> OutGraph:
+    def _graphbuilder(
+        self,
+        graphid: Hashable,
+        rawgraph: InGraph
+    ) -> OutGraph:
         raise NotImplementedError
 
     @property
     def graphs(self) -> dict[Hashable, OutGraph]:
-        """The graphs in corpus"""
+        """The graphs in corpus."""
         return self._graphs
 
     @property
