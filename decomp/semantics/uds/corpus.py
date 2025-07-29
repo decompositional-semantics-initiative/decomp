@@ -17,7 +17,7 @@ document-level semantic relationships.
 import importlib.resources
 import json
 import os
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from functools import lru_cache
 from glob import glob
 from io import BytesIO
@@ -33,7 +33,7 @@ from rdflib.query import Result
 
 from ..predpatt import PredPattCorpus
 from .annotation import NormalizedUDSAnnotation, RawUDSAnnotation, UDSAnnotation
-from .document import UDSDocument
+from .document import SentenceGraphDict, UDSDocument
 from .graph import EdgeAttributes, EdgeKey, NodeAttributes, UDSSentenceGraph
 from .metadata import UDSCorpusMetadata, UDSPropertyMetadata
 
@@ -92,7 +92,7 @@ class UDSCorpus(PredPattCorpus):
         # attribute will operate on sentence-level graphs only
         # more specific type than parent's dict[Hashable, OutGraph]
         # we're intentionally narrowing the type from the parent class
-        self._graphs = cast(dict[str, UDSSentenceGraph], {})
+        self._graphs: SentenceGraphDict = {}  # type: ignore[assignment] # narrowing parent's dict[Hashable, Any] to dict[str, UDSSentenceGraph]
         self._sentences = self._graphs
         self._documents: dict[str, UDSDocument] = {}
 
@@ -120,13 +120,13 @@ class UDSCorpus(PredPattCorpus):
                 self._sentences = {str(name): UDSSentenceGraph(g, str(name))
                                   for name, g in sentences.items()}
                 self._graphs = self._sentences
-            
+
             self._documents = documents or {}
 
             if sentence_annotations:
                 for ann in sentence_annotations:
                     self.add_annotation(ann)
-            
+
             if document_annotations:
                 for ann in document_annotations:
                     self.add_annotation(document_annotation=ann)
@@ -300,7 +300,7 @@ class UDSCorpus(PredPattCorpus):
         with ZipFile(BytesIO(udewt)) as zf:
             conll_names = [fname for fname in zf.namelist()
                            if splitext(fname)[-1] == '.conllu']
-            
+
             for fn in conll_names:
                 with zf.open(fn) as conll:
                     conll_str = conll.read().decode('utf-8')
@@ -378,6 +378,7 @@ class UDSCorpus(PredPattCorpus):
             corpus name to be appended to the beginning of graph ids
         """
         # select appropriate loader based on format
+        loader: Callable[[str | TextIO], RawUDSAnnotation | NormalizedUDSAnnotation]
         if annotation_format == 'raw':
             loader = RawUDSAnnotation.from_json
         elif annotation_format == 'normalized':
@@ -387,7 +388,7 @@ class UDSCorpus(PredPattCorpus):
                              '"raw" or "normalized"')
 
         predpatt_corpus = PredPattCorpus.from_conll(corpus, name=name)
-        predpatt_sentence_graphs = {graph_name: UDSSentenceGraph(g, str(graph_name))
+        predpatt_sentence_graphs = {str(graph_name): UDSSentenceGraph(g, str(graph_name))
                                     for graph_name, g in predpatt_corpus.items()}
         predpatt_documents = cls._initialize_documents(predpatt_sentence_graphs)
 
@@ -564,7 +565,7 @@ class UDSCorpus(PredPattCorpus):
 
         for dname, (node_attrs, edge_attrs) in annotation.items():
             if dname in self._documents:
-                from .graph import EdgeKey, NodeAttributes, EdgeAttributes
+                from .graph import EdgeAttributes, EdgeKey, NodeAttributes
                 self._documents[dname].add_annotation(
                     cast(dict[str, NodeAttributes], node_attrs),
                     cast(dict[EdgeKey, EdgeAttributes], edge_attrs)
@@ -586,7 +587,6 @@ class UDSCorpus(PredPattCorpus):
         dict[str, UDSDocument]
             Documents keyed by document ID
         """
-
         # load the UD document and sentence IDs
         ud_ids = cast(dict[str, dict[str, str]], cls._load_ud_ids())
 

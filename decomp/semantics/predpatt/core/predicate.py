@@ -7,18 +7,20 @@ various predicate types (normal, possessive, appositive, adjectival).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
-from ..typing import HasPosition, T
+from ..typing import T
 from ..utils.ud_schema import dep_v1, postag
 from .token import Token
 
+
 if TYPE_CHECKING:
-    from typing import Callable
-    from .argument import Argument
+    from collections.abc import Callable
+
     from ..rules.base import Rule
     from ..typing import UDSchema
-    
+    from .argument import Argument
+
     ColorFunc = Callable[[str, str], str]
 
 # Predicate type constants
@@ -106,8 +108,8 @@ class Predicate:
     def __init__(
         self,
         root: Token,
-        ud: 'UDSchema' = dep_v1,
-        rules: list['Rule'] | None = None,
+        ud: UDSchema = dep_v1,
+        rules: list[Rule] | None = None,
         type_: str = NORMAL
     ) -> None:
         """Initialize a Predicate."""
@@ -268,7 +270,7 @@ class Predicate:
             return True
         return None
 
-    def _format_predicate(self, name: dict['Argument', str], c: 'ColorFunc' = no_color) -> str:  # noqa: C901
+    def _format_predicate(self, name: dict[Argument, str], c: ColorFunc = no_color) -> str:  # noqa: C901
         """Format predicate with argument placeholders.
 
         Parameters
@@ -307,14 +309,14 @@ class Predicate:
                     if item == gov_arg:
                         continue
                     if item in self.arguments:
-                        rest.append(name[item])
+                        rest.append(name[item])  # type: ignore[index]  # item is Argument when in self.arguments
                     else:
-                        rest.append(item.text)
+                        rest.append(item.text)  # type: ignore[union-attr]  # item is Token when not in self.arguments
                 rest_str = ' '.join(rest)
                 return f'{name[gov_arg]} is/are {rest_str}'
             else:
                 # fallback if no governor argument found
-                return ' '.join(name[item] if item in self.arguments else item.text for item in x)
+                return ' '.join(name[item] if item in self.arguments else item.text for item in x)  # type: ignore[index,union-attr]
 
         else:
             # normal predicate or xcomp special case
@@ -327,26 +329,26 @@ class Predicate:
                 first_arg_added = False
                 for item in x:
                     if item in self.arguments:
-                        result.append(name[item])
+                        result.append(name[item])  # type: ignore[index]  # item is Argument when in self.arguments
                         if not first_arg_added:
                             result.append('is/are')
                             first_arg_added = True
                     else:
-                        result.append(item.text)
+                        result.append(item.text)  # type: ignore[union-attr]  # item is Token when not in self.arguments
             else:
                 # normal formatting
                 for item in x:
                     if item in self.arguments:
-                        result.append(name[item])
+                        result.append(name[item])  # type: ignore[index]  # item is Argument when in self.arguments
                     else:
-                        result.append(item.text)
+                        result.append(item.text)  # type: ignore[union-attr]  # item is Token when not in self.arguments
 
             return ' '.join(result)
 
     def format(
         self,
         track_rule: bool = False,
-        c: 'ColorFunc' = no_color,
+        c: ColorFunc = no_color,
         indent: str = '\t'
     ) -> str:
         """Format predicate with arguments for display.

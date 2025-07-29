@@ -1,7 +1,7 @@
 """Module for defining abstract graph corpus readers"""
 
 from abc import ABCMeta, abstractmethod
-from collections.abc import Hashable, Iterator
+from collections.abc import Hashable, ItemsView, Iterator
 from logging import warning
 from random import sample
 from typing import Generic, TypeAlias, TypeVar
@@ -31,9 +31,9 @@ class Corpus(Generic[InGraph, OutGraph], metaclass=ABCMeta):
     def __iter__(self) -> Iterator[Hashable]:
         return iter(self._graphs)
 
-    def items(self) -> Iterator[tuple[Hashable, OutGraph]]:
+    def items(self) -> ItemsView[Hashable, OutGraph]:
         """Dictionary-like iterator for (graphid, graph) pairs"""
-        return iter(self._graphs.items())
+        return self._graphs.items()
 
     def __getitem__(self, k: Hashable) -> OutGraph:
         return self._graphs[k]
@@ -48,10 +48,12 @@ class Corpus(Generic[InGraph, OutGraph], metaclass=ABCMeta):
         for graphid, rawgraph in self._graphs_raw.items():
             try:
                 self._graphs[graphid] = self._graphbuilder(graphid, rawgraph)
+
             except ValueError:
-                warning(str(graphid)+' has no or multiple root nodes')
+                warning(f'{graphid} has no or multiple root nodes')
+
             except RecursionError:
-                warning(str(graphid)+' has loops')
+                warning(f'{graphid} has loops')
 
     @abstractmethod
     def _graphbuilder(self,

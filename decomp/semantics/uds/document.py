@@ -18,6 +18,8 @@ from typing import TypeAlias, cast
 
 from networkx import DiGraph
 
+from .types import NetworkXGraphData, BasicNodeAttrs
+
 from .graph import EdgeAttributes, EdgeKey, NodeAttributes, UDSDocumentGraph, UDSSentenceGraph
 
 
@@ -67,12 +69,12 @@ class UDSDocument:
         # Initialize the sentence-level graphs
         self.add_sentence_graphs(sentence_graphs, sentence_ids)
 
-    def to_dict(self) -> dict[str, dict[str, dict[str, dict[str, int | bool | str]]]]:
+    def to_dict(self) -> NetworkXGraphData:
         """Convert the document graph to a dictionary.
 
         Returns
         -------
-        dict[str, dict[str, dict[str, dict[str, int | bool | str]]]]
+        NetworkXGraphData
             NetworkX adjacency data format for the document graph
         """
         return self.document_graph.to_dict()
@@ -131,11 +133,11 @@ class UDSDocument:
             The timestamp string if found, None otherwise
         """
         timestamp = re.search(r'\d{8}_?\d{6}', document_name)
-        
+
         return timestamp[0] if timestamp else None
 
     def add_sentence_graphs(
-        self, 
+        self,
         sentence_graphs: SentenceGraphDict,
         sentence_ids: SentenceIDDict
     ) -> None:
@@ -154,10 +156,10 @@ class UDSDocument:
         for gname, graph in sentence_graphs.items():
             sentence_graphs[gname].sentence_id = sentence_ids[gname]
             sentence_graphs[gname].document_id = self.name
-            
+
             self.sentence_graphs[gname] = graph
             self.sentence_ids[gname] = sentence_ids[gname]
-            
+
             for node_name, node in graph.semantics_nodes.items():
                 semantics = {'graph': gname, 'node': node_name}
                 document_node_name = node_name.replace('semantics', 'document')
@@ -168,7 +170,7 @@ class UDSDocument:
                 )
 
     def add_annotation(
-        self, 
+        self,
         node_attrs: dict[str, NodeAttributes],
         edge_attrs: dict[EdgeKey, EdgeAttributes]
     ) -> None:
@@ -186,7 +188,7 @@ class UDSDocument:
         """
         self.document_graph.add_annotation(node_attrs, edge_attrs, self.sentence_ids)
 
-    def semantics_node(self, document_node: str) -> dict[str, dict[str, int | bool | str]]:
+    def semantics_node(self, document_node: str) -> dict[str, BasicNodeAttrs]:
         """Get the semantics node corresponding to a document node.
 
         Document nodes maintain references to their corresponding semantics
@@ -200,7 +202,7 @@ class UDSDocument:
 
         Returns
         -------
-        dict[str, dict[str, int | bool | str]]
+        dict[str, BasicNodeAttrs]
             Single-item dict mapping node ID to its attributes
 
         Raises
@@ -218,7 +220,7 @@ class UDSDocument:
         graph_id = cast(str, semantics['graph'])
         node_id = cast(str, semantics['node'])
         semantics_node = self.sentence_graphs[graph_id].semantics_nodes[node_id]
-        return {node_id: semantics_node}
+        return {node_id: cast(BasicNodeAttrs, semantics_node)}
 
     @cached_property
     def text(self) -> str:
@@ -233,6 +235,6 @@ class UDSDocument:
             The complete document text
         """
         return ' '.join([
-            sent_graph.sentence 
+            sent_graph.sentence
             for gname, sent_graph in sorted(self.sentence_graphs.items())
         ])

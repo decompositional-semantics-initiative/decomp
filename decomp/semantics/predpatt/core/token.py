@@ -44,7 +44,7 @@ class Token:
         relation types and constants.
     """
 
-    def __init__(self, position: int, text: str, tag: str, ud: 'UDSchema' = dep_v1) -> None:
+    def __init__(self, position: int, text: str, tag: str, ud: UDSchema = dep_v1) -> None:
         """
         Initialize a Token.
 

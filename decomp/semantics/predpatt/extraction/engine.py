@@ -10,7 +10,7 @@ from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING
 
 from ..core.options import PredPattOpts
-from ..typing import HasPosition, T, UDSchema
+from ..typing import T, UDSchema
 from ..utils.ud_schema import dep_v1, dep_v2, postag
 
 

@@ -15,7 +15,7 @@ graph operations like finding maxima/minima and extracting subgraphs.
 from abc import ABC, abstractmethod
 from functools import cached_property, lru_cache
 from logging import info, warning
-from typing import Literal, TypeAlias, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from networkx import DiGraph, adjacency_data, adjacency_graph
 from overrides import overrides
@@ -29,7 +29,7 @@ from rdflib.query import Result
 # import RDFConverter (need to check if it exists first)
 if TYPE_CHECKING:
     from ...graph import RDFConverter as _RDFConverter
-    RDFConverter = type[_RDFConverter] | None
+    RDFConverter: type[_RDFConverter] | None = _RDFConverter
 else:
     try:
         from ...graph import RDFConverter
@@ -56,10 +56,10 @@ EdgeType: TypeAlias = Literal['head', 'nonhead', 'dependency', 'interface']
 # node attributes can vary based on domain
 # common attributes: domain, type, position, form, frompredpatt, semantics
 # also includes UDS annotation subspaces and properties
-NodeAttributes: TypeAlias = dict[str, str | int | bool | dict[str, str] | dict[str, dict[str, dict[str, str | int | bool | float]]]]
+NodeAttributes: TypeAlias = dict[str, str | int | bool | dict[str, str] | dict[str, dict[str, dict[str, str | int | bool | float]]] | dict[str, dict[str, dict[str, dict[str, str | int | bool | float]]]]]
 """Dictionary of node attributes including domain, type, and annotation data."""
 
-EdgeAttributes: TypeAlias = dict[str, str | int | bool | dict[str, str] | dict[str, dict[str, dict[str, dict[str, str | int | bool | float]]]]]
+EdgeAttributes: TypeAlias = dict[str, str | int | bool | dict[str, str] | dict[str, dict[str, dict[str, str | int | bool | float]]] | dict[str, dict[str, dict[str, dict[str, str | int | bool | float]]]]]
 """Dictionary of edge attributes including domain, type, and annotation data."""
 
 # Attribute values can be various types
@@ -176,7 +176,9 @@ class UDSSentenceGraph(UDSGraph):
         if self._rdf is None:
             if RDFConverter is None:
                 raise AttributeError("RDFConverter not available")
-            self._rdf = RDFConverter.networkx_to_rdf(self.graph)
+            # Type narrowing: RDFConverter is not None at this point
+            converter: type[_RDFConverter] = RDFConverter
+            self._rdf = converter.networkx_to_rdf(self.graph)
         return self._rdf
 
     @cached_property
@@ -338,7 +340,6 @@ class UDSSentenceGraph(UDSGraph):
         ValueError
             If query returns non-node results
         """
-
         results: list[str] = [r[0].toPython()  # type: ignore[index,union-attr]
                              for r in self.query(query,
                                                  cache_query=cache_query)]
@@ -373,7 +374,6 @@ class UDSSentenceGraph(UDSGraph):
         ValueError
             If query returns non-edge results
         """
-
         results: list[tuple[str, str]] = [
             tuple(edge[0].toPython().split('%%'))  # type: ignore[index,union-attr]
             for edge in self.query(query, cache_query=cache_query)
@@ -843,9 +843,9 @@ class UDSSentenceGraph(UDSGraph):
             synnode = synnode.replace('semantics-arg', 'syntax')
             synnode = synnode.replace('semantics-subpred', 'syntax')
             synnode = synnode.replace('semantics-subarg', 'syntax')
-            
+
             instedge = (node, synnode)
-            
+
             self.graph.add_edge(*instedge, domain='interface', type='head')
 
             if self.rootid is not None:
@@ -883,7 +883,7 @@ class UDSSentenceGraph(UDSGraph):
             form = nodeattr.get('form')
             if isinstance(pos, int) and isinstance(form, str):
                 id_word[pos - 1] = form
-        
+
         return ' '.join([
             id_word[i] for i in range(max(list(id_word.keys()))+1)
         ])
@@ -946,16 +946,16 @@ class UDSDocumentGraph(UDSGraph):
             # Verify that the annotation is intra-document
             s1 = '-'.join(edge[0].split('-')[:3])
             s2 = '-'.join(edge[1].split('-')[:3])
-            
+
             if s1 not in sentence_ids or s2 not in sentence_ids:
                 warning(
                     f'Skipping cross-document annotation from {edge[0]} '
                     f'to {edge[1]}'
                 )
                 return
-            
+
             attrs = dict(
-                attrs, 
+                attrs,
                 **{'domain': 'document',
                    'type': 'relation',
                    'frompredpatt': False,

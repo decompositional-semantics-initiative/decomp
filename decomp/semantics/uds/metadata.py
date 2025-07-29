@@ -19,7 +19,7 @@ PrimitiveType: TypeAlias = str | int | bool | float
 """Union of primitive types supported in UDS annotations: str, int, bool, float."""
 
 UDSDataTypeDict: TypeAlias = dict[
-    str, 
+    str,
     str | list[PrimitiveType] | bool | float
 ]
 """Dictionary representation of a UDS data type with optional categories and bounds."""
@@ -378,18 +378,18 @@ class UDSDataType:
         ordered = bool(ordered_value) if ordered_value is not None else None
 
         lower_bound_value = datatype.get('lower_bound')
-        
+
         if lower_bound_value is not None and isinstance(lower_bound_value, (int, float, str)):
             lower_bound = float(lower_bound_value)
-        
+
         else:
             lower_bound = None
 
         upper_bound_value = datatype.get('upper_bound')
-        
+
         if upper_bound_value is not None and isinstance(upper_bound_value, (int, float, str)):
             upper_bound = float(upper_bound_value)
-        
+
         else:
             upper_bound = None
 
@@ -592,16 +592,16 @@ class UDSPropertyMetadata:
 
         else:
             annotators_data = metadata['annotators']
-            
+
             # handle various types - annotators can be set or list
             if isinstance(annotators_data, set):
                 return UDSPropertyMetadata(value, confidence, annotators_data)
-            
+
             # check if it's a list and convert to set
             # mypy has trouble with type narrowing here
             try:
                 return UDSPropertyMetadata(value, confidence, set(annotators_data))
-            
+
             except TypeError:
                 raise TypeError('annotators must be a set or list')
 
@@ -621,14 +621,14 @@ class UDSPropertyMetadata:
         if self._annotators is not None:
             # return type needs to match PropertyMetadataDict
             result: PropertyMetadataDict = {'annotators': self._annotators}
-            
+
             # cast datatypes to the appropriate type for PropertyMetadataDict
             result.update(
                 cast(PropertyMetadataDict, datatypes)
             )
-            
+
             return result
-        
+
         else:
             return cast(PropertyMetadataDict, datatypes)
 
@@ -671,13 +671,13 @@ class UDSAnnotationMetadata:
         """
         if isinstance(k, str):
             return self._metadata[k]
-        
+
         elif isinstance(k, tuple) and len(k) == 2:
             # for tuple access like metadata[subspace, property]
             subspace, prop = k
-            
+
             return self._metadata[subspace][prop]
-        
+
         else:
             raise TypeError("Key must be a string or 2-tuple")
 

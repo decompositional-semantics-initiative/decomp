@@ -88,7 +88,7 @@ class TestArgumentComparison:
         # This is an implementation detail that doesn't affect output.
         assert "test_mutable" in orig1.rules
         assert "test_mutable" in modern1.rules
-        
+
         # Clean up the original's mutable default to avoid affecting other tests
         if "test_mutable" in orig2.rules:
             orig2.rules.clear()

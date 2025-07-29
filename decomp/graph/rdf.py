@@ -1,5 +1,6 @@
 """Module for converting from networkx to RDF"""
 
+from collections.abc import ItemsView
 from typing import Any
 
 from networkx import DiGraph, to_dict_of_dicts
@@ -52,7 +53,7 @@ class RDFConverter:
         self._construct_node(nodeid)
 
         self._add_attributes(nodeid,
-                             list(self.nxgraph.nodes[nodeid].items()))
+                             self.nxgraph.nodes[nodeid].items())
 
 
     def _add_edge_attributes(self, nodeid1: str, nodeid2: str) -> None:
@@ -60,10 +61,10 @@ class RDFConverter:
         edgetup = (nodeid1, nodeid2)
 
         self._add_attributes(edgeid,
-                             list(self.nxgraph.edges[edgetup].items()))
+                             self.nxgraph.edges[edgetup].items())
 
 
-    def _add_attributes(self, nid: str, attributes: list[tuple[str, Any]]) -> None:
+    def _add_attributes(self, nid: str, attributes: ItemsView[str, str | int | bool | float | dict[str, str | int | bool | float] | list[str | int | bool | float] | tuple[str | int | bool | float, ...]]) -> None:
         triples = []
 
         for attrid1, attrs1 in attributes:

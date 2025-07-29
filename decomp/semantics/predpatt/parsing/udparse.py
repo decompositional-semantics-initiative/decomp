@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from ..typing import UDSchema
 
 # Import at runtime to avoid circular dependency
-def _get_dep_v1() -> 'UDSchema':
+def _get_dep_v1() -> UDSchema:
     """Get the dep_v1 module dynamically.
     
     Returns
@@ -97,10 +97,10 @@ class UDParse:
 
     def __init__(
         self,
-        tokens: list[str | 'Token'],
+        tokens: list[str | Token],
         tags: list[str],
         triples: list[DepTriple],
-        ud: 'UDSchema' | None = None
+        ud: UDSchema | None = None
     ) -> None:
         """Initialize UDParse with tokens, tags, and dependency triples.
 
@@ -122,10 +122,10 @@ class UDParse:
         self.triples = triples
 
         # build governor mapping: dependent -> DepTriple
-        self.governor: dict[int | 'Token', DepTriple] = {e.dep: e for e in triples}
+        self.governor: dict[int | Token, DepTriple] = {e.dep: e for e in triples}
 
         # build dependents mapping: governor -> [DepTriple]
-        self.dependents: defaultdict[int | 'Token', list[DepTriple]] = defaultdict(list)
+        self.dependents: defaultdict[int | Token, list[DepTriple]] = defaultdict(list)
         for e in self.triples:
             self.dependents[e.gov].append(e)
 

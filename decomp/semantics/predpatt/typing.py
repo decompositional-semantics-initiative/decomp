@@ -6,13 +6,14 @@ the PredPatt system to avoid circular imports and ensure consistency.
 
 from typing import TYPE_CHECKING, Protocol, TypeVar
 
+
 if TYPE_CHECKING:
     from .utils.ud_schema import DependencyRelationsV1, DependencyRelationsV2
 
 
 class HasPosition(Protocol):
     """Protocol for objects that have a position attribute."""
-    
+
     position: int
 
 
