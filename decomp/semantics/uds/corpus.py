@@ -73,7 +73,7 @@ class UDSCorpus(PredPattCorpus):
     CACHE_DIR = str(importlib.resources.files('decomp') / 'data') + '/'
 
     def __init__(self,
-                 sentences: PredPattCorpus | None = None,
+                 sentences: PredPattCorpus | dict[str, UDSSentenceGraph] | None = None,
                  documents: dict[str, UDSDocument] | None = None,
                  sentence_annotations: list[UDSAnnotation] = [],
                  document_annotations: list[UDSAnnotation] = [],
@@ -130,13 +130,13 @@ class UDSCorpus(PredPattCorpus):
             if sentence_annotations or document_annotations:
                 self.add_annotation(sentence_annotations, document_annotations)
 
-    def _validate_arguments(self, sentences: PredPattCorpus | None, documents: dict[str, UDSDocument] | None,
+    def _validate_arguments(self, sentences: PredPattCorpus | dict[str, UDSSentenceGraph] | None, documents: dict[str, UDSDocument] | None,
                             version: str, split: str | None, annotation_format: str) -> None:
         """Validate constructor arguments for consistency.
 
         Parameters
         ----------
-        sentences : PredPattCorpus | None
+        sentences : PredPattCorpus | dict[str, UDSSentenceGraph] | None
             Optional sentence graphs
         documents : dict[str, UDSDocument] | None
             Optional document collection

@@ -32,8 +32,62 @@ AttributeValue: TypeAlias = str | int | bool | float | dict[str, str] | dict[str
 
 def get_ontologies() -> tuple[list[str], list[str]]:
     """
-    Collect node and edge ontologies from existing UDS corpus 
+    Collect node and edge ontologies from annotation files or UDS corpus 
     """
+    import json
+    import os
+    from glob import glob
+    
+    # Try to load metadata from annotation files first
+    try:
+        # Get the data directory path
+        import importlib.resources
+        data_dir = str(importlib.resources.files('decomp') / 'data' / '2.0' / 'normalized')
+        
+        # Collect all metadata from annotation files
+        all_metadata = {}
+        
+        # Process sentence annotations
+        sentence_ann_pattern = os.path.join(data_dir, 'sentence', 'annotations', '*.json')
+        for ann_file in glob(sentence_ann_pattern):
+            try:
+                with open(ann_file) as f:
+                    data = json.load(f)
+                    if 'metadata' in data:
+                        all_metadata.update(data['metadata'])
+            except (json.JSONDecodeError, IOError):
+                continue
+                
+        # Process document annotations  
+        doc_ann_pattern = os.path.join(data_dir, 'document', 'annotations', '*.json')
+        for ann_file in glob(doc_ann_pattern):
+            try:
+                with open(ann_file) as f:
+                    data = json.load(f)
+                    if 'metadata' in data:
+                        all_metadata.update(data['metadata'])
+            except (json.JSONDecodeError, IOError):
+                continue
+        
+        # Generate ontology lists from metadata
+        if all_metadata:
+            node_ontology = []
+            edge_ontology = []
+            
+            for k, v in all_metadata.items():
+                for v_val in v.keys():
+                    if k != 'protoroles':
+                        node_ontology.append(f"{k}-{v_val}")
+                    else:
+                        edge_ontology.append(f"{k}-{v_val}")
+                        
+            return sorted(node_ontology), sorted(edge_ontology)
+            
+    except Exception:
+        # If loading from files fails, fall back to original approach
+        pass
+    
+    # Fall back to loading from corpus
     corpus = UDSCorpus(split="dev")
     metadata = corpus.metadata.sentence_metadata.metadata
     node_ontology = [f"{k}-{v_val}" for k,v in metadata.items() for v_val in v.keys() if k != "protoroles"]
