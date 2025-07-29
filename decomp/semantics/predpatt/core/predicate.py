@@ -58,7 +58,7 @@ def sort_by_position(x: list[Any]) -> list[Any]:
     return list(sorted(x, key=lambda y: y.position))
 
 
-def no_color(x, _):
+def no_color(x: str, _: str) -> str:
     """Identity function for when color is disabled."""
     return x
 
@@ -113,6 +113,7 @@ class Predicate:
         self.arguments: list[Argument] = []
         self.type = type_
         self.tokens: list[Token] = []
+        self.children: list[Predicate] = []
 
     def __repr__(self) -> str:
         """Return string representation."""
@@ -222,7 +223,9 @@ class Predicate:
         subj = self.subj()
         other_subj = other.subj()
         # use the exact same pattern as original to ensure identical behavior
-        return subj and other_subj and subj.position == other_subj.position  # type: ignore[return-value]
+        if subj is None or other_subj is None:
+            return None
+        return subj.position == other_subj.position
 
     def has_borrowed_arg(self) -> bool:
         """Check if any argument is borrowed (shared).
@@ -260,7 +263,7 @@ class Predicate:
             return True
         return None
 
-    def _format_predicate(self, name: dict[Any, str], c: Any = no_color) -> str:
+    def _format_predicate(self, name: dict[Any, str], c: Any = no_color) -> str:  # noqa: C901
         """Format predicate with argument placeholders.
 
         Parameters

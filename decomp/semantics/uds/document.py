@@ -1,12 +1,12 @@
 """Module for representing UDS documents."""
 
 import re
-from typing import Any, TypeAlias, cast
+from functools import cached_property
+from typing import TypeAlias, cast
 
-from memoized_property import memoized_property
 from networkx import DiGraph
 
-from .graph import UDSDocumentGraph, UDSSentenceGraph
+from .graph import EdgeAttributes, EdgeKey, NodeAttributes, UDSDocumentGraph, UDSSentenceGraph
 
 
 # Type aliases
@@ -123,8 +123,8 @@ class UDSDocument:
                             domain='document', type=node['type'],
                             frompredpatt=False, semantics=semantics)
 
-    def add_annotation(self, node_attrs: dict[str, dict[str, Any]],
-                             edge_attrs: dict[str, dict[str, Any]]) -> None:
+    def add_annotation(self, node_attrs: dict[str, NodeAttributes],
+                             edge_attrs: dict[EdgeKey, EdgeAttributes]) -> None:
         """Add node or edge annotations to the document-level graph
 
         Parameters
@@ -146,10 +146,16 @@ class UDSDocument:
             retrieved
         """
         semantics = self.document_graph.nodes[document_node]['semantics']
-        semantics_node = self.sentence_graphs[semantics['graph']].semantics_nodes[semantics['node']]
-        return {semantics['node']: semantics_node}
+        if not isinstance(semantics, dict):
+            raise TypeError(f"Expected 'semantics' to be a dict but got {type(semantics)}")
+        if 'graph' not in semantics or 'node' not in semantics:
+            raise KeyError("Expected 'semantics' dict to have 'graph' and 'node' keys")
+        graph_id = cast(str, semantics['graph'])
+        node_id = cast(str, semantics['node'])
+        semantics_node = self.sentence_graphs[graph_id].semantics_nodes[node_id]
+        return {node_id: semantics_node}
 
-    @memoized_property  # type: ignore[misc]
+    @cached_property
     def text(self) -> str:
         """The document text"""
         return ' '.join([sent_graph.sentence for gname, sent_graph in sorted(self.sentence_graphs.items())])

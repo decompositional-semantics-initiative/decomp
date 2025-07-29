@@ -78,3 +78,62 @@ def raw_sentence_annotations(raw_node_sentence_annotation,
     raw_edge_ann = RawUDSAnnotation.from_json(raw_edge_sentence_annotation)
 
     return raw_node_ann, raw_edge_ann
+
+@pytest.fixture
+def normalized_sentence_graph(rawtree, listtree, normalized_sentence_annotations):
+    from decomp.semantics.predpatt import PredPatt, PredPattGraphBuilder, PredPattOpts, load_conllu
+    from decomp.semantics.uds import UDSSentenceGraph
+    from decomp.syntax.dependency import DependencyGraphBuilder
+
+    node_ann, edge_ann = normalized_sentence_annotations
+
+    ud = DependencyGraphBuilder.from_conll(listtree, 'tree1')
+
+    pp = PredPatt(next(load_conllu(rawtree))[1],
+                  opts=PredPattOpts(resolve_relcl=True,
+                                    borrow_arg_for_relcl=True,
+                                    resolve_conj=False,
+                                    cut=True))
+
+    pp_graph = PredPattGraphBuilder.from_predpatt(pp, ud, 'tree1')
+
+    graph = UDSSentenceGraph(pp_graph, 'tree1')
+    graph.add_annotation(*node_ann['tree1'])
+    graph.add_annotation(*edge_ann['tree1'])
+
+    return graph
+
+@pytest.fixture
+def rawtree(test_data_dir):
+    fpath = os.path.join(test_data_dir, 'rawtree.conllu')
+
+    with open(fpath) as f:
+        return f.read()
+
+@pytest.fixture
+def listtree(rawtree):
+    return [l.split() for l in rawtree.split('\n')]
+
+@pytest.fixture
+def raw_sentence_graph(rawtree, listtree, raw_sentence_annotations):
+    from decomp.semantics.predpatt import PredPatt, PredPattGraphBuilder, PredPattOpts, load_conllu
+    from decomp.semantics.uds import UDSSentenceGraph
+    from decomp.syntax.dependency import DependencyGraphBuilder
+
+    node_ann, edge_ann = raw_sentence_annotations
+
+    ud = DependencyGraphBuilder.from_conll(listtree, 'tree1')
+
+    pp = PredPatt(next(load_conllu(rawtree))[1],
+                  opts=PredPattOpts(resolve_relcl=True,
+                                    borrow_arg_for_relcl=True,
+                                    resolve_conj=False,
+                                    cut=True))
+
+    pp_graph = PredPattGraphBuilder.from_predpatt(pp, ud, 'tree1')
+
+    graph = UDSSentenceGraph(pp_graph, 'tree1')
+    graph.add_annotation(*node_ann['tree1'])
+    graph.add_annotation(*edge_ann['tree1'])
+
+    return graph

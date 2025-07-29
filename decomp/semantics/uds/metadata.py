@@ -1,12 +1,12 @@
 """Classes for representing UDS annotation metadata."""
 
 from collections import defaultdict
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 
 PrimitiveType: TypeAlias = str | int | bool | float
 
-UDSDataTypeDict: TypeAlias = dict[str, str | list[PrimitiveType] | bool]
+UDSDataTypeDict: TypeAlias = dict[str, str | list[PrimitiveType] | bool | float]
 PropertyMetadataDict: TypeAlias = dict[str,
                                        set[str] |
                                        dict[str, UDSDataTypeDict]]
@@ -267,11 +267,7 @@ class UDSDataType:
         result: UDSDataTypeDict = {}
         for k, v in with_null.items():
             if v is not None:
-                if k in ('lower_bound', 'upper_bound'):
-                    # Keep bounds as numbers, not strings
-                    result[k] = v  # type: ignore[assignment]
-                else:
-                    result[k] = v  # type: ignore[assignment]
+                result[k] = v
         return result
 
 class UDSPropertyMetadata:
@@ -375,8 +371,8 @@ class UDSPropertyMetadata:
             raise TypeError('confidence must be a dictionary')
 
         # these should be UDSDataTypeDict, not nested dicts
-        value_data: UDSDataTypeDict = value_data_raw  # type: ignore[assignment]
-        confidence_data: UDSDataTypeDict = confidence_data_raw  # type: ignore[assignment]
+        value_data = cast(UDSDataTypeDict, value_data_raw)
+        confidence_data = cast(UDSDataTypeDict, confidence_data_raw)
 
         value = UDSDataType.from_dict(value_data)
         confidence = UDSDataType.from_dict(confidence_data)
@@ -404,13 +400,12 @@ class UDSPropertyMetadata:
 
         if self._annotators is not None:
             # return type needs to match PropertyMetadataDict
-            result: PropertyMetadataDict = {}
-            result['annotators'] = self._annotators
-            for k, v in datatypes.items():
-                result[k] = v  # type: ignore[assignment]
+            result: PropertyMetadataDict = {'annotators': self._annotators}
+            # Cast datatypes to the appropriate type for PropertyMetadataDict
+            result.update(cast(PropertyMetadataDict, datatypes))
             return result
         else:
-            return datatypes  # type: ignore[return-value]
+            return cast(PropertyMetadataDict, datatypes)
 
 
 class UDSAnnotationMetadata:

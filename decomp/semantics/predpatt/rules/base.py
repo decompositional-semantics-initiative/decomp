@@ -6,7 +6,6 @@ Rules track the logic behind extraction decisions and provide explanations.
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 
@@ -14,7 +13,7 @@ if TYPE_CHECKING:
     from ..core.token import Token
 
 
-class Rule(ABC):
+class Rule:
     """Abstract base class for all PredPatt rules.
 
     Rules are used to track extraction logic and provide explanations
@@ -60,7 +59,7 @@ class Rule(ABC):
         # Handle RuleI -> i special case
         if name == 'RuleI':
             return 'i'
-        
+
         # Handle single letter rules (A1 -> a1, G1 -> g1, etc.)
         if len(name) <= 2 and name[0].isupper():
             return name.lower()

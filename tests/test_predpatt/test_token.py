@@ -199,8 +199,8 @@ class TestTokenHardToFindArguments:
         token = Token(position=0, text="helpful", tag="JJ")
         token.gov_rel = dep_v1.amod
 
-        # This should raise TypeError because dependents is None
-        with pytest.raises(TypeError, match="'NoneType' object is not iterable"):
+        # This should raise TypeError with explicit error message
+        with pytest.raises(TypeError, match="Cannot iterate over None dependents for token"):
             token.hard_to_find_arguments()
 
     def test_hard_to_find_arguments_with_empty_dependents(self):

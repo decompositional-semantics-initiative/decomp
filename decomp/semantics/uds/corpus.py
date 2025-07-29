@@ -19,7 +19,7 @@ from random import sample
 from typing import Any, TextIO, TypeAlias, cast
 from zipfile import ZipFile
 
-import requests  # type: ignore[import-untyped]
+import requests
 from rdflib.plugins.sparql.sparql import Query
 from rdflib.query import Result
 
@@ -81,7 +81,9 @@ class UDSCorpus(PredPattCorpus):
 
         # methods inherited from Corpus that reference the self._graphs
         # attribute will operate on sentence-level graphs only
-        self._graphs: dict[str, UDSSentenceGraph] = {}  # type: ignore[assignment]
+        # More specific type than parent's dict[Hashable, OutGraph]
+        # We're intentionally narrowing the type from the parent class
+        self._graphs = cast(dict[str, UDSSentenceGraph], {})
         self._sentences = self._graphs
         self._documents: dict[str, UDSDocument] = {}
 
@@ -314,7 +316,7 @@ class UDSCorpus(PredPattCorpus):
         predpatt_corpus = PredPattCorpus.from_conll(corpus, name=name)
         predpatt_sentence_graphs = {graph_name: UDSSentenceGraph(g, str(graph_name))
                                     for graph_name, g in predpatt_corpus.items()}
-        predpatt_documents = cls._initialize_documents(predpatt_sentence_graphs)  # type: ignore[arg-type]
+        predpatt_documents = cls._initialize_documents(predpatt_sentence_graphs)
 
         # process sentence-level graph annotations
         processed_sentence_annotations = []
@@ -331,7 +333,8 @@ class UDSCorpus(PredPattCorpus):
             processed_document_annotations.append(ann)
 
         # Create corpus and add annotations after creation
-        uds_corpus: UDSCorpus = cls(predpatt_sentence_graphs, predpatt_documents)  # type: ignore[arg-type]
+        # Cast needed because constructor expects PredPattCorpus but we have dict[str, UDSSentenceGraph]
+        uds_corpus: UDSCorpus = cls(cast(PredPattCorpus | None, predpatt_sentence_graphs), predpatt_documents)
 
         # Add sentence annotations
         for ann in processed_sentence_annotations:
@@ -408,7 +411,7 @@ class UDSCorpus(PredPattCorpus):
                                                  sent_ids, name)
                      for name, d_json in documents_json['data'].items()}
 
-        corpus = cls(sentences, documents)  # type: ignore[arg-type]
+        corpus = cls(cast(PredPattCorpus | None, sentences), documents)
 
         metadata_dict = {'sentence_metadata': sentences_json['metadata'],
                          'document_metadata': documents_json['metadata']}
@@ -449,8 +452,13 @@ class UDSCorpus(PredPattCorpus):
 
         for gname, (node_attrs, edge_attrs) in annotation.items():
             if gname in self._sentences:
-                self._sentences[gname].add_annotation(node_attrs,
-                                                      edge_attrs)  # type: ignore[arg-type]
+                from typing import cast
+
+                from .graph import EdgeAttributes, EdgeKey, NodeAttributes
+                self._sentences[gname].add_annotation(
+                    cast(dict[str, NodeAttributes], node_attrs),
+                    cast(dict[EdgeKey, EdgeAttributes], edge_attrs)
+                )
 
     def add_document_annotation(self, annotation: UDSAnnotation) -> None:
         """Add annotations to UDS documents
@@ -464,11 +472,14 @@ class UDSCorpus(PredPattCorpus):
 
         for dname, (node_attrs, edge_attrs) in annotation.items():
             if dname in self._documents:
-                self._documents[dname].add_annotation(node_attrs,
-                                                      edge_attrs)  # type: ignore[arg-type]
+                from .graph import EdgeKey, NodeAttributes, EdgeAttributes
+                self._documents[dname].add_annotation(
+                    cast(dict[str, NodeAttributes], node_attrs),
+                    cast(dict[EdgeKey, EdgeAttributes], edge_attrs)
+                )
 
     @classmethod
-    def _initialize_documents(cls, graphs: dict[str, 'UDSSentenceGraph']) -> dict[str, UDSDocument]:
+    def _initialize_documents(cls, graphs: dict[str, UDSSentenceGraph]) -> dict[str, UDSDocument]:
 
         # Load the UD document and sentence IDs
         ud_ids = cast(dict[str, dict[str, str]], cls._load_ud_ids())

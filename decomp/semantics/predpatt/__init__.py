@@ -29,7 +29,7 @@ DEFAULT_PREDPATT_OPTIONS = PredPattOpts(resolve_relcl=True,
                                         cut=True)  # Resolve relative clause
 
 
-class PredPattCorpus(Corpus):
+class PredPattCorpus(Corpus[tuple[PredPatt, DiGraph], DiGraph]):
     """Container for predpatt graphs."""
 
     def _graphbuilder(self,

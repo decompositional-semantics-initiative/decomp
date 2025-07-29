@@ -7,6 +7,7 @@ linguistic and structural criteria.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 
@@ -31,9 +32,9 @@ def is_not_interrogative(pred: Predicate) -> bool:
     bool
         True if predicate does not contain '?' (accept), False otherwise (reject).
     """
-    # tokens = [tk.text for tk in pred.tokens]
-    tokens = pred.tokens
-    if '?' not in tokens:
+    # Check if any token text contains '?'
+    token_texts = [tk.text for tk in pred.tokens]
+    if '?' not in token_texts:
         filter_rules = getattr(pred, 'rules', [])
         filter_rules.append(is_not_interrogative.__name__)
         return True
@@ -82,6 +83,8 @@ def is_not_copula(pred: Predicate) -> bool:
     """
     copula_verbs = ['be', 'am', 'is', 'are', 'was', 'were', 'being', 'been']
 
+    if pred.root.dependents is None:
+        raise TypeError(f"Cannot filter predicate {pred}: root token has no dependency information")
     pred_deps_rel = [p.rel for p in pred.root.dependents]
     pred_deps_txt = [p.dep.text for p in pred.root.dependents]
     if 'cop' in pred_deps_rel:
@@ -125,6 +128,8 @@ def is_good_ancestor(pred: Predicate) -> bool:
         if pointer.gov_rel in embedding_deps:
             return False
         # Replace pointer with its head
+        if pointer.gov is None:
+            break
         pointer = pointer.gov
     filter_rules = getattr(pred, 'rules', [])
     filter_rules.append(is_good_ancestor.__name__)
@@ -149,6 +154,8 @@ def is_good_descendants(pred: Predicate) -> bool:
         True if predicate has good descendants (accept), False otherwise (reject).
     """
     embedding_deps = {"neg", "advmod", "aux", "mark", "advcl", "appos"}
+    if pred.root.dependents is None:
+        raise TypeError(f"Cannot check descendants for predicate {pred}: root token has no dependency information")
     for desc in pred.root.dependents:
         # The following is true if child is in fact a child
         # of verb
@@ -181,6 +188,8 @@ def has_subj(pred: Predicate, passive: bool = False) -> bool:
     # the original filter function considers nsubjpass
     #if (('nsubj' in [x.rel for x in parse.dependents[event.root]])
     #    or ('nsubjpass' in [x.rel for x in parse.dependents[event.root]])):
+    if pred.root.dependents is None:
+        raise TypeError(f"Cannot check subjects for predicate {pred}: root token has no dependency information")
     for x in pred.root.dependents:
         if x.rel in subj_rels:
             filter_rules = getattr(pred, 'rules', [])
@@ -217,27 +226,28 @@ def filter_events_nucl(event: Predicate, parse: UDParse) -> bool:
     """Apply filters for running Keisuke's NUCLE HIT.
 
     Combines multiple predicate filters for the NUCL evaluation.
-    Only applies if the parse is not interrogative.
+    Only applies if the event is not interrogative.
 
     Parameters
     ----------
     event : Predicate
         The predicate event to filter.
     parse : UDParse
-        The dependency parse (used for interrogative check).
+        The dependency parse (included for compatibility).
 
     Returns
     -------
     bool
         True if event passes all NUCL filters (accept), False otherwise (reject).
     """
-    if is_not_interrogative(parse):
+    if is_not_interrogative(event):
         return all(f(event) for f in (is_pred_verb,
                                       is_not_copula,
                                       is_not_have,
                                       has_subj,
                                       is_good_ancestor,
                                       is_good_descendants))
+    return False
     #isSbjOrObj (without nsubjpass)
     #isNotPronoun
     #has_direct_arc
@@ -261,7 +271,7 @@ def filter_events_sprl(event: Predicate, parse: UDParse) -> bool:
     bool
         True if event passes all SPRL filters (accept), False otherwise (reject).
     """
-    if is_not_interrogative(parse):
+    if is_not_interrogative(event):
         return all(f(event) for f in (is_pred_verb,
                                       is_good_ancestor,
                                       is_good_descendants,
@@ -271,6 +281,7 @@ def filter_events_sprl(event: Predicate, parse: UDParse) -> bool:
                                       # isSbjOrObj, #(including nsubjpass)
                                       #is_expletive,
                                   ))
+    return False
 
 
 def activate(pred: Predicate) -> None:
@@ -302,7 +313,7 @@ def activate(pred: Predicate) -> None:
         has_direct_arc(pred, arg)
 
 
-def apply_filters(_filter, pred: Predicate, **options) -> bool:
+def apply_filters(_filter: Callable[..., bool], pred: Predicate, **options: bool) -> bool:
     """Apply a filter function with proper parameter handling.
 
     Handles different filter function signatures and parameter requirements.

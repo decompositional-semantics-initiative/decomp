@@ -81,6 +81,7 @@ class Argument:
         self.ud = ud
         self.tokens: list[Token] = []
         self.share = share
+        self.type: str | None = None
 
     def __repr__(self) -> str:
         """Return string representation.
@@ -179,6 +180,8 @@ class Argument:
         coords = [self]
         # don't consider the conjuncts of ccomp, csubj and amod
         if self.root.gov_rel not in {self.ud.ccomp, self.ud.csubj}:
+            if self.root.dependents is None:
+                raise TypeError(f"Cannot find coordinated arguments for argument {self}: root token has no dependency information")
             for e in self.root.dependents:
                 if e.rel == self.ud.conj:
                     coords.append(Argument(e.dep, self.ud, [R.m()]))

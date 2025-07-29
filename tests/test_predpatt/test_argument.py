@@ -377,8 +377,8 @@ class TestArgumentCoords:
 
         arg = Argument(root)
 
-        # should raise TypeError since None is not iterable
-        with pytest.raises(TypeError, match="'NoneType' object is not iterable"):
+        # should raise TypeError with explicit error message
+        with pytest.raises(TypeError, match="Cannot find coordinated arguments for argument"):
             arg.coords()
 
 

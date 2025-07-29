@@ -9,15 +9,37 @@ be used for serialization, comparison, or display purposes.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Protocol, TypeVar, cast
 
 from .ud_schema import dep_v1, postag
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from ..core.argument import Argument
     from ..core.predicate import Predicate
     from ..core.token import Token
+    from ..extraction.engine import PredPattEngine
+    from ..utils.ud_schema import DependencyRelationsV1, DependencyRelationsV2
+
+    UDSchema = type[DependencyRelationsV1] | type[DependencyRelationsV2]
+    TokenIterator = Iterator[tuple[int, str]]
+
+
+class HasPosition(Protocol):
+    """Protocol for objects that have a position attribute."""
+
+    position: int
+
+
+class HasChildren(Protocol):
+    """Protocol for objects that can have children list."""
+
+    children: list[Predicate]
+
+
+T = TypeVar('T', bound=HasPosition)
 
 # Import constants directly to avoid circular imports
 NORMAL = "normal"
@@ -72,7 +94,7 @@ class LinearizedPPOpts:
         self.only_head = only_head
 
 
-def sort_by_position(x: list[Any]) -> list[Any]:
+def sort_by_position(x: list[T]) -> list[T]:
     """Sort items by their position attribute.
 
     Parameters
@@ -88,7 +110,7 @@ def sort_by_position(x: list[Any]) -> list[Any]:
     return list(sorted(x, key=lambda y: y.position))
 
 
-def is_dep_of_pred(t: Token, ud: Any = dep_v1) -> bool | None:
+def is_dep_of_pred(t: Token, ud: UDSchema = dep_v1) -> bool | None:
     """Check if token is a dependent of a predicate.
 
     Parameters
@@ -110,7 +132,7 @@ def is_dep_of_pred(t: Token, ud: Any = dep_v1) -> bool | None:
     return None
 
 
-def important_pred_tokens(p: Any, ud: Any = dep_v1) -> list[Any]:
+def important_pred_tokens(p: Predicate, ud: UDSchema = dep_v1) -> list[Token]:
     """Get important tokens from a predicate (root and negation).
 
     Parameters
@@ -130,10 +152,10 @@ def important_pred_tokens(p: Any, ud: Any = dep_v1) -> list[Any]:
         # direct dependents of the predicate
         if x.gov and x.gov.position == p.root.position and x.gov_rel in {ud.neg}:
             ret.append(x)
-    return sort_by_position(ret)
+    return sorted(ret, key=lambda x: x.position)
 
 
-def likely_to_be_pred(pred: Any, ud: Any = dep_v1) -> bool | None:
+def likely_to_be_pred(pred: Predicate, ud: UDSchema = dep_v1) -> bool | None:
     """Check if a predicate is likely to be a true predicate.
 
     Parameters
@@ -160,7 +182,7 @@ def likely_to_be_pred(pred: Any, ud: Any = dep_v1) -> bool | None:
     return None
 
 
-def build_pred_dep(pp: Any) -> list[Any]:
+def build_pred_dep(pp: PredPattEngine) -> list[Predicate]:
     """Build dependencies between predicates.
 
     Parameters
@@ -173,13 +195,13 @@ def build_pred_dep(pp: Any) -> list[Any]:
     list[Predicate]
         List of root predicates sorted by position.
     """
-    root_to_preds = {p.root.position: p for p in pp.instances}
+    root_to_preds: dict[int, Predicate] = {p.root.position: p for p in pp.instances}
 
     for p in pp.instances:
         if not hasattr(p, "children"):
             p.children = []
 
-    id_to_root_preds = {}
+    id_to_root_preds: dict[str, Predicate] = {}
     for p in pp.instances:
         # only keep predicates with high confidence
         if not likely_to_be_pred(p):
@@ -191,19 +213,19 @@ def build_pred_dep(pp: Any) -> list[Any]:
         # climb up until finding a gov predicate
         while gov is not None and gov.position not in root_to_preds:
             gov = gov.gov
-        gov_p = root_to_preds[gov.position] if gov else None
+        gov_p: Predicate | None = root_to_preds[gov.position] if gov else None
         # Add the current predicate as a root predicate
         # if not find any gov predicate or
         # the gov predicate is not likely_to_be_pred.
-        if gov is None or not likely_to_be_pred(gov_p):
+        if gov is None or gov_p is None or not likely_to_be_pred(gov_p):
             id_to_root_preds[p.identifier()] = p
             continue
         # build a dependency between the current pred and the gov pred.
         gov_p.children.append(p)
-    return sort_by_position(id_to_root_preds.values())
+    return sort_by_position(list(id_to_root_preds.values()))
 
 
-def get_prediates(pp: Any, only_head: bool = False) -> list[str]:
+def get_prediates(pp: PredPattEngine, only_head: bool = False) -> list[str]:
     """Get predicates as formatted strings.
 
     Parameters
@@ -235,7 +257,7 @@ def get_prediates(pp: Any, only_head: bool = False) -> list[str]:
         return ret
 
 
-def linearize(pp: Any, opt: LinearizedPPOpts | None = None, ud: Any = dep_v1) -> str:
+def linearize(pp: PredPattEngine, opt: LinearizedPPOpts | None = None, ud: UDSchema = dep_v1) -> str:
     """Convert PredPatt output to linearized form.
 
     Here we define the way to represent the predpatt output in a linearized
@@ -281,7 +303,7 @@ def linearize(pp: Any, opt: LinearizedPPOpts | None = None, ud: Any = dep_v1) ->
     return " ".join(ret)
 
 
-def flatten_and_enclose_pred(pred: Any, opt: LinearizedPPOpts, ud: Any) -> str:
+def flatten_and_enclose_pred(pred: Predicate, opt: LinearizedPPOpts, ud: UDSchema) -> str:
     """Flatten and enclose a predicate with appropriate markers.
 
     Parameters
@@ -305,7 +327,7 @@ def flatten_and_enclose_pred(pred: Any, opt: LinearizedPPOpts, ud: Any) -> str:
     return f'{enc[0]} {repr_y} {enc[1]}'
 
 
-def flatten_pred(pred: Any, opt: LinearizedPPOpts, ud: Any) -> tuple[str, bool | None]:
+def flatten_pred(pred: Predicate, opt: LinearizedPPOpts, ud: UDSchema) -> tuple[str, bool | None]:  # noqa: C901
     """Flatten a predicate into a string representation.
 
     Parameters
@@ -331,17 +353,21 @@ def flatten_pred(pred: Any, opt: LinearizedPPOpts, ud: Any) -> tuple[str, bool |
         # Only take the first two arguments into account.
         for y in sort_by_position(args[:2] + child_preds):
             if hasattr(y, 'tokens') and hasattr(y, 'root'):
+                # Type narrow y to Argument
+                arg_y = cast(Argument, y)
                 arg_i += 1
                 if arg_i == 1:
                     # Generate the special ``poss'' predicate with label.
                     poss = POSS + (PRED_HEADER if opt.distinguish_header
                                      else PRED_SUF)
-                    ret += [phrase_and_enclose_arg(y, opt), poss]
+                    ret += [phrase_and_enclose_arg(arg_y, opt), poss]
                 else:
-                    ret += [phrase_and_enclose_arg(y, opt)]
+                    ret += [phrase_and_enclose_arg(arg_y, opt)]
             else:
+                # y must be a Predicate if it doesn't have tokens and root
+                pred_y = cast(Predicate, y)
                 if opt.recursive:
-                    repr_y = flatten_and_enclose_pred(y, opt, ud)
+                    repr_y = flatten_and_enclose_pred(pred_y, opt, ud)
                     ret.append(repr_y)
         return ' '.join(ret), False
 
@@ -366,13 +392,16 @@ def flatten_pred(pred: Any, opt: LinearizedPPOpts, ud: Any) -> tuple[str, bool |
 
     # Mix arguments with predicate tokens. Use word order to derive a
     # nice-looking name.
-    items = pred.tokens + args + child_preds
+    items: list[Token | Argument | Predicate] = pred.tokens + args + child_preds
     if opt.only_head:
         items = important_pred_tokens(pred, ud) + args + child_preds
 
-    for _i, y in enumerate(sort_by_position(items)):
-        if hasattr(y, 'tokens') and hasattr(y, 'root'):
-            if (y.isclausal() and y.root.gov in pred.tokens):
+    sorted_mixed = sorted(items, key=lambda x: x.position)
+    for _i, elem in enumerate(sorted_mixed):
+        if hasattr(elem, 'tokens') and hasattr(elem, 'root'):
+            # Type narrow elem to Argument
+            arg_elem = cast(Argument, elem)
+            if (arg_elem.isclausal() and arg_elem.root.gov in pred.tokens):
                 # In theory, "SOMETHING:a=" should be followed by a embedded
                 # predicate. But in the real world, the embedded predicate
                 # could be broken, which means such predicate could be empty
@@ -381,22 +410,26 @@ def flatten_pred(pred: Any, opt: LinearizedPPOpts, ud: Any) -> tuple[str, bool |
                 # predicate viewed as an argument of the predicate under
                 # processing.
                 ret.append(SOMETHING)
-                ret.append(phrase_and_enclose_arg(y, opt))
+                ret.append(phrase_and_enclose_arg(arg_elem, opt))
             else:
-                ret.append(phrase_and_enclose_arg(y, opt))
-        elif hasattr(y, 'type') and hasattr(y, 'arguments'):
+                ret.append(phrase_and_enclose_arg(arg_elem, opt))
+        elif hasattr(elem, 'type') and hasattr(elem, 'arguments'):
+            # elem must be a Predicate if it has type and arguments
+            pred_elem = cast(Predicate, elem)
             if opt.recursive:
-                repr_y = flatten_and_enclose_pred(y, opt, ud)
-                ret.append(repr_y)
+                repr_elem = flatten_and_enclose_pred(pred_elem, opt, ud)
+                ret.append(repr_elem)
         else:
-            if opt.distinguish_header and y.position == pred.root.position:
-                ret.append(y.text + PRED_HEADER)
+            # elem must be a Token
+            token_elem = elem
+            if opt.distinguish_header and token_elem.position == pred.root.position:
+                ret.append(token_elem.text + PRED_HEADER)
             else:
-                ret.append(y.text + PRED_SUF)
+                ret.append(token_elem.text + PRED_SUF)
     return ' '.join(ret), is_dep_of_pred(pred.root, ud)
 
 
-def phrase_and_enclose_arg(arg: Any, opt: LinearizedPPOpts) -> str:
+def phrase_and_enclose_arg(arg: Argument, opt: LinearizedPPOpts) -> str:
     """Format and enclose an argument with markers.
 
     Parameters
@@ -426,7 +459,7 @@ def phrase_and_enclose_arg(arg: Any, opt: LinearizedPPOpts) -> str:
     return f"{ARG_ENC[0]} {repr_arg} {ARG_ENC[1]}"
 
 
-def collect_embebdded_tokens(tokens_iter: Any, start_token: str) -> list[str]:
+def collect_embebdded_tokens(tokens_iter: TokenIterator, start_token: str) -> list[str]:
     """Collect tokens within embedded structure markers.
 
     Parameters
@@ -444,7 +477,7 @@ def collect_embebdded_tokens(tokens_iter: Any, start_token: str) -> list[str]:
     end_token = PRED_ENC[1] if start_token == PRED_ENC[0] else ARGPRED_ENC[1]
 
     missing_end_token = 1
-    embedded_tokens = []
+    embedded_tokens: list[str] = []
     for _, t in tokens_iter:
         if t == start_token:
             missing_end_token += 1
@@ -479,7 +512,7 @@ def linear_to_string(tokens: list[str]) -> list[str]:
     return ret
 
 
-def get_something(something_idx: int, tokens_iter: Any) -> Any:
+def get_something(something_idx: int, tokens_iter: TokenIterator) -> Argument:
     """Get SOMETHING argument from token iterator.
 
     Parameters
@@ -497,16 +530,16 @@ def get_something(something_idx: int, tokens_iter: Any) -> Any:
     for _idx, t in tokens_iter:
         if t  == ARG_ENC[0]:
             argument = construct_arg_from_flat(tokens_iter)
-            argument.type = SOMETHING  # type: ignore[attr-defined]
+            argument.type = SOMETHING
             return argument
-    root = Token(something_idx, "SOMETHING", None)
+    root = Token(something_idx, "SOMETHING", "")
     from ..utils.ud_schema import dep_v1
     arg = Argument(root, dep_v1, [])
     arg.tokens = [root]
     return arg
 
 
-def is_argument_finished(t: str, current_argument: Any) -> bool:
+def is_argument_finished(t: str, current_argument: Argument) -> bool:
     """Check if argument construction is finished.
 
     Parameters
@@ -531,7 +564,7 @@ def is_argument_finished(t: str, current_argument: Any) -> bool:
     return True
 
 
-def construct_arg_from_flat(tokens_iter: Any) -> Any:
+def construct_arg_from_flat(tokens_iter: TokenIterator) -> Argument:
     """Construct an argument from flat token iterator.
 
     Parameters
@@ -548,7 +581,7 @@ def construct_arg_from_flat(tokens_iter: Any) -> Any:
     from ..core.argument import Argument
     from ..core.token import Token
 
-    empty_token = Token(-1, None, None)
+    empty_token = Token(-1, "", "")
     from ..utils.ud_schema import dep_v1
     argument = Argument(empty_token, dep_v1, [])
     idx = -1
@@ -564,7 +597,7 @@ def construct_arg_from_flat(tokens_iter: Any) -> Any:
         else:
             # Special case: a predicate tag is given.
             text, _ = t.rsplit(":", 1)
-        token = Token(idx, text, None)
+        token = Token(idx, text, "")
         argument.tokens.append(token)
         # update argument root
         if t.endswith(ARG_HEADER):
@@ -577,7 +610,7 @@ def construct_arg_from_flat(tokens_iter: Any) -> Any:
     return argument
 
 
-def construct_pred_from_flat(tokens: list[str]) -> list[Any]:
+def construct_pred_from_flat(tokens: list[str]) -> list[Predicate]:
     """Construct predicates from flat token list.
 
     Parameters
@@ -595,7 +628,7 @@ def construct_pred_from_flat(tokens: list[str]) -> list[Any]:
     # Construct one-layer predicates
     ret = []
     # Use this empty_token to initialize a predicate or argument.
-    empty_token = Token(-1, None, None)
+    empty_token = Token(-1, "", "")
     # Initialize a predicate in advance, because argument or sub-level
     # predicates may come before we meet the first predicate token, and
     # they need to build connection with the predicate.
@@ -616,7 +649,7 @@ def construct_pred_from_flat(tokens: list[str]) -> list[Any]:
         elif t.endswith(PRED_SUF) or t.endswith(PRED_HEADER):
             # add predicate token
             text, _ = t.rsplit(PRED_SUF, 1)
-            token = Token(idx, text, None)
+            token = Token(idx, text, "")
             current_predicate.tokens.append(token)
             # update predicate root
             if t.endswith(PRED_HEADER):
@@ -670,7 +703,7 @@ def check_recoverability(tokens: list[str]) -> tuple[bool, list[str]]:
     return encloses_matched(), tokens
 
 
-def pprint_preds(preds: list[Any]) -> list[str]:
+def pprint_preds(preds: list[Predicate]) -> list[str]:
     """Pretty print list of predicates.
 
     Parameters
@@ -686,7 +719,7 @@ def pprint_preds(preds: list[Any]) -> list[str]:
     return [format_pred(p) for p in preds]
 
 
-def argument_names(args: list[Any]) -> dict[Any, str]:
+def argument_names(args: list[Argument]) -> dict[Argument, str]:
     """Give arguments alpha-numeric names.
 
     Examples
@@ -716,7 +749,7 @@ def argument_names(args: list[Any]) -> dict[Any, str]:
     return name
 
 
-def format_pred(pred: Any, indent: str = "\t") -> str:
+def format_pred(pred: Predicate, indent: str = "\t") -> str:
     r"""Format a predicate for display.
 
     Parameters
@@ -744,7 +777,7 @@ def format_pred(pred: Any, indent: str = "\t") -> str:
     return '\n'.join(lines)
 
 
-def _format_predicate(pred: Any, name: dict[Any, str]) -> str:
+def _format_predicate(pred: Predicate, name: dict[Argument, str]) -> str:
     """Format predicate with argument placeholders.
 
     Parameters
@@ -759,14 +792,19 @@ def _format_predicate(pred: Any, name: dict[Any, str]) -> str:
     str
         Formatted predicate string.
     """
-    ret = []
-    args = pred.arguments
+    ret: list[str] = []
+    args: list[Argument] = pred.arguments
     # Mix arguments with predicate tokens. Use word order to derive a
     # nice-looking name.
-    for _i, y in enumerate(sort_by_position(pred.tokens + args)):
+    mixed_items: list[Token | Argument] = pred.tokens + args
+    for _i, y in enumerate(sort_by_position(mixed_items)):
         if hasattr(y, 'tokens') and hasattr(y, 'root'):
+            # It's an Argument
+            assert isinstance(y, Argument)
             ret.append(name[y])
         else:
+            # It's a Token
+            assert hasattr(y, 'text')
             ret.append(y.text)
     return ' '.join(ret)
 
@@ -810,7 +848,7 @@ def test(data: str) -> None:
                     return True
         return False
 
-    def no_color(x, _):
+    def no_color(x: str, _: str) -> str:
         return x
     count, failed = 0, 0
     ret = ""
@@ -819,7 +857,7 @@ def test(data: str) -> None:
         pp = PredPatt(ud_parse)
         sent = ' '.join(t.text for t in pp.tokens)
         linearized_pp = linearize(pp)
-        gold_preds = [predicate.format(C=no_color, track_rule=False)
+        gold_preds = [predicate.format(c=no_color, track_rule=False)
                 for predicate in pp.instances if likely_to_be_pred(predicate)]
         test_preds = pprint_preds(construct_pred_from_flat(linearized_pp.split()))
         if fail(gold_preds, test_preds):

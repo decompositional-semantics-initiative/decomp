@@ -128,6 +128,8 @@ class Token:
         #        ^      ^              ^
         #        --amod--       (a easy predicate, dependent of "helpful"
         #                       which is hard_to_find_arguments)
+        if self.dependents is None:
+            raise TypeError(f"Cannot iterate over None dependents for token '{self.text}' at position {self.position}. Token not properly initialized with dependency information.")
         for e in self.dependents:
             if e.rel in self.ud.SUBJ or e.rel in self.ud.OBJ:
                 return False

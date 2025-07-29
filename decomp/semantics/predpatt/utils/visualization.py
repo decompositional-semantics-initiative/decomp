@@ -8,21 +8,33 @@ including support for colored output, rule tracking, and various output formats.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
+
+
+if TYPE_CHECKING:
+    from ..core.argument import Argument
+    from ..core.predicate import Predicate
+    from ..core.token import Token
+    from ..extraction.engine import PredPattEngine
+    from ..parsing.udparse import UDParse
 
 
 try:
-    from termcolor import colored
+    from termcolor import colored as _termcolor_colored
+    # Wrap termcolor's colored to have consistent signature
+    def colored(text: str, color: str | None = None, on_color: str | None = None, attrs: list[str] | None = None) -> str:
+        """Wrapper for termcolor.colored with consistent signature."""
+        return _termcolor_colored(text, color, on_color, attrs)
 except ImportError:
     # Fallback if termcolor is not available
-    def colored(text, color=None, on_color=None, attrs=None):  # type: ignore[misc]
+    def colored(text: str, color: str | None = None, on_color: str | None = None, attrs: list[str] | None = None) -> str:
         """Fallback colored function when termcolor is not available."""
         return text
 
 if TYPE_CHECKING:
     from decomp.semantics.predpatt.core.argument import Argument
     from decomp.semantics.predpatt.core.predicate import Predicate
-    pass  # PredPatt type is only used for type hints
+    from decomp.semantics.predpatt.core.token import Token
 
 
 def no_color(x: str, _: str) -> str:
@@ -85,7 +97,6 @@ def format_predicate(
         Formatted predicate string with argument placeholders
     """
     from decomp.semantics.predpatt.core.predicate import AMOD, APPOS, POSS
-    from decomp.semantics.predpatt.utils.linearization import sort_by_position
 
     ret = []
     args = predicate.arguments
@@ -115,15 +126,24 @@ def format_predicate(
     # nice-looking name.
     from decomp.semantics.predpatt.utils.ud_schema import postag
 
-    for i, y in enumerate(sort_by_position(predicate.tokens + args)):
-        # Check if y is in the name dict (which means it's an Argument)
-        if y in name:
-            ret.append(name[y])
+    # Mix tokens and arguments, both have position attribute
+    mixed_items: list[Token | Argument] = predicate.tokens + args
+    sorted_items = sorted(mixed_items, key=lambda x: x.position)
+
+    for i, y in enumerate(sorted_items):
+        # Check if y is an Argument (has 'tokens' and 'root' attributes)
+        if hasattr(y, 'tokens') and hasattr(y, 'root'):
+            # It's an Argument - type narrowing through hasattr checks
+            # Cast to Argument since we've verified it has the right attributes
+            from ..core.argument import Argument
+            arg_y = cast(Argument, y)
+            ret.append(name[arg_y])
             if (predicate.root.gov_rel == predicate.ud.xcomp and
                 predicate.root.tag not in {postag.VERB, postag.ADJ} and
                 i == 0):
                 ret.append(c('is/are', 'yellow'))
         else:
+            # It's a Token
             ret.append(c(y.text, 'green'))
 
     return ' '.join(ret)
@@ -187,7 +207,7 @@ def format_predicate_instance(
 
 
 def pprint(
-    predpatt,  # Type is PredPatt but can't import due to circular dependency
+    predpatt: PredPattEngine,
     color: bool = False,
     track_rule: bool = False
 ) -> str:
@@ -215,7 +235,7 @@ def pprint(
 
 
 def pprint_ud_parse(
-    parse,
+    parse: UDParse,
     color: bool = False,
     k: int = 1
 ) -> str:
@@ -242,12 +262,12 @@ def pprint_ud_parse(
     e = [f'{e.rel}({tokens1[e.dep]}{c % e.dep}, {tokens1[e.gov]}{c % e.gov})'
          for e in sorted(parse.triples, key=lambda x: x.dep)]
 
-    cols = [[] for _ in range(k)]
+    cols: list[list[str]] = [[] for _ in range(k)]
     for i, x in enumerate(e):
         cols[i % k].append(x)
 
     # add padding to columns because zip stops at shortest iterator.
-    for c in cols:
-        c.extend('' for _ in range(len(cols[0]) - len(c)))
+    for col in cols:
+        col.extend('' for _ in range(len(cols[0]) - len(col)))
 
     return tabulate(zip(*cols, strict=False), tablefmt='plain')
