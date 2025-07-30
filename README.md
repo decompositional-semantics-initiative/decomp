@@ -1,5 +1,10 @@
 # Overview
 
+[![CI](https://github.com/decompositional-semantics-initiative/decomp/actions/workflows/ci.yml/badge.svg)](https://github.com/decompositional-semantics-initiative/decomp/actions/workflows/ci.yml)
+[![Documentation](https://readthedocs.org/projects/decomp/badge/?version=latest)](https://decomp.readthedocs.io/en/latest/?badge=latest)
+[![GitHub](https://img.shields.io/badge/github-decomp-blue?logo=github)](https://github.com/decompositional-semantics-initiative/decomp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 [Decomp](https://github.com/decompositional-semantics-initiative/decomp)
 is a toolkit for working with the [Universal Decompositional Semantics
 (UDS) dataset](http://decomp.io), which is a collection of directed

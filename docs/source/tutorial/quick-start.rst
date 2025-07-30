@@ -9,12 +9,10 @@ To read the Universal Decompositional Semantics (UDS) dataset, use:
 
    uds = UDSCorpus()
 
-This imports a `UDSCorpus`_ object ``uds``, which contains all
+This imports a :py:class:`~decomp.semantics.uds.UDSCorpus` object ``uds``, which contains all
 graphs across all splits in the data. If you would like a corpus,
 e.g., containing only a particular split, see other loading options in
 :doc:`reading`.
-
-.. _UDSCorpus: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSCorpus
 
 The first time you read UDS, it will take several minutes to
 complete while the dataset is built from the `Universal Dependencies
@@ -26,22 +24,17 @@ will be faster, since the dataset is cached on build.
 .. _Universal Dependencies English Web Treebank: https://github.com/UniversalDependencies/UD_English-EWT
 .. _UDS annotations: http://decomp.io/data/
 
-`UDSSentenceGraph`_ objects in the corpus can be accessed using standard
+:py:class:`~decomp.semantics.uds.UDSSentenceGraph` objects in the corpus can be accessed using standard
 dictionary getters or iteration. For instance, to get the UDS graph
 corresponding to the 12th sentence in ``en-ud-train.conllu``, you can
 use:
-
-.. _UDSSentenceGraph: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSSentenceGraph
 
 .. code-block:: python
 
    uds["ewt-train-12"]
 
-To access documents (`UDSDocument`_ objects, each of which has an associated
-`UDSDocumentGraph`_), you can use:
-
-.. _UDSDocument: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSDocument
-.. _UDSDocumentGraph: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSDocumentGraph
+To access documents (:py:class:`~decomp.semantics.uds.UDSDocument` objects, each of which has an associated
+:py:class:`~decomp.semantics.uds.UDSDocumentGraph`), you can use:
 
 .. code-block:: python
 
@@ -109,12 +102,12 @@ and the corresponding graph can be accessed via the ``graphs`` attribute.
    uds.graphs
 
 
-A list of document identifiers can also be accessed via the ``document_ids``
+A list of document identifiers can also be accessed via the ``documentids``
 attribute of the UDSCorpus:
 
 .. code-block:: python
 
-   uds.document_ids
+   uds.documentids
 
 
 For sentence-level graphs, there are various instance attributes and 
@@ -190,17 +183,13 @@ using the ``query`` method, which accepts arbitrary SPARQL 1.1 queries. See
 :doc:`querying` for details.
 
 Queries on document-level graphs are not currently supported. However, each
-`UDSDocument`_ does contain a number of useful attributes, including its ``genre``
+:py:class:`~decomp.semantics.uds.UDSDocument` does contain a number of useful attributes, including its ``genre``
 (corresponding to the English Web Treebank subcorpus); its ``text`` (as
 demonstrated above); its ``timestamp``; the ``sentence_ids`` of its 
 constituent sentences; and the sentence-level graphs (``sentence_graphs``) 
 associated with those sentences. Additionally, one can also look up the
 semantics node associated with a particular node in the document graph via
-the `semantics_node`_ instance method.
-
-.. _UDSDocument: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSDocument
-.. _semantics_node: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSDocument.semantics_node
-
+the :py:meth:`~decomp.semantics.uds.UDSDocument.semantics_node` instance method.
 
 Lastly, iterables for the nodes and edges of a document-level graph may be
 accessed as follows:

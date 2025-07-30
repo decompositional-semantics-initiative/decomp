@@ -1,12 +1,9 @@
 Visualizing UDS Graphs 
 ======================
 
-Decomp comes with a built-in interactive visualization tool using the `UDSVisualization`_ object. This object visualizes a `UDSSentenceGraph`_.
+Decomp comes with a built-in interactive visualization tool using the :py:class:`~decomp.vis.uds_vis.UDSVisualization` object. This object visualizes a :py:class:`~decomp.semantics.uds.UDSSentenceGraph`.
 
-.. _UDSVisualization: ../package/decomp.vis.uds_vis.html#decomp.vis.uds_vis.UDSVisualization
-.. _UDSSentenceGraph: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSSentenceGraph
-
-A visualization (which is based on `Dash`_) is served to your local browser via port 8050 (e.g. `http://localhost:8050`).
+A visualization (which is based on Dash_) is served to your local browser via port 8050 (e.g. `http://localhost:8050`).
 The following snippet visualizes the first graph in the dev split: 
 
 .. _Dash: https://dash.plotly.com
