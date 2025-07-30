@@ -32,7 +32,7 @@ def is_not_interrogative(pred: Predicate) -> bool:
     bool
         True if predicate does not contain '?' (accept), False otherwise (reject).
     """
-    # Check if any token text contains '?'
+    # check if any token text contains '?'
     token_texts = [tk.text for tk in pred.tokens]
     if '?' not in token_texts:
         filter_rules = getattr(pred, 'rules', [])
@@ -115,8 +115,8 @@ def is_good_ancestor(pred: Predicate) -> bool:
     bool
         True if predicate has good ancestry (accept), False otherwise (reject).
     """
-    # Move to ud_filters
-    # Technically, conj shouldn't be a problem, but
+    # move to ud_filters
+    # technically, conj shouldn't be a problem, but
     # some bad annotations mean we need to exclude it.
     #   ex. "It is a small one and easily missed" ("missed" has
     #   "one" as a head with relation "conj")
@@ -127,7 +127,7 @@ def is_good_ancestor(pred: Predicate) -> bool:
     while pointer.gov_rel != 'root':
         if pointer.gov_rel in embedding_deps:
             return False
-        # Replace pointer with its head
+        # replace pointer with its head
         if pointer.gov is None:
             break
         pointer = pointer.gov
@@ -155,9 +155,12 @@ def is_good_descendants(pred: Predicate) -> bool:
     """
     embedding_deps = {"neg", "advmod", "aux", "mark", "advcl", "appos"}
     if pred.root.dependents is None:
-        raise TypeError(f"Cannot check descendants for predicate {pred}: root token has no dependency information")
+        raise TypeError(
+            f"Cannot check descendants for predicate {pred}: "
+            f"root token has no dependency information"
+        )
     for desc in pred.root.dependents:
-        # The following is true if child is in fact a child
+        # the following is true if child is in fact a child
         # of verb
         if desc.rel in embedding_deps:
             return False
@@ -189,7 +192,10 @@ def has_subj(pred: Predicate, passive: bool = False) -> bool:
     #if (('nsubj' in [x.rel for x in parse.dependents[event.root]])
     #    or ('nsubjpass' in [x.rel for x in parse.dependents[event.root]])):
     if pred.root.dependents is None:
-        raise TypeError(f"Cannot check subjects for predicate {pred}: root token has no dependency information")
+        raise TypeError(
+            f"Cannot check subjects for predicate {pred}: "
+            f"root token has no dependency information"
+        )
     for x in pred.root.dependents:
         if x.rel in subj_rels:
             filter_rules = getattr(pred, 'rules', [])
@@ -295,7 +301,7 @@ def activate(pred: Predicate) -> None:
     pred : Predicate
         The predicate to apply all filters to.
     """
-    # Import here to avoid circular dependency
+    # import here to avoid circular dependency
     from .argument_filters import has_direct_arc, is_not_pronoun, is_sbj_or_obj
 
     pred.rules = []
@@ -333,7 +339,7 @@ def apply_filters(_filter: Callable[..., bool], pred: Predicate, **options: bool
     bool
         True if filter accepts the predicate/arguments, False otherwise.
     """
-    # Import here to avoid circular dependency
+    # import here to avoid circular dependency
     from .argument_filters import has_direct_arc, is_not_pronoun, is_sbj_or_obj
 
     if _filter in {is_sbj_or_obj, is_not_pronoun}:

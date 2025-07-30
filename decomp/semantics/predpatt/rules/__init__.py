@@ -47,8 +47,8 @@ Rules are identified by single letters (A-W) or letter-number combinations
 
 from __future__ import annotations
 
-# Import argument extraction rules
-# Import argument resolution rules
+# import argument extraction rules
+# import argument resolution rules
 from .argument_rules import (
     G1,
     H1,
@@ -87,8 +87,8 @@ from .argument_rules import (
     RuleI as I,
 )
 
-# Import base rule class
-# Import rule categories
+# import base rule class
+# import rule categories
 from .base import (
     ArgPhraseRule,
     ArgumentResolution,
@@ -103,15 +103,15 @@ from .base import (
     SimplifyRule,
 )
 
-# Import helper functions
+# import helper functions
 from .helpers import gov_looks_like_predicate
 
-# Import predicate extraction rules
-# Import predicate conjunction rules
-# Import phrase rules
-# Import simplification rules
-# Import utility rules
-# Import language-specific rules
+# import predicate extraction rules
+# import predicate conjunction rules
+# import phrase rules
+# import simplification rules
+# import utility rules
+# import language-specific rules
 from .predicate_rules import (
     A1,
     A2,
@@ -140,8 +140,8 @@ from .predicate_rules import (
 )
 
 
-# Create lowercase aliases for backward compatibility
-# This allows code to use either R.g1 or R.G1
+# create lowercase aliases for backward compatibility
+# this allows code to use either R.g1 or R.G1
 g1 = G1
 h1 = H1
 h2 = H2
@@ -198,25 +198,25 @@ special_arg_drop_direct_dep = SpecialArgDropDirectDep
 pred_conj_borrow_aux_neg = PredConjBorrowAuxNeg
 pred_conj_borrow_tokens_xcomp = PredConjBorrowTokensXcomp
 
-# For the two en_relcl_dummy_arg_filter classes, use the argument one as default
+# for the two en_relcl_dummy_arg_filter classes, use the argument one as default
 en_relcl_dummy_arg_filter = EnRelclDummyArgFilterArg
 
 __all__ = [
-    # Predicate root rules (PascalCase)
+    # predicate root rules (PascalCase)
     "A1",
     "A2",
-    # Argument root rules (PascalCase)
+    # argument root rules (PascalCase)
     "G1",
     "H1",
     "H2",
-    # Predicate phrase rules (PascalCase)
+    # predicate phrase rules (PascalCase)
     "N1",
     "N2",
     "N3",
     "N4",
     "N5",
     "N6",
-    # Simplification rules (PascalCase)
+    # simplification rules (PascalCase)
     "P1",
     "P2",
     "W1",
@@ -229,11 +229,11 @@ __all__ = [
     "BorrowObj",
     "BorrowSubj",
     "C",
-    # Argument phrase rules (PascalCase)
+    # argument phrase rules (PascalCase)
     "CleanArgToken",
     "ConjunctionResolution",
     "CutBorrowObj",
-    # Argument resolution rules (PascalCase)
+    # argument resolution rules (PascalCase)
     "CutBorrowOther",
     "CutBorrowSubj",
     "D",
@@ -245,7 +245,7 @@ __all__ = [
     "EmbeddedAdvcl",
     "EmbeddedCcomp",
     "EmbeddedUnknown",
-    # Language-specific rules
+    # language-specific rules
     "EnRelclDummyArgFilterArg",
     "EnRelclDummyArgFilterPred",
     "EnglishSpecific",
@@ -257,7 +257,7 @@ __all__ = [
     "LanguageSpecific",
     "M",
     "MoveCaseTokenToPred",
-    # Predicate conjunction rules (PascalCase)
+    # predicate conjunction rules (PascalCase)
     "PredConjBorrowAuxNeg",
     "PredConjBorrowTokensXcomp",
     "PredConjRule",
@@ -267,15 +267,15 @@ __all__ = [
     "PredicateRootRule",
     "Q",
     "R",
-    # Base classes
+    # base classes
     "Rule",
     "ShareArgument",
     "SimplifyRule",
     "SpecialArgDropDirectDep",
-    # Utility rules (PascalCase)
+    # utility rules (PascalCase)
     "U",
     "V",
-    # Lowercase aliases
+    # lowercase aliases
     "a1",
     "a2",
     "arg_resolve_relcl",
@@ -283,10 +283,10 @@ __all__ = [
     "borrow_obj",
     "borrow_subj",
     "c",
-    # Lowercase aliases
+    # lowercase aliases
     "clean_arg_token",
     "cut_borrow_obj",
-    # Lowercase aliases
+    # lowercase aliases
     "cut_borrow_other",
     "cut_borrow_subj",
     "d",
@@ -300,9 +300,9 @@ __all__ = [
     "embedded_unknown",
     "en_relcl_dummy_arg_filter",
     "f",
-    # Lowercase aliases
+    # lowercase aliases
     "g1",
-    # Helper functions
+    # helper functions
     "gov_looks_like_predicate",
     "h1",
     "h2",
@@ -313,17 +313,17 @@ __all__ = [
     "l_rule",
     "m",
     "move_case_token_to_pred",
-    # Lowercase aliases
+    # lowercase aliases
     "n1",
     "n2",
     "n3",
     "n4",
     "n5",
     "n6",
-    # Lowercase aliases
+    # lowercase aliases
     "p1",
     "p2",
-    # Lowercase aliases
+    # lowercase aliases
     "pred_conj_borrow_aux_neg",
     "pred_conj_borrow_tokens_xcomp",
     "pred_resolve_relcl",
@@ -332,7 +332,7 @@ __all__ = [
     "r",
     "share_argument",
     "special_arg_drop_direct_dep",
-    # Lowercase aliases
+    # lowercase aliases
     "u",
     "v",
     "w1",

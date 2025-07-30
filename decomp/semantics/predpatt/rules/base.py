@@ -44,10 +44,10 @@ class Rule:
             The class name without module prefix, converted to lowercase
             for backward compatibility with expected outputs.
         """
-        # Convert PascalCase to lowercase/snake_case for output compatibility
+        # convert PascalCase to lowercase/snake_case for output compatibility
         name = cls.__name__.split('.')[-1]
 
-        # Base classes keep their PascalCase names
+        # base classes keep their PascalCase names
         base_classes = {
             'Rule', 'PredicateRootRule', 'ArgumentRootRule', 'PredConjRule',
             'ArgumentResolution', 'ConjunctionResolution', 'SimplifyRule',
@@ -56,16 +56,16 @@ class Rule:
         if name in base_classes:
             return name
 
-        # Handle RuleI -> i special case
+        # handle RuleI -> i special case
         if name == 'RuleI':
             return 'i'
 
-        # Handle single letter rules (A1 -> a1, G1 -> g1, etc.)
+        # handle single letter rules (A1 -> a1, G1 -> g1, etc.)
         if len(name) <= 2 and name[0].isupper():
             return name.lower()
 
-        # Handle PascalCase rules (PredConjBorrowAuxNeg -> pred_conj_borrow_aux_neg)
-        # Insert underscore before uppercase letters
+        # handle PascalCase rules (PredConjBorrowAuxNeg -> pred_conj_borrow_aux_neg)
+        # insert underscore before uppercase letters
         result = []
         for i, char in enumerate(name):
             if i > 0 and char.isupper() and (i == 0 or not name[i-1].isupper()):

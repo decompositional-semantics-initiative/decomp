@@ -78,8 +78,8 @@ class RuleI(ArgumentRootRule):
     pass
 
 
-# Alias for compatibility
-I = RuleI
+# alias for compatibility
+I = RuleI  # noqa: E741
 
 
 class J(ArgumentRootRule):

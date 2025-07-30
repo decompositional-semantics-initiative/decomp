@@ -68,7 +68,7 @@ from .predicate_filters import (
 __all__ = [
     "activate",
     "apply_filters",
-    # Backward compatibility
+    # backward compatibility
     "filter_events_NUCL",
     "filter_events_SPRL",
     "filter_events_nucl",
@@ -88,15 +88,15 @@ __all__ = [
     "is_good_descendants",
     "is_not_copula",
     "is_not_have",
-    # Predicate filters
+    # predicate filters
     "is_not_interrogative",
     "is_not_pronoun",
     "is_pred_verb",
-    # Argument filters
-    "is_sbj_or_obj"
+    # argument filters
+    "is_sbj_or_obj",
 ]
 
-# Backward compatibility aliases
+# backward compatibility aliases
 filter_events_NUCL = filter_events_nucl  # noqa: N816
 filter_events_SPRL = filter_events_sprl  # noqa: N816
 hasSubj = has_subj  # noqa: N816

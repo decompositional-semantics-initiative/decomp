@@ -30,8 +30,8 @@ def is_sbj_or_obj(arg: Argument) -> bool:
     bool
         True if argument is a core argument (accept), False otherwise (reject).
     """
-    if arg.root.gov_rel in ('nsubj', 'dobj', 'iobj'):
-        filter_rules = getattr(arg, 'rules', [])
+    if arg.root.gov_rel in ("nsubj", "dobj", "iobj"):
+        filter_rules = getattr(arg, "rules", [])
         filter_rules.append(is_sbj_or_obj.__name__)
         return True
     return False
@@ -53,12 +53,12 @@ def is_not_pronoun(arg: Argument) -> bool:
     bool
         True if argument is not a pronoun (accept), False otherwise (reject).
     """
-    if arg.root.tag == 'PRP':
+    if arg.root.tag == "PRP":
         return False
-    if arg.root.text.lower() in ['that', 'this', 'which', 'what']:
+    if arg.root.text.lower() in ["that", "this", "which", "what"]:
         return False
     else:
-        filter_rules = getattr(arg, 'rules', [])
+        filter_rules = getattr(arg, "rules", [])
         filter_rules.append(is_not_pronoun.__name__)
         return True
 
@@ -82,7 +82,7 @@ def has_direct_arc(pred: Predicate, arg: Argument) -> bool:
         True if there is a direct dependency arc (accept), False otherwise (reject).
     """
     if arg.root.gov == pred.root:
-        filter_rules = getattr(arg, 'rules', [])
+        filter_rules = getattr(arg, "rules", [])
         filter_rules.append(has_direct_arc.__name__)
         return True
     return False
