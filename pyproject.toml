@@ -78,10 +78,10 @@ docstring-code-line-length = "dynamic"
 [tool.ruff.lint]
 # Enable rules for consistent formatting
 select = ["E", "F", "B", "C90", "I", "N", "D", "UP", "W", "RUF", "SIM"]
-ignore = ["D203", "D213"]  # Ignore conflicting docstring formatting rules
+ignore = ["D203", "D213"]  # ignore conflicting docstring formatting rules
 
 [tool.ruff.lint.isort]
-# Use hanging indents for imports
+# use hanging indents for imports
 force-single-line = false
 force-wrap-aliases = true
 combine-as-imports = false

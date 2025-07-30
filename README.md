@@ -85,13 +85,20 @@ contained in that directory.
 # Installation
 
 The most painless way to get started quickly is to use the included
-barebones Python 3.6-based Dockerfile. To build the image and start a
-python interactive prompt, use:
+Dockerfile based on jupyter/datascience-notebook with Python 3.12. 
+To build the image and start a Jupyter Lab server:
 
 ```bash
 git clone git://github.com/decompositional-semantics-initiative/decomp.git
 cd decomp
 docker build -t decomp .
+docker run -it -p 8888:8888 decomp
+```
+
+This will start a Jupyter Lab server accessible at http://localhost:8888.
+To start a Python interactive prompt instead:
+
+```bash
 docker run -it decomp python
 ```
 

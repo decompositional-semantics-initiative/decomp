@@ -9,17 +9,25 @@ Installation
     .. tab-item:: Docker
 
         The most painless way to get started quickly is to use the included
-        barebones Python 3.6-based Dockerfile. To build the image and start a
-        python interactive prompt, use:
+        Dockerfile based on jupyter/datascience-notebook with Python 3.12.
+        
+        To build the image and start a Jupyter Lab server:
 
         .. code-block:: bash
 
-            git clone git://gitlab.hltcoe.jhu.edu/aswhite/decomp.git
+            git clone git://github.com/decompositional-semantics-initiative/decomp.git
             cd decomp
             docker build -t decomp .
-            docker run -it decomp python
+            docker run -it -p 8888:8888 decomp
            
-        A jupyter notebook can then be opened in the standard way.
+        This will start a Jupyter Lab server accessible at http://localhost:8888
+        (with authentication disabled for convenience).
+        
+        To start a Python interactive prompt instead:
+        
+        .. code-block:: bash
+        
+            docker run -it decomp python
 
     .. tab-item:: pip
 
