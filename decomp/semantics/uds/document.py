@@ -50,9 +50,15 @@ class UDSDocument:
         initialized without edges from sentence_graphs
     """
 
-    def __init__(self, sentence_graphs: SentenceGraphDict,
-                 sentence_ids: SentenceIDDict, name: str, genre: str,
-                 timestamp: str | None = None, doc_graph: UDSDocumentGraph | None = None):
+    def __init__(
+        self,
+        sentence_graphs: SentenceGraphDict,
+        sentence_ids: SentenceIDDict,
+        name: str,
+        genre: str,
+        timestamp: str | None = None,
+        doc_graph: UDSDocumentGraph | None = None
+    ):
         self.sentence_graphs: SentenceGraphDict = {}
         self.sentence_ids: SentenceIDDict = {}
         self.name = name
@@ -79,8 +85,13 @@ class UDSDocument:
         return self.document_graph.to_dict()
 
     @classmethod
-    def from_dict(cls, document: dict[str, dict], sentence_graphs: dict[str, UDSSentenceGraph],
-                       sentence_ids: dict[str, str], name: str = 'UDS') -> 'UDSDocument':
+    def from_dict(
+        cls,
+        document: dict[str, dict],
+        sentence_graphs: dict[str, UDSSentenceGraph],
+        sentence_ids: dict[str, str],
+        name: str = 'UDS'
+    ) -> 'UDSDocument':
         """Construct a UDSDocument from a dictionary.
 
         Since only the document graphs are serialized, the sentence

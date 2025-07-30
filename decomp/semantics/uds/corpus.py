@@ -356,13 +356,15 @@ class UDSCorpus(PredPattCorpus):
                         spl.to_json(sentences_json_path, documents_json_path)
 
     @classmethod
-    def from_conll_and_annotations(cls,
-                                   corpus: Location,
-                                   sentence_annotations: Sequence[Location] = [],
-                                   document_annotations: Sequence[Location] = [],
-                                   annotation_format: str = 'normalized',
-                                   version: str = '2.0',
-                                   name: str = 'ewt') -> 'UDSCorpus':
+    def from_conll_and_annotations(
+        cls,
+        corpus: Location,
+        sentence_annotations: Sequence[Location] = [],
+        document_annotations: Sequence[Location] = [],
+        annotation_format: str = 'normalized',
+        version: str = '2.0',
+        name: str = 'ewt'
+    ) -> 'UDSCorpus':
         """Load UDS graph corpus from CoNLL (dependencies) and JSON (annotations).
 
         This method should only be used if the UDS corpus is being
@@ -463,8 +465,11 @@ class UDSCorpus(PredPattCorpus):
                 return ud_ids
 
     @classmethod
-    def from_json(cls, sentences_jsonfile: Location,
-                  documents_jsonfile: Location) -> 'UDSCorpus':
+    def from_json(
+        cls,
+        sentences_jsonfile: Location,
+        documents_jsonfile: Location
+    ) -> 'UDSCorpus':
         """Load annotated UDS graph corpus (including annotations) from JSON.
 
         This is the suggested method for loading the UDS corpus.
@@ -541,8 +546,11 @@ class UDSCorpus(PredPattCorpus):
         """
         self._metadata += metadata
 
-    def add_annotation(self, sentence_annotation: list[UDSAnnotation] | None = None,
-                       document_annotation: list[UDSAnnotation] | None = None) -> None:
+    def add_annotation(
+        self,
+        sentence_annotation: list[UDSAnnotation] | None = None,
+        document_annotation: list[UDSAnnotation] | None = None
+    ) -> None:
         """Add annotations to UDS sentence and document graphs.
 
         Parameters
@@ -873,8 +881,11 @@ class UDSCorpus(PredPattCorpus):
         """
         raise NotImplementedError
 
-    def sentence_property_metadata(self, subspace: str,
-                                   prop: str) -> UDSPropertyMetadata:
+    def sentence_property_metadata(
+        self,
+        subspace: str,
+        prop: str
+    ) -> UDSPropertyMetadata:
         """Return the metadata for a property in a sentence subspace.
 
         Parameters
@@ -906,8 +917,11 @@ class UDSCorpus(PredPattCorpus):
         """
         raise NotImplementedError
 
-    def document_property_metadata(self, subspace: str,
-                                   prop: str) -> UDSPropertyMetadata:
+    def document_property_metadata(
+        self,
+        subspace: str,
+        prop: str
+    ) -> UDSPropertyMetadata:
         """Return the metadata for a property in a document subspace.
 
         Parameters
