@@ -23,12 +23,12 @@ try:
     from termcolor import colored as _termcolor_colored
     # Wrap termcolor's colored to have consistent signature
     def colored(text: str, color: str | None = None, on_color: str | None = None, attrs: list[str] | None = None) -> str:
-        """Wrapper for termcolor.colored with consistent signature."""
+        """Wrap termcolor.colored with consistent signature."""
         return _termcolor_colored(text, color, on_color, attrs)
 except ImportError:
     # Fallback if termcolor is not available
     def colored(text: str, color: str | None = None, on_color: str | None = None, attrs: list[str] | None = None) -> str:
-        """Fallback colored function when termcolor is not available."""
+        """Return text unchanged when termcolor is not available."""
         return text
 
 if TYPE_CHECKING:

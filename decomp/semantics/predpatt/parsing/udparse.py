@@ -1,7 +1,19 @@
-"""Universal Dependencies parse representation.
+"""Universal Dependencies parse representation and visualization.
 
-This module contains the UDParse class for representing dependency parses
-and the DepTriple namedtuple for representing individual dependencies.
+This module provides data structures for representing and visualizing
+Universal Dependencies (UD) parse trees. It includes classes for storing
+dependency relations and methods for pretty-printing and visualizing
+parse structures.
+
+The UDParse class supports various output formats including
+pretty-printed text, LaTeX diagrams, and PDF visualization.
+
+Classes
+-------
+DepTriple
+    Named tuple representing a single dependency relation.
+UDParse
+    Container for complete dependency parse with tokens and relations.
 """
 
 from __future__ import annotations
@@ -11,16 +23,13 @@ from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
-    pass
-
-if TYPE_CHECKING:
     from ..core.token import Token
     from ..typing import UDSchema
 
 # Import at runtime to avoid circular dependency
 def _get_dep_v1() -> UDSchema:
     """Get the dep_v1 module dynamically.
-    
+
     Returns
     -------
     UDSchema
@@ -30,7 +39,7 @@ def _get_dep_v1() -> UDSchema:
     return dep_v1
 
 
-class DepTriple(namedtuple('DepTriple', 'rel gov dep')):
+class DepTriple(namedtuple("DepTriple", "rel gov dep")):
     """Dependency triple representing a single dependency relation.
 
     A named tuple with three fields representing a dependency edge in the parse tree.
@@ -60,7 +69,7 @@ class DepTriple(namedtuple('DepTriple', 'rel gov dep')):
         str
             String representation like 'nsubj(0,2)'.
         """
-        return f'{self.rel}({self.dep},{self.gov})'
+        return f"{self.rel}({self.dep},{self.gov})"
 
 
 class UDParse:
@@ -100,7 +109,7 @@ class UDParse:
         tokens: list[str | Token],
         tags: list[str],
         triples: list[DepTriple],
-        ud: UDSchema | None = None
+        ud: UDSchema | None = None,
     ) -> None:
         """Initialize UDParse with tokens, tags, and dependency triples.
 
@@ -148,17 +157,17 @@ class UDParse:
         from tabulate import tabulate
         from termcolor import colored
 
-        tokens1 = [*self.tokens, 'ROOT']
-        c = colored('/%s', 'magenta') if color else '/%s'
-        e = [f'{e.rel}({tokens1[e.dep]}{c % e.dep}, {tokens1[e.gov]}{c % e.gov})'
+        tokens1 = [*self.tokens, "ROOT"]
+        c = colored("/%s", "magenta") if color else "/%s"
+        e = [f"{e.rel}({tokens1[e.dep]}{c % e.dep}, {tokens1[e.gov]}{c % e.gov})"
              for e in sorted(self.triples, key=lambda x: x.dep)]
         cols: list[list[str]] = [[] for _ in range(k)]
         for i, x in enumerate(e):
             cols[i % k].append(x)
         # add padding to columns because zip stops at shortest iterator.
         for col in cols:
-            col.extend('' for _ in range(len(cols[0]) - len(col)))
-        return tabulate(zip(*cols, strict=False), tablefmt='plain')
+            col.extend("" for _ in range(len(cols[0]) - len(col)))
+        return tabulate(zip(*cols, strict=False), tablefmt="plain")
 
     def latex(self) -> bytes:
         """Generate LaTeX code for dependency diagram.
@@ -171,25 +180,29 @@ class UDParse:
             UTF-8 encoded LaTeX document.
         """
         # http://ctan.mirrors.hoobly.com/graphics/pgf/contrib/tikz-dependency/tikz-dependency-doc.pdf
-        boilerplate = r"""\documentclass{standalone}
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage{tikz}
-\usepackage{tikz-dependency}
-\begin{document}
-\begin{dependency}[theme = brazil]
-\begin{deptext}
-%s \\
-%s \\
-\end{deptext}
-%s
-\end{dependency}
-\end{document}"""
-        tok = ' \\& '.join((x if isinstance(x, str) else x.text).replace('&', r'and').replace('_', ' ') for x in self.tokens)
-        tag = ' \\& '.join(self.tags).lower()
-        dep = '\n'.join(rf'\depedge{{{e.gov+1}}}{{{e.dep+1}}}{{{e.rel}}}'
+        tok = " \\& ".join(
+            (x if isinstance(x, str) else x.text).replace("&", r"and").replace("_", " ")
+            for x in self.tokens
+        )
+        tag = " \\& ".join(self.tags).lower()
+        dep = "\n".join(rf"\depedge{{{e.gov+1}}}{{{e.dep+1}}}{{{e.rel}}}"
                         for e in self.triples if e.gov >= 0)
-        return (boilerplate % (tok, tag, dep)).replace('$','\\$').encode('utf-8')
+
+        boilerplate = rf"""\documentclass{{standalone}}
+\usepackage[utf8]{{inputenc}}
+\usepackage[T1]{{fontenc}}
+\usepackage{{tikz}}
+\usepackage{{tikz-dependency}}
+\begin{{document}}
+\begin{{dependency}}[theme = brazil]
+\begin{{deptext}}
+{tok} \\
+{tag} \\
+\end{{deptext}}
+{dep}
+\end{{dependency}}
+\end{{document}}"""
+        return boilerplate.replace("$", "\\$").encode("utf-8")
 
     def view(self, do_open: bool = True) -> str | None:
         """Open a dependency parse diagram of the sentence.
@@ -213,17 +226,17 @@ class UDParse:
         latex = self.latex()
         was = os.getcwd()
         try:
-            os.chdir('/tmp')
-            tokens_str = ' '.join(x if isinstance(x, str) else x.text for x in self.tokens)
-            hash_str = md5(tokens_str.encode('ascii', errors='ignore')).hexdigest()
-            base = f'parse_{hash_str}'
-            pdf = f'{base}.pdf'
+            os.chdir("/tmp")
+            tokens_str = " ".join(x if isinstance(x, str) else x.text for x in self.tokens)
+            hash_str = md5(tokens_str.encode("ascii", errors="ignore")).hexdigest()
+            base = f"parse_{hash_str}"
+            pdf = f"{base}.pdf"
             if not os.path.exists(pdf):
-                with open(f'{base}.tex', 'wb') as f:
+                with open(f"{base}.tex", "wb") as f:
                     f.write(latex)
-                os.system(f'pdflatex -halt-on-error {base}.tex >/dev/null')
+                os.system(f"pdflatex -halt-on-error {base}.tex >/dev/null")
             if do_open:
-                os.system(f'xdg-open {pdf}')
+                os.system(f"xdg-open {pdf}")
             return os.path.abspath(pdf)
         finally:
             os.chdir(was)
@@ -242,9 +255,9 @@ class UDParse:
 
         img = self.view(do_open=False)
         if img is not None:
-            out = img[:-4] + '.png'
+            out = img[:-4] + ".png"
             if not os.path.exists(out):
-                cmd = f'gs -dBATCH -dNOPAUSE -sDEVICE=pngalpha -o {out} {img}'
+                cmd = f"gs -dBATCH -dNOPAUSE -sDEVICE=pngalpha -o {out} {img}"
                 os.system(cmd)
             return out
         return None

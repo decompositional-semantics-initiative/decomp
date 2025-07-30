@@ -2,7 +2,37 @@
 """Universal Dependencies schema definitions for PredPatt.
 
 This module provides POS tags and dependency relation definitions
-for both UD v1.0 and v2.0, supporting version-specific processing.
+for both UD v1.0 and v2.0, supporting version-specific processing
+in the PredPatt semantic extraction system.
+
+The dependency relation classes define core syntactic relations (subject,
+object, modifiers) and relation sets used by PredPatt for pattern matching
+during predicate-argument extraction.
+
+Classes
+-------
+POSTag
+    Universal Dependencies part-of-speech tags.
+DependencyRelationsBase
+    Abstract base class for dependency relations.
+DependencyRelationsV1
+    UD v1.0 dependency relation definitions.
+DependencyRelationsV2
+    UD v2.0 dependency relation definitions.
+
+Functions
+---------
+get_dependency_relations
+    Helper to get relations for a specific version.
+
+Constants
+---------
+postag
+    Alias for POSTag class.
+dep_v1
+    Instance of DependencyRelationsV1.
+dep_v2
+    Instance of DependencyRelationsV2.
 """
 
 from abc import ABC, abstractmethod
@@ -15,7 +45,7 @@ class POSTag:
     Reference: http://universaldependencies.org/u/pos/index.html
     """
 
-    # Open class words
+    # open class words
     ADJ: ClassVar[str] = "ADJ"
     ADV: ClassVar[str] = "ADV"
     INTJ: ClassVar[str] = "INTJ"
@@ -23,7 +53,7 @@ class POSTag:
     PROPN: ClassVar[str] = "PROPN"
     VERB: ClassVar[str] = "VERB"
 
-    # Closed class words
+    # closed class words
     ADP: ClassVar[str] = "ADP"
     AUX: ClassVar[str] = "AUX"
     CCONJ: ClassVar[str] = "CCONJ"
@@ -33,7 +63,7 @@ class POSTag:
     PRON: ClassVar[str] = "PRON"
     SCONJ: ClassVar[str] = "SCONJ"
 
-    # Other
+    # other
     PUNCT: ClassVar[str] = "PUNCT"
     SYM: ClassVar[str] = "SYM"
     X: ClassVar[str] = "X"
@@ -42,10 +72,10 @@ class POSTag:
 class DependencyRelationsBase(ABC):
     """Base class for Universal Dependencies relation definitions."""
 
-    # Version identifier
+    # version identifier
     VERSION: ClassVar[str]
 
-    # Core dependency relations that must be defined by subclasses
+    # core dependency relations that must be defined by subclasses
     @property
     @abstractmethod
     def nsubj(self) -> str:
@@ -70,7 +100,7 @@ class DependencyRelationsBase(ABC):
         """Passive auxiliary relation."""
         pass
 
-    # Relation sets that must be defined by subclasses
+    # relation sets that must be defined by subclasses
     @property
     @abstractmethod
     def subj(self) -> set[str]:
@@ -89,72 +119,72 @@ class DependencyRelationsV1(DependencyRelationsBase):
 
     VERSION: ClassVar[str] = "1.0"
 
-    # Subject relations
+    # subject relations
     nsubj: ClassVar[str] = "nsubj"
     nsubjpass: ClassVar[str] = "nsubjpass"
     csubj: ClassVar[str] = "csubj"
     csubjpass: ClassVar[str] = "csubjpass"
 
-    # Object relations
+    # object relations
     dobj: ClassVar[str] = "dobj"
     iobj: ClassVar[str] = "iobj"
 
-    # Copular
+    # copular
     cop: ClassVar[str] = "cop"
 
-    # Auxiliary
+    # auxiliary
     aux: ClassVar[str] = "aux"
     auxpass: ClassVar[str] = "auxpass"
 
-    # Negation
+    # negation
     neg: ClassVar[str] = "neg"
 
-    # Non-nominal modifier
+    # non-nominal modifier
     amod: ClassVar[str] = "amod"
     advmod: ClassVar[str] = "advmod"
 
-    # Nominal modifiers
+    # nominal modifiers
     nmod: ClassVar[str] = "nmod"
     nmod_poss: ClassVar[str] = "nmod:poss"
     nmod_tmod: ClassVar[str] = "nmod:tmod"
     nmod_npmod: ClassVar[str] = "nmod:npmod"
-    obl: ClassVar[str] = "nmod"  # Maps to nmod in v1
+    obl: ClassVar[str] = "nmod"  # maps to nmod in v1
     obl_npmod: ClassVar[str] = "nmod:npmod"
 
-    # Appositional modifier
+    # appositional modifier
     appos: ClassVar[str] = "appos"
 
-    # Coordination
+    # coordination
     cc: ClassVar[str] = "cc"
     conj: ClassVar[str] = "conj"
     cc_preconj: ClassVar[str] = "cc:preconj"
 
-    # Marker
+    # marker
     mark: ClassVar[str] = "mark"
     case: ClassVar[str] = "case"
 
-    # Fixed multiword expression
+    # fixed multiword expression
     mwe: ClassVar[str] = "fixed"
 
-    # Parataxis
+    # parataxis
     parataxis: ClassVar[str] = "parataxis"
 
-    # Punctuation
+    # punctuation
     punct: ClassVar[str] = "punct"
 
-    # Clausal complement
+    # clausal complement
     ccomp: ClassVar[str] = "ccomp"
     xcomp: ClassVar[str] = "xcomp"
 
-    # Relative clause
+    # relative clause
     advcl: ClassVar[str] = "advcl"
     acl: ClassVar[str] = "acl"
     aclrelcl: ClassVar[str] = "acl:relcl"
 
-    # Unknown dependency
+    # unknown dependency
     dep: ClassVar[str] = "dep"
 
-    # Relation sets for pattern matching
+    # relation sets for pattern matching
     SUBJ: ClassVar[set[str]] = {nsubj, csubj, nsubjpass, csubjpass}
     OBJ: ClassVar[set[str]] = {dobj, iobj}
     NMODS: ClassVar[set[str]] = {nmod, obl, nmod_npmod, nmod_tmod}
@@ -163,15 +193,15 @@ class DependencyRelationsV1(DependencyRelationsBase):
         nmod, obl, nmod_npmod, nmod_tmod, nsubj, csubj, csubjpass, dobj, iobj
     }
 
-    # Trivial symbols to be stripped out
+    # trivial symbols to be stripped out
     TRIVIALS: ClassVar[set[str]] = {mark, cc, punct}
 
-    # These dependents of a predicate root shouldn't be included in the predicate phrase
+    # these dependents of a predicate root shouldn't be included in the predicate phrase
     PRED_DEPS_TO_DROP: ClassVar[set[str]] = {
         ccomp, csubj, advcl, acl, aclrelcl, nmod_tmod, parataxis, appos, dep
     }
 
-    # These dependents of an argument root shouldn't be included in the
+    # these dependents of an argument root shouldn't be included in the
     # argument phrase if the argument root is the gov of the predicate root
     SPECIAL_ARG_DEPS_TO_DROP: ClassVar[set[str]] = {
         nsubj, dobj, iobj, csubj, csubjpass, neg,
@@ -179,7 +209,7 @@ class DependencyRelationsV1(DependencyRelationsBase):
         parataxis
     }
 
-    # Predicates of these relations are hard to find arguments
+    # predicates of these relations are hard to find arguments
     HARD_TO_FIND_ARGS: ClassVar[set[str]] = {amod, dep, conj, acl, aclrelcl, advcl}
 
     @property
@@ -198,72 +228,72 @@ class DependencyRelationsV2(DependencyRelationsBase):
 
     VERSION: ClassVar[str] = "2.0"
 
-    # Subject relations
+    # subject relations
     nsubj: ClassVar[str] = "nsubj"
-    nsubjpass: ClassVar[str] = "nsubj:pass"  # Changed in v2
+    nsubjpass: ClassVar[str] = "nsubj:pass"  # changed in v2
     csubj: ClassVar[str] = "csubj"
-    csubjpass: ClassVar[str] = "csubj:pass"  # Changed in v2
+    csubjpass: ClassVar[str] = "csubj:pass"  # changed in v2
 
-    # Object relations
-    dobj: ClassVar[str] = "obj"  # Changed in v2
+    # object relations
+    dobj: ClassVar[str] = "obj"  # changed in v2
     iobj: ClassVar[str] = "iobj"
 
-    # Auxiliary
+    # auxiliary
     aux: ClassVar[str] = "aux"
-    auxpass: ClassVar[str] = "aux:pass"  # Changed in v2
+    auxpass: ClassVar[str] = "aux:pass"  # changed in v2
 
-    # Negation
+    # negation
     neg: ClassVar[str] = "neg"
 
-    # Copular
+    # copular
     cop: ClassVar[str] = "cop"
 
-    # Non-nominal modifier
+    # non-nominal modifier
     amod: ClassVar[str] = "amod"
     advmod: ClassVar[str] = "advmod"
 
-    # Nominal modifiers
+    # nominal modifiers
     nmod: ClassVar[str] = "nmod"
     nmod_poss: ClassVar[str] = "nmod:poss"
     nmod_tmod: ClassVar[str] = "nmod:tmod"
     nmod_npmod: ClassVar[str] = "nmod:npmod"
-    obl: ClassVar[str] = "obl"  # Separate relation in v2
+    obl: ClassVar[str] = "obl"  # separate relation in v2
     obl_npmod: ClassVar[str] = "obl:npmod"
 
-    # Appositional modifier
+    # appositional modifier
     appos: ClassVar[str] = "appos"
 
-    # Coordination
+    # coordination
     cc: ClassVar[str] = "cc"
     conj: ClassVar[str] = "conj"
     cc_preconj: ClassVar[str] = "cc:preconj"
 
-    # Marker
+    # marker
     mark: ClassVar[str] = "mark"
     case: ClassVar[str] = "case"
 
-    # Fixed multiword expression
+    # fixed multiword expression
     mwe: ClassVar[str] = "fixed"
 
-    # Parataxis
+    # parataxis
     parataxis: ClassVar[str] = "parataxis"
 
-    # Punctuation
+    # punctuation
     punct: ClassVar[str] = "punct"
 
-    # Clausal complement
+    # clausal complement
     ccomp: ClassVar[str] = "ccomp"
     xcomp: ClassVar[str] = "xcomp"
 
-    # Relative clause
+    # relative clause
     advcl: ClassVar[str] = "advcl"
     acl: ClassVar[str] = "acl"
     aclrelcl: ClassVar[str] = "acl:relcl"
 
-    # Unknown dependency
+    # unknown dependency
     dep: ClassVar[str] = "dep"
 
-    # Relation sets for pattern matching
+    # relation sets for pattern matching
     SUBJ: ClassVar[set[str]] = {nsubj, csubj, nsubjpass, csubjpass}
     OBJ: ClassVar[set[str]] = {dobj, iobj}
     NMODS: ClassVar[set[str]] = {nmod, obl, nmod_npmod, nmod_tmod}
@@ -272,15 +302,15 @@ class DependencyRelationsV2(DependencyRelationsBase):
         nmod, obl, nmod_npmod, nmod_tmod, nsubj, csubj, csubjpass, dobj, iobj
     }
 
-    # Trivial symbols to be stripped out
+    # trivial symbols to be stripped out
     TRIVIALS: ClassVar[set[str]] = {mark, cc, punct}
 
-    # These dependents of a predicate root shouldn't be included in the predicate phrase
+    # these dependents of a predicate root shouldn't be included in the predicate phrase
     PRED_DEPS_TO_DROP: ClassVar[set[str]] = {
         ccomp, csubj, advcl, acl, aclrelcl, nmod_tmod, parataxis, appos, dep
     }
 
-    # These dependents of an argument root shouldn't be included in the
+    # these dependents of an argument root shouldn't be included in the
     # argument phrase if the argument root is the gov of the predicate root
     SPECIAL_ARG_DEPS_TO_DROP: ClassVar[set[str]] = {
         nsubj, dobj, iobj, csubj, csubjpass, neg,
@@ -288,7 +318,7 @@ class DependencyRelationsV2(DependencyRelationsBase):
         parataxis
     }
 
-    # Predicates of these relations are hard to find arguments
+    # predicates of these relations are hard to find arguments
     HARD_TO_FIND_ARGS: ClassVar[set[str]] = {amod, dep, conj, acl, aclrelcl, advcl}
 
     @property
@@ -302,7 +332,7 @@ class DependencyRelationsV2(DependencyRelationsBase):
         return self.OBJ
 
 
-# Convenience aliases for backwards compatibility
+# convenience aliases for backwards compatibility
 postag = POSTag
 dep_v1 = DependencyRelationsV1
 dep_v2 = DependencyRelationsV2

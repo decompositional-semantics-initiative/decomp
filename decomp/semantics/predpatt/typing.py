@@ -5,19 +5,23 @@ across the PredPatt framework. It defines protocols and type variables that
 are used throughout the system to avoid circular imports while maintaining
 type safety.
 
-Key Components
---------------
-:class:`HasPosition`
+Classes
+-------
+HasPosition
     Protocol defining objects with a position attribute, used for tokens,
-    predicates, and arguments that have positions in text
+    predicates, and arguments that have positions in text.
 
-:data:`T`
+Type Variables
+--------------
+T
     Type variable bounded by HasPosition protocol for generic functions
-    that operate on positioned objects
+    that operate on positioned objects.
 
-:data:`UDSchema`
+Type Aliases
+------------
+UDSchema
     Type alias for Universal Dependencies schema classes, supporting both
-    v1 and v2 dependency relation definitions
+    v1 and v2 dependency relation definitions.
 """
 
 from typing import TYPE_CHECKING, Protocol, TypeVar

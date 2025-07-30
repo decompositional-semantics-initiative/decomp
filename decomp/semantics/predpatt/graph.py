@@ -4,11 +4,11 @@ This module provides functionality for converting PredPatt extractions into
 unified NetworkX graphs that combine syntactic dependencies with semantic
 predicate-argument structures.
 
-Key Components
---------------
-:class:`PredPattGraphBuilder`
+Classes
+-------
+PredPattGraphBuilder
     Static methods for building NetworkX graphs from PredPatt extractions,
-    creating unified representations with syntax, semantics, and interface layers
+    creating unified representations with syntax, semantics, and interface layers.
 """
 
 from networkx import DiGraph

@@ -1,7 +1,23 @@
-"""Argument class for representing predicate arguments.
+"""Argument representation for predicate-argument structures.
 
-This module contains the Argument class which represents arguments
-associated with predicates in the PredPatt system.
+This module provides the Argument class, which represents
+arguments extracted from dependency parse trees in the PredPatt semantic
+extraction system. Arguments are the participants in predicate-argument
+structures, such as subjects, objects, and other dependents of predicates.
+
+Arguments can be simple (single tokens) or complex (multi-token phrases),
+and support operations like copying, creating references (for shared
+arguments), and expanding coordinated structures.
+
+Classes
+-------
+Argument
+    The main class representing predicate arguments.
+
+Functions
+---------
+sort_by_position
+    Utility function for sorting items by position.
 """
 
 from __future__ import annotations
@@ -20,7 +36,7 @@ if TYPE_CHECKING:
 
 def sort_by_position(x: list[T]) -> list[T]:
     """Sort items by their position attribute."""
-    return list(sorted(x, key=lambda y: y.position))
+    return sorted(x, key=lambda y: y.position)
 
 
 class Argument:
@@ -37,7 +53,6 @@ class Argument:
         The Universal Dependencies module to use (default: dep_v1).
     rules : list, optional
         List of rules that led to this argument's extraction.
-        NOTE: Default is mutable list - this matches original behavior.
 
     Attributes
     ----------
@@ -60,7 +75,7 @@ class Argument:
         root: Token,
         ud: UDSchema = dep_v1,
         rules: list[Rule] | None = None,
-        share: bool = False
+        share: bool = False,
     ) -> None:
         """Initialize an Argument.
 
@@ -93,7 +108,7 @@ class Argument:
         str
             String in format 'Argument(root)'.
         """
-        return f'Argument({self.root})'
+        return f"Argument({self.root})"
 
     def copy(self) -> Argument:
         """Create a copy of this argument.
@@ -162,7 +177,7 @@ class Argument:
         str
             Space-joined text of all tokens in the argument.
         """
-        return ' '.join(x.text for x in self.tokens)
+        return " ".join(x.text for x in self.tokens)
 
     def coords(self) -> list[Argument]:
         """Get coordinated arguments including this one.
@@ -183,7 +198,10 @@ class Argument:
         # don't consider the conjuncts of ccomp, csubj and amod
         if self.root.gov_rel not in {self.ud.ccomp, self.ud.csubj}:
             if self.root.dependents is None:
-                raise TypeError(f"Cannot find coordinated arguments for argument {self}: root token has no dependency information")
+                raise TypeError(
+                    f"Cannot find coordinated arguments for argument {self}: "
+                    f"root token has no dependency information",
+                )
             for e in self.root.dependents:
                 if e.rel == self.ud.conj:
                     coords.append(Argument(e.dep, self.ud, [R.m()]))

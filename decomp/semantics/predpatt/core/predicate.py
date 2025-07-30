@@ -5,32 +5,26 @@ for extracting and representing predicates from dependency parses. It handles
 various predicate types including verbal, possessive, appositional, and
 adjectival predicates.
 
-Key Components
---------------
-:class:`Predicate`
+Classes
+-------
+Predicate
     Main class representing a predicate with its root token, arguments, and
     predicate type. Supports different predicate types (normal, possessive,
     appositive, adjectival).
-
-:class:`PredicateType`
+PredicateType
     Enumeration defining the four types of predicates that PredPatt can extract:
     NORMAL, POSS, APPOS, and AMOD.
 
-:func:`argument_names`
+Functions
+---------
+argument_names
     Utility function to generate alphabetic names for arguments (?a, ?b, etc.)
     for display and debugging purposes.
-
-:func:`sort_by_position`
+sort_by_position
     Helper function to sort items by their position attribute, used for
     ordering tokens and arguments.
-
-Predicate Types
----------------
-The module defines a :class:`PredicateType` enum with four values:
-- ``PredicateType.NORMAL``: Standard verbal predicates
-- ``PredicateType.POSS``: Possessive predicates
-- ``PredicateType.APPOS``: Appositional predicates
-- ``PredicateType.AMOD``: Adjectival modifier predicates
+no_color
+    Identity function that returns text unchanged (used when color is disabled).
 """
 
 from __future__ import annotations
@@ -55,9 +49,10 @@ if TYPE_CHECKING:
 
 class PredicateType(str, enum.Enum):
     """Enumeration of predicate types in PredPatt.
-    
+
     Inherits from str to maintain backward compatibility with string comparisons.
     """
+
     NORMAL = "normal"  # Standard verbal predicates
     POSS = "poss"      # Possessive predicates
     APPOS = "appos"    # Appositional predicates

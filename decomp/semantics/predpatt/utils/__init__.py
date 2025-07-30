@@ -1,6 +1,24 @@
-"""Utilities for PredPatt.
+"""Utility functions for PredPatt processing and visualization.
 
-This module contains utility functions for linearization of PredPatt structures.
+This module provides utility functions for linearizing PredPatt structures
+into flat representations, visualizing dependency trees, and formatting
+output for display.
+
+Functions
+---------
+linearize
+    Convert PredPatt structures to linearized string format.
+linearize_pprint
+    Pretty-print linearized PredPatt structures.
+construct_pred_from_flat
+    Reconstruct predicate from linearized format.
+linear_to_string
+    Convert linearized structure to string representation.
+
+Classes
+-------
+LinearizedPPOpts
+    Options for controlling linearization output format.
 """
 
 from .linearization import (

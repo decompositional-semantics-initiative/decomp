@@ -1,8 +1,48 @@
-"""
-Rules module for PredPatt with modern Python implementation.
+"""Linguistic rules for predicate-argument extraction in PredPatt.
 
-This module contains all the rules used in the PredPatt extraction process,
-organized into logical categories for better maintainability.
+This module implements the rule system that drives PredPatt's extraction
+of predicates and arguments from Universal Dependencies parses. Rules are
+organized into categories based on their linguistic function.
+
+The rule system consists of:
+
+- **Predicate rules**: Identify verbal and non-verbal predicates
+- **Argument rules**: Extract syntactic arguments of predicates
+- **Resolution rules**: Handle complex phenomena like coordination
+- **Simplification rules**: Optional rules for simplified extraction
+
+Classes
+-------
+Rule
+    Abstract base class for all extraction rules.
+PredicateRootRule
+    Rules for identifying predicate root tokens.
+ArgumentRootRule
+    Rules for extracting argument root tokens.
+PredPhraseRule
+    Rules for building predicate phrases.
+ArgPhraseRule
+    Rules for building argument phrases.
+ArgumentResolution
+    Rules for resolving complex argument structures.
+ConjunctionResolution
+    Rules for handling coordinated structures.
+SimplifyRule
+    Rules for simplified extraction mode.
+LanguageSpecific
+    Base class for language-specific rules.
+EnglishSpecific
+    Rules specific to English syntax.
+
+Functions
+---------
+gov_looks_like_predicate
+    Helper to check if a governor token is predicate-like.
+
+Notes
+-----
+Rules are identified by single letters (A-W) or letter-number combinations
+(A1, N2). Lowercase aliases are provided for backward compatibility.
 """
 
 from __future__ import annotations
@@ -109,7 +149,7 @@ i = I
 j = J
 k = K
 l_rule = L
-l = L  # Keep for compatibility
+l = L  # noqa: E741 - Keep for compatibility
 m = M
 w1 = W1
 w2 = W2

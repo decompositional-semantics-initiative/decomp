@@ -6,11 +6,11 @@
 This module provides functionality for loading and managing collections of
 PredPatt semantic graphs from CoNLL-U format dependency corpora.
 
-Key Components
---------------
-:class:`PredPattCorpus`
+Classes
+-------
+PredPattCorpus
     Container class extending the base Corpus for managing PredPatt semantic
-    extractions paired with their dependency graphs
+    extractions paired with their dependency graphs.
 """
 
 from collections.abc import Hashable

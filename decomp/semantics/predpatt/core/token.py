@@ -1,12 +1,12 @@
 """Token representation for dependency parsing in PredPatt.
 
-This module defines the core :class:`Token` class that represents individual
+This module defines the core Token class that represents individual
 tokens (words) in a dependency parse tree. Tokens store linguistic information
 including text, part-of-speech tags, and dependency relations.
 
-Key Components
---------------
-:class:`Token`
+Classes
+-------
+Token
     Represents a single token with its linguistic properties and dependency
     relations. Used as the basic unit in dependency parsing for predicate-argument
     extraction.
