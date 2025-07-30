@@ -1,9 +1,15 @@
-"""
-Modernized Token class for PredPatt.
+"""Token representation for dependency parsing in PredPatt.
 
-This module provides the Token class which represents a single token
-in a dependency parse, maintaining exact compatibility with the
-original PredPatt implementation.
+This module defines the core :class:`Token` class that represents individual
+tokens (words) in a dependency parse tree. Tokens store linguistic information
+including text, part-of-speech tags, and dependency relations.
+
+Key Components
+--------------
+:class:`Token`
+    Represents a single token with its linguistic properties and dependency
+    relations. Used as the basic unit in dependency parsing for predicate-argument
+    extraction.
 """
 
 from __future__ import annotations
@@ -19,8 +25,7 @@ if TYPE_CHECKING:
 
 
 class Token:
-    """
-    Represents a single token in a dependency parse.
+    """Represents a single token in a dependency parse.
 
     Attributes
     ----------
@@ -45,8 +50,7 @@ class Token:
     """
 
     def __init__(self, position: int, text: str, tag: str, ud: UDSchema = dep_v1) -> None:
-        """
-        Initialize a Token.
+        """Initialize a Token.
 
         Parameters
         ----------
@@ -59,7 +63,7 @@ class Token:
         ud : UDSchema, optional
             The Universal Dependencies module, by default dep_v1.
         """
-        # maintain exact initialization order as original
+        # maintain exact initialization order
         self.position: int = position
         self.text: str = text
         self.tag: str = tag
@@ -69,8 +73,7 @@ class Token:
         self.ud: UDSchema = ud
 
     def __repr__(self) -> str:
-        """
-        Return string representation of the token.
+        """Return string representation of the token.
 
         Returns
         -------
@@ -81,8 +84,7 @@ class Token:
 
     @property
     def isword(self) -> bool:
-        """
-        Check if the token is not punctuation.
+        """Check if the token is not punctuation.
 
         Returns
         -------
@@ -92,8 +94,7 @@ class Token:
         return self.tag != postag.PUNCT
 
     def argument_like(self) -> bool:
-        """
-        Check if this token looks like the root of an argument.
+        """Check if this token looks like the root of an argument.
 
         Returns
         -------
@@ -103,8 +104,7 @@ class Token:
         return self.gov_rel in self.ud.ARG_LIKE
 
     def hard_to_find_arguments(self) -> bool:
-        """
-        Check if this is potentially the root of a predicate with hard-to-find arguments.
+        """Check if this is potentially the root of a predicate with hard-to-find arguments.
 
         This func is only called when one of its dependents is an easy
         predicate. Here, we're checking:
@@ -115,21 +115,22 @@ class Token:
         -------
         bool
             True if this could be a predicate root with hard-to-find arguments.
-
-        Notes
-        -----
-        The original implementation has a typo in the docstring ("argment").
-        This is preserved for exact compatibility.
         """
         # amod:
-        # There is nothing wrong with a negotiation,
+        # there is nothing wrong with a negotiation,
         # but nothing helpful about generating one that is just for show .
         #        ^      ^              ^
         #        --amod--       (a easy predicate, dependent of "helpful"
         #                       which is hard_to_find_arguments)
         if self.dependents is None:
-            raise TypeError(f"Cannot iterate over None dependents for token '{self.text}' at position {self.position}. Token not properly initialized with dependency information.")
+            raise TypeError(
+                f"Cannot iterate over None dependents for token '{self.text}' "
+                f"at position {self.position}. Token not properly initialized "
+                f"with dependency information."
+            )
+
         for e in self.dependents:
             if e.rel in self.ud.SUBJ or e.rel in self.ud.OBJ:
                 return False
+
         return self.gov_rel in self.ud.HARD_TO_FIND_ARGS
