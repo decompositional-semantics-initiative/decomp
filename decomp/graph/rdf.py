@@ -1,14 +1,32 @@
-"""Module for converting from networkx to RDF"""
+"""Module for converting NetworkX graphs to RDF format.
+
+This module provides functionality to convert NetworkX DiGraph structures
+into RDFLib Graph objects, enabling semantic web queries and interoperability
+with RDF-based systems and tools.
+
+Classes
+-------
+RDFConverter
+    Converter class for transforming NetworkX digraphs into RDFLib graphs.
+
+Notes
+-----
+The conversion process handles node and edge attributes by mapping them to
+appropriate RDF triples. Special handling is provided for UDS-style annotations
+with value and confidence components.
+"""
+
+from __future__ import annotations
 
 from collections.abc import ItemsView
-from typing import Any
+from typing import Any, ClassVar
 
 from networkx import DiGraph, to_dict_of_dicts
 from rdflib import Graph, Literal, URIRef
 
 
 class RDFConverter:
-    """A converter between NetworkX digraphs and RDFLib graphs
+    """A converter between NetworkX digraphs and RDFLib graphs.
 
     Parameters
     ----------
@@ -16,12 +34,14 @@ class RDFConverter:
         the graph to convert
     """
 
-    SUBSPACES: dict[str, URIRef] = {}
-    PROPERTIES: dict[str, URIRef] = {'domain': URIRef('domain'),
-                                     'type': URIRef('type'),
-                                     'subspace': URIRef('subspace'),
-                                     'confidence': URIRef('confidence')}
-    VALUES: dict[str, URIRef] = {}
+    SUBSPACES: ClassVar[dict[str, URIRef]] = {}
+    PROPERTIES: ClassVar[dict[str, URIRef]] = {
+        'domain': URIRef('domain'),
+        'type': URIRef('type'),
+        'subspace': URIRef('subspace'),
+        'confidence': URIRef('confidence')
+    }
+    VALUES: ClassVar[dict[str, URIRef]] = {}
 
     def __init__(self, nxgraph: DiGraph):
         self.nxgraph = nxgraph
@@ -30,7 +50,7 @@ class RDFConverter:
 
     @classmethod
     def networkx_to_rdf(cls, nxgraph: DiGraph) -> Graph:
-        """Convert a NetworkX digraph to an RDFLib graph
+        """Convert a NetworkX digraph to an RDFLib graph.
 
         Parameters
         ----------
@@ -64,12 +84,21 @@ class RDFConverter:
                              self.nxgraph.edges[edgetup].items())
 
 
-    def _add_attributes(self, nid: str, attributes: ItemsView[str, str | int | bool | float | dict[str, str | int | bool | float] | list[str | int | bool | float] | tuple[str | int | bool | float, ...]]) -> None:
+    def _add_attributes(
+        self,
+        nid: str,
+        attributes: ItemsView[
+            str,
+            str | int | bool | float | dict[str, str | int | bool | float]
+            | list[str | int | bool | float]
+            | tuple[str | int | bool | float, ...]
+        ]
+    ) -> None:
         triples = []
 
         for attrid1, attrs1 in attributes:
             if not isinstance(attrs1, dict):
-                if isinstance(attrs1, list) or isinstance(attrs1, tuple):
+                if isinstance(attrs1, list | tuple):
                     errmsg = 'Cannot convert list- or tuple-valued' +\
                              ' attributes to RDF'
                     raise ValueError(errmsg)
@@ -109,8 +138,13 @@ class RDFConverter:
         else:
             return edgeid
 
-    def _construct_property(self, nodeid: str, propid: str, val: Any,
-                            subspaceid: str | None = None) -> list[tuple[URIRef, URIRef, URIRef | Literal]]:
+    def _construct_property(
+        self,
+        nodeid: str,
+        propid: str,
+        val: Any,
+        subspaceid: str | None = None
+    ) -> list[tuple[URIRef, URIRef, URIRef | Literal]]:
 
         c = self.__class__
         triples: list[tuple[URIRef, URIRef, URIRef | Literal]]
@@ -149,7 +183,9 @@ class RDFConverter:
         return triples
 
     @classmethod
-    def _construct_subspace(cls, subspaceid: str, propid: str) -> list[tuple[URIRef, URIRef, URIRef | Literal]]:
+    def _construct_subspace(
+        cls, subspaceid: str, propid: str
+    ) -> list[tuple[URIRef, URIRef, URIRef | Literal]]:
         if subspaceid not in cls.SUBSPACES:
             cls.SUBSPACES[subspaceid] = URIRef(subspaceid)
 

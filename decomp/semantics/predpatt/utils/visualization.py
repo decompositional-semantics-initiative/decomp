@@ -3,38 +3,70 @@
 
 This module provides functions for pretty-printing PredPatt extractions,
 including support for colored output, rule tracking, and various output formats.
+
+Functions
+---------
+no_color
+    Pass-through function for plain text output without colors.
+argument_names
+    Generate unique names for predicate arguments.
+format_predicate
+    Format a predicate with argument placeholders.
+format_predicate_instance
+    Format a complete predicate-argument structure.
+pprint
+    Pretty-print all extracted predicates from PredPatt.
+pprint_ud_parse
+    Pretty-print dependency parse in tabular format.
+
+Notes
+-----
+This module supports both colored (via termcolor) and plain text output.
+Colored output is optional and degrades gracefully if termcolor is not installed.
+
+See Also
+--------
+decomp.semantics.predpatt.extraction.engine : Main extraction engine
+decomp.semantics.predpatt.core : Core classes for predicates and arguments
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING, cast
 
 
 if TYPE_CHECKING:
-    from ..core.argument import Argument
-    from ..core.predicate import Predicate
-    from ..core.token import Token
-    from ..extraction.engine import PredPattEngine
-    from ..parsing.udparse import UDParse
+    from collections.abc import Callable
+
+    from decomp.semantics.predpatt.core.argument import Argument
+    from decomp.semantics.predpatt.core.predicate import Predicate
+    from decomp.semantics.predpatt.core.token import Token
+    from decomp.semantics.predpatt.extraction.engine import PredPattEngine
+    from decomp.semantics.predpatt.parsing.udparse import UDParse
 
 
 try:
     from termcolor import colored as _termcolor_colored
-    # Wrap termcolor's colored to have consistent signature
-    def colored(text: str, color: str | None = None, on_color: str | None = None, attrs: list[str] | None = None) -> str:
+    # wrap termcolor's colored to have consistent signature
+    def colored(
+        text: str,
+        color: str | None = None,
+        on_color: str | None = None,
+        attrs: list[str] | None = None,
+    ) -> str:
         """Wrap termcolor.colored with consistent signature."""
         return _termcolor_colored(text, color, on_color, attrs)
 except ImportError:
-    # Fallback if termcolor is not available
-    def colored(text: str, color: str | None = None, on_color: str | None = None, attrs: list[str] | None = None) -> str:
+    # fallback if termcolor is not available
+    def colored(
+        text: str,
+        color: str | None = None,
+        on_color: str | None = None,
+        attrs: list[str] | None = None,
+    ) -> str:
         """Return text unchanged when termcolor is not available."""
         return text
 
-if TYPE_CHECKING:
-    from decomp.semantics.predpatt.core.argument import Argument
-    from decomp.semantics.predpatt.core.predicate import Predicate
-    from decomp.semantics.predpatt.core.token import Token
 
 
 def no_color(x: str, _: str) -> str:
@@ -66,12 +98,12 @@ def argument_names(args: list[Argument]) -> dict[Argument, str]:
     >>> [names[i] for i in range(1, 100, 26)]
     ['?b', '?b1', '?b2', '?b3']
     """
-    # Argument naming scheme: integer -> `?[a-z]` with potentially a number if
+    # argument naming scheme: integer -> `?[a-z]` with potentially a number if
     # there are more than 26 arguments.
     name = {}
     for i, arg in enumerate(args):
-        c = i // 26 if i >= 26 else ''
-        name[arg] = f'?{chr(97 + (i % 26))}{c}'
+        c = i // 26 if i >= 26 else ""
+        name[arg] = f"?{chr(97 + (i % 26))}{c}"
     return name
 
 
@@ -102,10 +134,10 @@ def format_predicate(
     args = predicate.arguments
 
     if predicate.type == PredicateType.POSS:
-        return ' '.join([name[args[0]], c(PredicateType.POSS.value, 'yellow'), name[args[1]]])
+        return " ".join([name[args[0]], c(PredicateType.POSS.value, "yellow"), name[args[1]]])
 
     if predicate.type in {PredicateType.AMOD, PredicateType.APPOS}:
-        # Special handling for `amod` and `appos` because the target
+        # special handling for `amod` and `appos` because the target
         # relation `is/are` deviates from the original word order.
         arg0 = None
         other_args = []
@@ -116,44 +148,44 @@ def format_predicate(
                 other_args.append(arg)
 
         if arg0 is not None:
-            ret = [name[arg0], c('is/are', 'yellow')]
+            ret = [name[arg0], c("is/are", "yellow")]
             args = other_args
         else:
-            ret = [name[args[0]], c('is/are', 'yellow')]
+            ret = [name[args[0]], c("is/are", "yellow")]
             args = args[1:]
 
-    # Mix arguments with predicate tokens. Use word order to derive a
+    # mix arguments with predicate tokens. Use word order to derive a
     # nice-looking name.
     from decomp.semantics.predpatt.utils.ud_schema import postag
 
-    # Mix tokens and arguments, both have position attribute
+    # mix tokens and arguments, both have position attribute
     mixed_items: list[Token | Argument] = predicate.tokens + args
     sorted_items = sorted(mixed_items, key=lambda x: x.position)
 
     for i, y in enumerate(sorted_items):
-        # Check if y is an Argument (has 'tokens' and 'root' attributes)
-        if hasattr(y, 'tokens') and hasattr(y, 'root'):
-            # It's an Argument - type narrowing through hasattr checks
-            # Cast to Argument since we've verified it has the right attributes
-            from ..core.argument import Argument
+        # check if y is an Argument (has 'tokens' and 'root' attributes)
+        if hasattr(y, "tokens") and hasattr(y, "root"):
+            # it's an Argument - type narrowing through hasattr checks
+            # cast to Argument since we've verified it has the right attributes
+            from decomp.semantics.predpatt.core.argument import Argument
             arg_y = cast(Argument, y)
             ret.append(name[arg_y])
             if (predicate.root.gov_rel == predicate.ud.xcomp and
                 predicate.root.tag not in {postag.VERB, postag.ADJ} and
                 i == 0):
-                ret.append(c('is/are', 'yellow'))
+                ret.append(c("is/are", "yellow"))
         else:
-            # It's a Token
-            ret.append(c(y.text, 'green'))
+            # it's a Token
+            ret.append(c(y.text, "green"))
 
-    return ' '.join(ret)
+    return " ".join(ret)
 
 
 def format_predicate_instance(
     predicate: Predicate,
     track_rule: bool = False,
     c: Callable[[str, str], str] = no_color,
-    indent: str = '\t'
+    indent: str = "\t"
 ) -> str:
     """Format a single predicate instance with its arguments.
 
@@ -178,32 +210,32 @@ def format_predicate_instance(
     lines = []
     name = argument_names(predicate.arguments)
 
-    # Format predicate
-    verbose = ''
+    # format predicate
+    verbose = ""
     if track_rule:
-        rules_str = ','.join(sorted(map(str, predicate.rules)))
-        rule = f',{rules_str}'
-        verbose = c(f'{indent}[{predicate.root.text}-{predicate.root.gov_rel}{rule}]',
-                    'magenta')
-    lines.append(f'{indent}{format_predicate(predicate, name, c=c)}{verbose}')
+        rules_str = ",".join(sorted(map(str, predicate.rules)))
+        rule = f",{rules_str}"
+        verbose = c(f"{indent}[{predicate.root.text}-{predicate.root.gov_rel}{rule}]",
+                    "magenta")
+    lines.append(f"{indent}{format_predicate(predicate, name, c=c)}{verbose}")
 
-    # Format arguments
+    # format arguments
     for arg in predicate.arguments:
         if (arg.isclausal() and arg.root.gov in predicate.tokens and
                 predicate.type == PredicateType.NORMAL):
-            s = c('SOMETHING', 'yellow') + ' := ' + arg.phrase()
+            s = c("SOMETHING", "yellow") + " := " + arg.phrase()
         else:
-            s = c(arg.phrase(), 'green')
+            s = c(arg.phrase(), "green")
 
-        verbose = ''
+        verbose = ""
         if track_rule:
-            rules_str = ','.join(sorted(map(str, arg.rules)))
-            rule = f',{rules_str}'
-            verbose = c(f'{indent}[{arg.root.text}-{arg.root.gov_rel}{rule}]',
-                        'magenta')
-        lines.append(f'{indent * 2}{name[arg]}: {s}{verbose}')
+            rules_str = ",".join(sorted(map(str, arg.rules)))
+            rule = f",{rules_str}"
+            verbose = c(f"{indent}[{arg.root.text}-{arg.root.gov_rel}{rule}]",
+                        "magenta")
+        lines.append(f"{indent * 2}{name[arg]}: {s}{verbose}")
 
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
 
 def pprint(
@@ -228,7 +260,7 @@ def pprint(
         Formatted string representation of all predicates
     """
     c = colored if color else no_color
-    return '\n'.join(
+    return "\n".join(
         format_predicate_instance(p, track_rule=track_rule, c=c)
         for p in predpatt.instances
     )
@@ -237,7 +269,7 @@ def pprint(
 def pprint_ud_parse(
     parse: UDParse,
     color: bool = False,
-    k: int = 1
+    k: int = 1,
 ) -> str:
     """Pretty-print list of dependencies from a UDParse instance.
 
@@ -257,9 +289,9 @@ def pprint_ud_parse(
     """
     from tabulate import tabulate
 
-    tokens1 = [*parse.tokens, 'ROOT']
-    c = colored('/%s', 'magenta') if color else '/%s'
-    e = [f'{e.rel}({tokens1[e.dep]}{c % e.dep}, {tokens1[e.gov]}{c % e.gov})'
+    tokens1 = [*parse.tokens, "ROOT"]
+    c = colored("/%s", "magenta") if color else "/%s"
+    e = [f"{e.rel}({tokens1[e.dep]}{c % e.dep}, {tokens1[e.gov]}{c % e.gov})"
          for e in sorted(parse.triples, key=lambda x: x.dep)]
 
     cols: list[list[str]] = [[] for _ in range(k)]
@@ -268,6 +300,6 @@ def pprint_ud_parse(
 
     # add padding to columns because zip stops at shortest iterator.
     for col in cols:
-        col.extend('' for _ in range(len(cols[0]) - len(col)))
+        col.extend("" for _ in range(len(cols[0]) - len(col)))
 
-    return tabulate(zip(*cols, strict=False), tablefmt='plain')
+    return tabulate(zip(*cols, strict=False), tablefmt="plain")

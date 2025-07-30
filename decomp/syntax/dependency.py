@@ -1,9 +1,38 @@
 # pylint: disable=R1717
 # pylint: disable=R0903
-"""Module for building/containing dependency trees from CoNLL"""
+"""Module for building and containing dependency trees from CoNLL format.
+
+This module provides functionality to parse CoNLL-U and CoNLL-X formatted
+dependency parse data and convert it into NetworkX DiGraph structures for
+further processing within the decomp package.
+
+Classes
+-------
+CoNLLDependencyTreeCorpus
+    Corpus containing dependency trees built from CoNLL data.
+DependencyGraphBuilder
+    Builder class for constructing dependency graphs from CoNLL format.
+
+Type Aliases
+------------
+ConllRow
+    Type alias for a single row of CoNLL data as a list of strings.
+ConllData
+    Type alias for complete CoNLL data as a list of ConllRow entries.
+
+Constants
+---------
+CONLL_HEAD
+    Column headers for CoNLL-U ('u') and CoNLL-X ('x') formats.
+CONLL_NODE_ATTRS
+    Node attribute mappings for different CoNLL format versions.
+CONLL_EDGE_ATTRS
+    Edge attribute mappings for different CoNLL format versions.
+"""
+
+from __future__ import annotations
 
 from collections.abc import Hashable
-from typing import TypeAlias
 
 from networkx import DiGraph
 from numpy import array
@@ -11,8 +40,8 @@ from numpy import array
 from ..corpus import Corpus
 
 
-ConllRow: TypeAlias = list[str]
-ConllData: TypeAlias = list[ConllRow]
+type ConllRow = list[str]
+type ConllData = list[ConllRow]
 
 CONLL_HEAD = {'u': ['id', 'form', 'lemma', 'upos', 'xpos',
                     'feats', 'head', 'deprel', 'deps', 'misc'],
@@ -32,7 +61,7 @@ CONLL_EDGE_ATTRS = {'u': {k: CONLL_HEAD['u'].index(k)
 
 
 class CoNLLDependencyTreeCorpus(Corpus[ConllData, DiGraph]):
-    """Class for building/containing dependency trees from CoNLL-U
+    """Class for building/containing dependency trees from CoNLL-U.
 
     Attributes
     ----------
@@ -49,14 +78,14 @@ class CoNLLDependencyTreeCorpus(Corpus[ConllData, DiGraph]):
 
 
 class DependencyGraphBuilder:
-    """A dependency graph builder"""
+    """A dependency graph builder."""
 
     @classmethod
     def from_conll(cls,
                    conll: ConllData,
                    treeid: str='',
                    spec: str='u') -> DiGraph:
-        """Build DiGraph from a CoNLL representation
+        """Build DiGraph from a CoNLL representation.
 
         Parameters
         ----------
@@ -92,7 +121,9 @@ class DependencyGraphBuilder:
         return depgraph
 
     @staticmethod
-    def _conll_node_attrs(treeid: str, row: ConllRow, spec: str) -> tuple[str, dict[str, str | int]]:
+    def _conll_node_attrs(
+        treeid: str, row: ConllRow, spec: str
+    ) -> tuple[str, dict[str, str | int]]:
         node_id = row[0]
 
         node_attrs: dict[str, str | int] = {'domain': 'syntax',

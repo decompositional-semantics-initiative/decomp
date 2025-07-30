@@ -1,5 +1,4 @@
-"""
-Module for representing CoNLL dependency tree corpora
+"""Module for representing CoNLL dependency tree corpora.
 
 This module provides readers for corpora represented using
 conll-formatted dependency parses. All dependency parses are read in

@@ -283,9 +283,10 @@ class UDSVisualization:
                 x_range_true.append(x_range[i])
                 y_range_true.append(y_range[i])
 
-        x_range = [None, *x_range.tolist(), None]
-        y_range = [None, *y_range.tolist(), None]
-        return x_range, y_range, np.max(y_range[1:-1])
+        x_range_list: list[float | None] = [None, *x_range.tolist(), None]
+        y_range_list: list[float | None] = [None, *y_range.tolist(), None]
+        max_y = float(np.max(y_range[1:-1])) if len(y_range) > 2 else None
+        return x_range_list, y_range_list, max_y
 
     def _add_arrowhead(
         self,

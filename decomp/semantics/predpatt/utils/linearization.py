@@ -9,62 +9,58 @@ be used for serialization, comparison, or display purposes.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Protocol, TypeVar, cast
+from typing import TYPE_CHECKING, cast
 
-from .ud_schema import dep_v1, postag
+from decomp.semantics.predpatt.utils.ud_schema import dep_v1, postag
 
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from ..core.argument import Argument
-    from ..core.predicate import Predicate, PredicateType
-    from ..core.token import Token
-    from ..extraction.engine import PredPattEngine
-    from ..utils.ud_schema import DependencyRelationsV1, DependencyRelationsV2
+    from decomp.semantics.predpatt.core.argument import Argument
+    from decomp.semantics.predpatt.core.predicate import Predicate, PredicateType
+    from decomp.semantics.predpatt.core.token import Token
+    from decomp.semantics.predpatt.extraction.engine import PredPattEngine
+    from decomp.semantics.predpatt.typing import HasPosition, T
+    from decomp.semantics.predpatt.utils.ud_schema import (
+        DependencyRelationsV1,
+        DependencyRelationsV2,
+    )
 
     UDSchema = type[DependencyRelationsV1] | type[DependencyRelationsV2]
     TokenIterator = Iterator[tuple[int, str]]
 else:
     # import at runtime to avoid circular imports
-    from ..core.predicate import PredicateType
+    from decomp.semantics.predpatt.core.predicate import PredicateType
+    from decomp.semantics.predpatt.typing import HasPosition, T
 
 
-class HasPosition(Protocol):
-    """Protocol for objects that have a position attribute."""
-
-    position: int
-
-
-class HasChildren(Protocol):
+class HasChildren(HasPosition):
     """Protocol for objects that can have children list."""
 
     children: list[Predicate]
 
 
-T = TypeVar('T', bound=HasPosition)
-
-
-# Regex patterns for parsing linearized forms
+# regex patterns for parsing linearized forms
 RE_ARG_ENC = re.compile(r"\^\(\( | \)\)\$")
 RE_ARG_LEFT_ENC = re.compile(r"\^\(\(")
 RE_ARG_RIGHT_ENC = re.compile(r"\)\)\$")
 RE_PRED_LEFT_ENC = re.compile(r"\^\(\(\(:a|\^\(\(\(")
 RE_PRED_RIGHT_ENC = re.compile(r"\)\)\)\$:a|\)\)\)\$")
 
-# Enclosure markers for different structures
+# enclosure markers for different structures
 ARG_ENC = ("^((", "))$")
 PRED_ENC = ("^(((", ")))$")
 ARGPRED_ENC = ("^(((:a", ")))$:a")
 
-# Suffix markers for different token types
+# suffix markers for different token types
 ARG_SUF = ":a"
 PRED_SUF = ":p"
 HEADER_SUF = "_h"
 ARG_HEADER = ARG_SUF + HEADER_SUF
 PRED_HEADER = PRED_SUF + HEADER_SUF
 
-# Special marker for embedded clausal arguments
+# special marker for embedded clausal arguments
 SOMETHING = "SOMETHING:a="
 
 
@@ -255,7 +251,11 @@ def get_prediates(pp: PredPattEngine, only_head: bool = False) -> list[str]:
         return ret
 
 
-def linearize(pp: PredPattEngine, opt: LinearizedPPOpts | None = None, ud: UDSchema = dep_v1) -> str:
+def linearize(
+    pp: PredPattEngine,
+    opt: LinearizedPPOpts | None = None,
+    ud: UDSchema = dep_v1,
+) -> str:
     """Convert PredPatt output to linearized form.
 
     Here we define the way to represent the predpatt output in a linearized
@@ -322,7 +322,7 @@ def flatten_and_enclose_pred(pred: Predicate, opt: LinearizedPPOpts, ud: UDSchem
     enc = PRED_ENC
     if is_argument:
         enc = ARGPRED_ENC
-    return f'{enc[0]} {repr_y} {enc[1]}'
+    return f"{enc[0]} {repr_y} {enc[1]}"
 
 
 def flatten_pred(pred: Predicate, opt: LinearizedPPOpts, ud: UDSchema) -> tuple[str, bool | None]:  # noqa: C901
@@ -344,18 +344,18 @@ def flatten_pred(pred: Predicate, opt: LinearizedPPOpts, ud: UDSchema) -> tuple[
     """
     ret = []
     args = pred.arguments
-    child_preds = pred.children if hasattr(pred, 'children') else []
+    child_preds = pred.children if hasattr(pred, "children") else []
 
     if pred.type == PredicateType.POSS:
         arg_i = 0
-        # Only take the first two arguments into account.
+        # only take the first two arguments into account.
         for y in sort_by_position(args[:2] + child_preds):
-            if hasattr(y, 'tokens') and hasattr(y, 'root'):
-                # Type narrow y to Argument
+            if hasattr(y, "tokens") and hasattr(y, "root"):
+                # type narrow y to Argument
                 arg_y = cast(Argument, y)
                 arg_i += 1
                 if arg_i == 1:
-                    # Generate the special ``poss'' predicate with label.
+                    # generate the special ``poss'' predicate with label.
                     poss = PredicateType.POSS.value + (PRED_HEADER if opt.distinguish_header
                                      else PRED_SUF)
                     ret += [phrase_and_enclose_arg(arg_y, opt), poss]
@@ -367,10 +367,10 @@ def flatten_pred(pred: Predicate, opt: LinearizedPPOpts, ud: UDSchema) -> tuple[
                 if opt.recursive:
                     repr_y = flatten_and_enclose_pred(pred_y, opt, ud)
                     ret.append(repr_y)
-        return ' '.join(ret), False
+        return " ".join(ret), False
 
     if pred.type in {PredicateType.AMOD, PredicateType.APPOS}:
-        # Special handling for `amod` and `appos` because the target
+        # special handling for `amod` and `appos` because the target
         # relation `is/are` deviates from the original word order.
         arg0 = None
         other_args = []
@@ -379,7 +379,7 @@ def flatten_pred(pred: Predicate, opt: LinearizedPPOpts, ud: UDSchema) -> tuple[
                 arg0 = arg
             else:
                 other_args.append(arg)
-        relation = 'is/are' + (PRED_HEADER if opt.distinguish_header
+        relation = "is/are" + (PRED_HEADER if opt.distinguish_header
                                else PRED_SUF)
         if arg0 is not None:
             ret = [phrase_and_enclose_arg(arg0, opt), relation]
@@ -388,7 +388,7 @@ def flatten_pred(pred: Predicate, opt: LinearizedPPOpts, ud: UDSchema) -> tuple[
             ret = [phrase_and_enclose_arg(args[0], opt), relation]
             args = args[1:]
 
-    # Mix arguments with predicate tokens. Use word order to derive a
+    # mix arguments with predicate tokens. Use word order to derive a
     # nice-looking name.
     items: list[Token | Argument | Predicate] = pred.tokens + args + child_preds
     if opt.only_head:
@@ -396,14 +396,14 @@ def flatten_pred(pred: Predicate, opt: LinearizedPPOpts, ud: UDSchema) -> tuple[
 
     sorted_mixed = sorted(items, key=lambda x: x.position)
     for _i, elem in enumerate(sorted_mixed):
-        if hasattr(elem, 'tokens') and hasattr(elem, 'root'):
-            # Type narrow elem to Argument
+        if hasattr(elem, "tokens") and hasattr(elem, "root"):
+            # type narrow elem to Argument
             arg_elem = cast(Argument, elem)
             if (arg_elem.isclausal() and arg_elem.root.gov in pred.tokens):
-                # In theory, "SOMETHING:a=" should be followed by a embedded
-                # predicate. But in the real world, the embedded predicate
+                # in theory, "SOMETHING:a=" should be followed by a embedded
+                # predicate. but in the real world, the embedded predicate
                 # could be broken, which means such predicate could be empty
-                # or missing. Therefore, it is necessary to add this special
+                # or missing. therefore, it is necessary to add this special
                 # symbol "SOMETHING:a=" to indicate that there is a embedded
                 # predicate viewed as an argument of the predicate under
                 # processing.
@@ -411,7 +411,7 @@ def flatten_pred(pred: Predicate, opt: LinearizedPPOpts, ud: UDSchema) -> tuple[
                 ret.append(phrase_and_enclose_arg(arg_elem, opt))
             else:
                 ret.append(phrase_and_enclose_arg(arg_elem, opt))
-        elif hasattr(elem, 'type') and hasattr(elem, 'arguments'):
+        elif hasattr(elem, "type") and hasattr(elem, "arguments"):
             # elem must be a Predicate if it has type and arguments
             pred_elem = cast(Predicate, elem)
             if opt.recursive:
@@ -424,7 +424,7 @@ def flatten_pred(pred: Predicate, opt: LinearizedPPOpts, ud: UDSchema) -> tuple[
                 ret.append(token_elem.text + PRED_HEADER)
             else:
                 ret.append(token_elem.text + PRED_SUF)
-    return ' '.join(ret), is_dep_of_pred(pred.root, ud)
+    return " ".join(ret), is_dep_of_pred(pred.root, ud)
 
 
 def phrase_and_enclose_arg(arg: Argument, opt: LinearizedPPOpts) -> str:
@@ -442,7 +442,7 @@ def phrase_and_enclose_arg(arg: Argument, opt: LinearizedPPOpts) -> str:
     str
         Formatted and enclosed argument string.
     """
-    repr_arg = ''
+    repr_arg = ""
     if opt.only_head:
         root_text = arg.root.text
         repr_arg = root_text + ARG_HEADER if opt.distinguish_header else root_text + ARG_SUF
@@ -453,7 +453,7 @@ def phrase_and_enclose_arg(arg: Argument, opt: LinearizedPPOpts) -> str:
                 ret.append(x.text + ARG_HEADER)
             else:
                 ret.append(x.text + ARG_SUF)
-        repr_arg = ' '.join(ret)
+        repr_arg = " ".join(ret)
     return f"{ARG_ENC[0]} {repr_arg} {ARG_ENC[1]}"
 
 
@@ -484,7 +484,7 @@ def collect_embebdded_tokens(tokens_iter: TokenIterator, start_token: str) -> li
         if missing_end_token == 0:
             return embedded_tokens
         embedded_tokens.append(t)
-    # No ending bracket for the predicate.
+    # no ending bracket for the predicate.
     return embedded_tokens
 
 
@@ -531,7 +531,7 @@ def get_something(something_idx: int, tokens_iter: TokenIterator) -> Argument:
             argument.type = SOMETHING
             return argument
     root = Token(something_idx, "SOMETHING", "")
-    from ..utils.ud_schema import dep_v1
+    from decomp.semantics.predpatt.utils.ud_schema import dep_v1
     arg = Argument(root, dep_v1, [])
     arg.tokens = [root]
     return arg
@@ -575,25 +575,25 @@ def construct_arg_from_flat(tokens_iter: TokenIterator) -> Argument:
     Argument
         Constructed argument.
     """
-    # Import at runtime to avoid circular imports
-    from ..core.argument import Argument
-    from ..core.token import Token
+    # import at runtime to avoid circular imports
+    from decomp.semantics.predpatt.core.argument import Argument
+    from decomp.semantics.predpatt.core.token import Token
 
     empty_token = Token(-1, "", "")
-    from ..utils.ud_schema import dep_v1
+    from decomp.semantics.predpatt.utils.ud_schema import dep_v1
     argument = Argument(empty_token, dep_v1, [])
     idx = -1
     for idx, t in tokens_iter:
         if t == ARG_ENC[1]:
             if argument.root.position == -1:
-                # Special case: No head is found.
+                # special case: no head is found.
                 argument.position = idx
             return argument
         # add argument token
         if ARG_SUF in t:
             text, _ = t.rsplit(ARG_SUF, 1)
         else:
-            # Special case: a predicate tag is given.
+            # special case: a predicate tag is given.
             text, _ = t.rsplit(":", 1)
         token = Token(idx, text, "")
         argument.tokens.append(token)
@@ -601,7 +601,7 @@ def construct_arg_from_flat(tokens_iter: TokenIterator) -> Argument:
         if t.endswith(ARG_HEADER):
             argument.root = token
             argument.position = token.position
-    # No ending bracket for the argument.
+    # no ending bracket for the argument.
     if argument.root.position == -1:
         # Special case: No head is found.
         argument.position = idx
@@ -623,11 +623,11 @@ def construct_pred_from_flat(tokens: list[str]) -> list[Predicate]:
     """
     if tokens is None or len(tokens) == 0:
         return []
-    # Construct one-layer predicates
+    # construct one-layer predicates
     ret = []
-    # Use this empty_token to initialize a predicate or argument.
+    # use this empty_token to initialize a predicate or argument.
     empty_token = Token(-1, "", "")
-    # Initialize a predicate in advance, because argument or sub-level
+    # initialize a predicate in advance, because argument or sub-level
     # predicates may come before we meet the first predicate token, and
     # they need to build connection with the predicate.
     current_predicate = Predicate(empty_token)
@@ -637,9 +637,9 @@ def construct_pred_from_flat(tokens: list[str]) -> list[Predicate]:
             argument = construct_arg_from_flat(tokens_iter)
             current_predicate.arguments.append(argument)
         elif t in {PRED_ENC[0], ARGPRED_ENC[0]}:
-            # Get the embedded tokens, including special tokens.
+            # get the embedded tokens, including special tokens.
             embedded = collect_embebdded_tokens(tokens_iter, t)
-            # Recursively construct sub-level predicates.
+            # recursively construct sub-level predicates.
             preds = construct_pred_from_flat(embedded)
             ret += preds
         elif t == SOMETHING:
@@ -742,8 +742,8 @@ def argument_names(args: list[Argument]) -> dict[Argument, str]:
     # there more than 26 arguments.
     name = {}
     for i, arg in enumerate(args):
-        c = i // 26 if i >= 26 else ''
-        name[arg] = f'?{chr(97+(i % 26))}{c}'
+        c = i // 26 if i >= 26 else ""
+        name[arg] = f"?{chr(97+(i % 26))}{c}"
     return name
 
 
@@ -765,14 +765,14 @@ def format_pred(pred: Predicate, indent: str = "\t") -> str:
     lines = []
     name = argument_names(pred.arguments)
     # Format predicate
-    lines.append(f'{indent}{_format_predicate(pred, name)}')
+    lines.append(f"{indent}{_format_predicate(pred, name)}")
     # Format arguments
     for arg in pred.arguments:
         s = arg.phrase()
         if hasattr(arg, "type") and arg.type == SOMETHING:
             s = "SOMETHING := " + s
-        lines.append(f'{indent*2}{name[arg]}: {s}')
-    return '\n'.join(lines)
+        lines.append(f"{indent*2}{name[arg]}: {s}")
+    return "\n".join(lines)
 
 
 def _format_predicate(pred: Predicate, name: dict[Argument, str]) -> str:
@@ -792,19 +792,19 @@ def _format_predicate(pred: Predicate, name: dict[Argument, str]) -> str:
     """
     ret: list[str] = []
     args: list[Argument] = pred.arguments
-    # Mix arguments with predicate tokens. Use word order to derive a
+    # mix arguments with predicate tokens. Use word order to derive a
     # nice-looking name.
     mixed_items: list[Token | Argument] = pred.tokens + args
     for _i, y in enumerate(sort_by_position(mixed_items)):
-        if hasattr(y, 'tokens') and hasattr(y, 'root'):
-            # It's an Argument
+        if hasattr(y, "tokens") and hasattr(y, "root"):
+            # it's an Argument
             assert isinstance(y, Argument)
             ret.append(name[y])
         else:
-            # It's a Token
-            assert hasattr(y, 'text')
+            # it's a Token
+            assert hasattr(y, "text")
             ret.append(y.text)
-    return ' '.join(ret)
+    return " ".join(ret)
 
 
 def pprint(s: str) -> str:
@@ -834,17 +834,13 @@ def test(data: str) -> None:
     data : str
         Path to test data file.
     """
-    from ..extraction.engine import PredPattEngine as PredPatt
-    from ..parsing.loader import load_conllu
+    from decomp.semantics.predpatt.extraction.engine import PredPattEngine as PredPatt
+    from decomp.semantics.predpatt.parsing.loader import load_conllu
 
     def fail(g: list[str], t: list[str]) -> bool:
         if len(g) != len(t):
             return True
-        else:
-            for i in g:
-                if i not in t:
-                    return True
-        return False
+        return any(i not in t for i in g)
 
     def no_color(x: str, _: str) -> str:
         return x
@@ -853,7 +849,7 @@ def test(data: str) -> None:
     for _sent_id, ud_parse in load_conllu(data):
         count += 1
         pp = PredPatt(ud_parse)
-        sent = ' '.join((t if isinstance(t, str) else t.text) for t in pp.tokens)
+        sent = " ".join((t if isinstance(t, str) else t.text) for t in pp.tokens)
         linearized_pp = linearize(pp)
         gold_preds = [predicate.format(c=no_color, track_rule=False)
                 for predicate in pp.instances if likely_to_be_pred(predicate)]
@@ -869,4 +865,4 @@ def test(data: str) -> None:
                 f"Yours:\n{test_str}\n\n"
             )
     print(ret)
-    print(f"You have test {count} instances, and {failed} failed the test.")
+    print(f"you have test {count} instances, and {failed} failed the test.")

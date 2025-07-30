@@ -2,27 +2,58 @@
 
 This module contains the PredPattEngine class which is responsible for orchestrating
 the entire predicate-argument extraction pipeline from Universal Dependencies parses.
+The engine coordinates all phases of extraction from predicate identification through
+argument resolution and coordination expansion.
+
+Classes
+-------
+PredPattEngine
+    Main extraction engine coordinating the complete predicate-argument pipeline.
+
+Functions
+---------
+gov_looks_like_predicate
+    Check if a governor token appears to be a predicate based on its dependents.
+sort_by_position
+    Sort objects by their position attribute.
+convert_parse
+    Convert dependency parse from integer indices to Token objects.
+
+See Also
+--------
+decomp.semantics.predpatt.core : Core classes for predicates and arguments
+decomp.semantics.predpatt.rules : Linguistic rules for extraction
+decomp.semantics.predpatt.parsing : Parse handling and conversion
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+import itertools
 from typing import TYPE_CHECKING
 
-from ..core.options import PredPattOpts
-from ..typing import T, UDSchema
-from ..utils.ud_schema import dep_v1, dep_v2, postag
+from decomp.semantics.predpatt.core.argument import Argument
+from decomp.semantics.predpatt.core.options import PredPattOpts
+from decomp.semantics.predpatt.core.predicate import Predicate, PredicateType
+from decomp.semantics.predpatt.core.token import Token
+from decomp.semantics.predpatt.parsing.udparse import DepTriple, UDParse
+from decomp.semantics.predpatt.rules import argument_rules, predicate_rules
+from decomp.semantics.predpatt.rules.base import Rule
+from decomp.semantics.predpatt.utils.ud_schema import dep_v1, dep_v2, postag
+from decomp.semantics.predpatt.utils.visualization import pprint as pprint_predpatt
 
 
 if TYPE_CHECKING:
-    from ..core.argument import Argument
-    from ..core.predicate import Predicate, PredicateType
-    from ..core.token import Token
-    from ..parsing.udparse import DepTriple, UDParse
-    from ..rules.base import Rule
-else:
-    # import at runtime to avoid circular imports
-    from ..core.predicate import PredicateType
+    from collections.abc import Callable, Iterator
+
+    from decomp.semantics.predpatt.typing import T, UDSchema
+
+# Optional imports for sentence parsing functionality
+try:
+    from decomp.semantics.predpatt.util.UDParser import Parser
+    _UDPARSER_AVAILABLE = True
+except ImportError:
+    Parser = None
+    _UDPARSER_AVAILABLE = False
 
 
 
@@ -44,7 +75,7 @@ def gov_looks_like_predicate(e: DepTriple, ud: UDSchema) -> bool:
     bool
         True if the governor looks like a predicate based on its arguments.
     """
-    # if e.gov "looks like" a predicate because it has potential arguments
+    # if e.gov looks like a predicate because it has potential arguments
     if e.gov.tag in {postag.VERB} and e.rel in {
             ud.nmod, ud.nmod_npmod, ud.obl, ud.obl_npmod}:
         return True
@@ -84,10 +115,6 @@ def convert_parse(parse: UDParse, ud: UDSchema) -> UDParse:
     UDParse
         Parse converted to use Token objects with full dependency structure.
     """
-    from ..core.token import Token
-    from ..parsing.udparse import DepTriple
-    from ..parsing.udparse import UDParse as ModernUDParse
-
     tokens: list[Token] = []
     for i, w in enumerate(parse.tokens):
         text = w if isinstance(w, str) else w.text
@@ -99,12 +126,12 @@ def convert_parse(parse: UDParse, ud: UDSchema) -> UDParse:
     for i, _ in enumerate(tokens):
         tokens[i].gov = (None if i not in parse.governor or parse.governor[i].gov == -1
                          else tokens[parse.governor[i].gov])
-        tokens[i].gov_rel = parse.governor[i].rel if i in parse.governor else 'root'
+        tokens[i].gov_rel = parse.governor[i].rel if i in parse.governor else "root"
         tokens[i].dependents = [convert_edge(e) for e in parse.dependents[i]]
 
-    # Cast to list[str | Token] using list() to satisfy type checker
+    # cast to list[str | Token] using list() to satisfy type checker
     tokens_for_parse: list[str | Token] = list(tokens)
-    return ModernUDParse(tokens_for_parse, parse.tags, [convert_edge(e) for e in parse.triples], ud)
+    return UDParse(tokens_for_parse, parse.tags, [convert_edge(e) for e in parse.triples], ud)
 
 
 class PredPattEngine:
@@ -168,8 +195,12 @@ class PredPattEngine:
         self.extract()
 
     @classmethod
-    def from_constituency(cls, parse_string: str, cacheable: bool = True,
-                         opts: PredPattOpts | None = None) -> PredPattEngine:
+    def from_constituency(
+        cls,
+        parse_string: str,
+        cacheable: bool = True,
+        opts: PredPattOpts | None = None,
+    ) -> PredPattEngine:
         """Create PredPattEngine from a constituency parse string.
 
         Converts constituency parse to Universal Dependencies automatically.
@@ -189,7 +220,8 @@ class PredPattEngine:
         PredPattEngine
             Engine instance with extraction results from converted parse.
         """
-        from ..util.UDParser import Parser
+        if not _UDPARSER_AVAILABLE:
+            raise ImportError("UDParser not available. Install required dependencies.")
         global _PARSER
         if _PARSER is None:
             _PARSER = Parser.get_instance(cacheable)
@@ -197,8 +229,12 @@ class PredPattEngine:
         return cls(parse, opts=opts)
 
     @classmethod
-    def from_sentence(cls, sentence: str, cacheable: bool = True,
-                     opts: PredPattOpts | None = None) -> PredPattEngine:
+    def from_sentence(
+        cls,
+        sentence: str,
+        cacheable: bool = True,
+        opts: PredPattOpts | None = None,
+    ) -> PredPattEngine:
         """Create PredPattEngine from a sentence string.
 
         Parses sentence and converts to Universal Dependencies automatically.
@@ -218,7 +254,8 @@ class PredPattEngine:
         PredPattEngine
             Engine instance with extraction results from parsed sentence.
         """
-        from ..util.UDParser import Parser
+        if not _UDPARSER_AVAILABLE:
+            raise ImportError("UDParser not available. Install required dependencies.")
         global _PARSER
         if _PARSER is None:
             _PARSER = Parser.get_instance(cacheable)
@@ -246,72 +283,65 @@ class PredPattEngine:
         This method modifies the engine state and populates the instances
         attribute with the final extraction results.
         """
-        # TODO: Implement extraction pipeline phases
-        # This will be implemented in subsequent phases following the
-        # exact order documented in PREDPATT_EXTRACTION_PIPELINE.md
-
-        # Phase 1: Predicate Root Identification
+        # phase 1: predicate root identification
         events = self.identify_predicate_roots()
 
-        # Phase 2: Event Dictionary Creation
+        # phase 2: event dictionary creation
         self.event_dict = {p.root.position: p for p in events}
 
-        # Phase 3: Argument Root Extraction
+        # phase 3: argument root extraction
         for e in events:
             e.arguments = self.argument_extract(e)
 
-        # Phase 4: Argument Resolution
+        # phase 4: argument resolution
         events = sort_by_position(self._argument_resolution(events))
 
-        # Phase 5: Argument Sorting
+        # phase 5: argument sorting
         for p in events:
             p.arguments.sort(key=lambda x: x.root.position)
 
-        # Store events before phrase extraction (needed for phrase extraction rules)
+        # store events before phrase extraction (needed for phrase extraction rules)
         self.events = events
 
-        # Phase 6-9: Extract phrases and process each predicate
+        # phase 6-9: extract phrases and process each predicate
         # CRITICAL: Must process each predicate completely before moving to next
-        # This matches the original implementation's structure
         for p in events:
-            # Phase 6: Phrase Extraction
+            # phase 6: phrase extraction
             self._pred_phrase_extract(p)
             for arg in p.arguments:
                 if not arg.is_reference() and arg.tokens == []:
                     self._arg_phrase_extract(p, arg)
 
-            # Phase 7: Argument Simplification (Optional)
+            # phase 7: argument simplification (optional)
             if self.options.simple:
-                # Simplify predicate's by removing non-core arguments.
+                # simplify predicate's by removing non-core arguments.
                 p.arguments = [arg for arg in p.arguments if self._simple_arg(p, arg)]
 
-            # Phase 8: Conjunction Resolution
+            # phase 8: conjunction resolution
             if p.root.gov_rel == self.ud.conj:
-                # Special cases for predicate conjunctions.
+                # special cases for predicate conjunctions.
                 self._conjunction_resolution(p)
 
-            # Phase 9: Coordination Expansion
+            # phase 9: coordination expansion
             if len(p.tokens):
                 self.instances.extend(self.expand_coord(p))
 
-        # Phase 10: Relative Clause Cleanup
+        # phase 10: relative clause cleanup
         if self.options.resolve_relcl and self.options.borrow_arg_for_relcl:
-            # Filter dummy arguments (that, which, who)
+            # filter dummy arguments (that, which, who)
             for p in self.instances:
-                from ..rules import argument_rules as R  # noqa: N812
-                if any(isinstance(r, R.PredResolveRelcl) for r in p.rules):
-                    new = [a for a in p.arguments if a.phrase() not in {'that', 'which', 'who'}]
+                if any(isinstance(r, argument_rules.PredResolveRelcl) for r in p.rules):
+                    new = [a for a in p.arguments if a.phrase() not in {"that", "which", "who"}]
                     if new != p.arguments:
                         p.arguments = new
-                        p.rules.append(R.EnRelclDummyArgFilter())
+                        p.rules.append(argument_rules.EnRelclDummyArgFilter())
 
-        # Phase 11: Final Cleanup
+        # phase 11: final cleanup
         self._cleanup()
         self._remove_broken_predicates()
 
-        # Store results
+        # store results
         self.events = events
-        # self.instances is now populated by coordination expansion and cleanup
 
     def identify_predicate_roots(self) -> list[Predicate]:  # noqa: C901
         """Predicate root identification.
@@ -325,12 +355,13 @@ class PredPattEngine:
         list[Predicate]
             List of predicate objects sorted by position.
         """
-        from ..core.predicate import Predicate
-        from ..rules import predicate_rules as R  # noqa: N812
-
         roots = {}
 
-        def nominate(root: Token, rule: Rule, type_: PredicateType = PredicateType.NORMAL) -> Predicate:
+        def nominate(
+            root: Token,
+            rule: Rule,
+            type_: PredicateType = PredicateType.NORMAL,
+        ) -> Predicate:
             """Create or update a predicate instance with rules.
 
             Parameters
@@ -353,53 +384,53 @@ class PredPattEngine:
                 roots[root].rules.append(rule)
             return roots[root]
 
-        # Apply predicate identification rules in exact order
+        # apply predicate identification rules in exact order
         for e in self.edges:
-            # Punctuation can't be a predicate
+            # punctuation can't be a predicate
             if not e.dep.isword:
                 continue
 
-            # Special predicate types (conditional on options)
+            # special predicate types (conditional on options)
             if self.options.resolve_appos and e.rel == self.ud.appos:
-                nominate(e.dep, R.D(), PredicateType.APPOS)
+                nominate(e.dep, predicate_rules.D(), PredicateType.APPOS)
 
             if self.options.resolve_poss and e.rel == self.ud.nmod_poss:
-                nominate(e.dep, R.V(), PredicateType.POSS)
+                nominate(e.dep, predicate_rules.V(), PredicateType.POSS)
 
-            # If resolve amod flag is enabled, then the dependent of an amod
+            # if resolve amod flag is enabled, then the dependent of an amod
             # arc is a predicate (but only if the dependent is an
-            # adjective). We also filter cases where ADJ modifies ADJ.
+            # adjective). we also filter cases where ADJ modifies ADJ.
             if (self.options.resolve_amod and e.rel == self.ud.amod
                 and e.dep.tag == postag.ADJ and e.gov.tag != postag.ADJ):
-                nominate(e.dep, R.E(), PredicateType.AMOD)
+                nominate(e.dep, predicate_rules.E(), PredicateType.AMOD)
 
-            # Avoid 'dep' arcs, they are normally parse errors.
-            # Note: we allow amod, poss, and appos predicates, even with a dep arc.
+            # avoid 'dep' arcs, they are normally parse errors.
+            # note: we allow amod, poss, and appos predicates, even with a dep arc.
             if e.gov.gov_rel == self.ud.dep:
                 continue
 
-            # Core predicate patterns
-            # If it has a clausal subject or complement its a predicate.
+            # core predicate patterns
+            # if it has a clausal subject or complement its a predicate.
             if e.rel in {self.ud.ccomp, self.ud.csubj, self.ud.csubjpass}:
-                nominate(e.dep, R.A1())
+                nominate(e.dep, predicate_rules.A1())
 
-            # Dependent of clausal modifier is a predicate.
+            # dependent of clausal modifier is a predicate.
             if (self.options.resolve_relcl
                 and e.rel in {self.ud.advcl, self.ud.acl, self.ud.aclrelcl}):
-                nominate(e.dep, R.B())
+                nominate(e.dep, predicate_rules.B())
 
             if e.rel == self.ud.xcomp:
-                # Dependent of an xcomp is a predicate
-                nominate(e.dep, R.A2())
+                # dependent of an xcomp is a predicate
+                nominate(e.dep, predicate_rules.A2())
 
             if gov_looks_like_predicate(e, self.ud):
-                # Look into e.gov
+                # look into e.gov
                 if e.rel == self.ud.ccomp and e.gov.argument_like():
-                    # In this case, e.gov looks more like an argument than a predicate
+                    # in this case, e.gov looks more like an argument than a predicate
                     #
-                    # For example, declarative context sentences
+                    # for example, declarative context sentences
                     #
-                    # We expressed [ our hope that someday the world will know peace ]
+                    # we expressed [ our hope that someday the world will know peace ]
                     #                     |                                ^
                     #                    gov ------------ ccomp --------- dep
                     #
@@ -407,19 +438,19 @@ class PredPattEngine:
                 elif e.gov.gov_rel == self.ud.xcomp:
                     # TODO: I don't think we need this case.
                     if e.gov.gov is not None and not e.gov.gov.hard_to_find_arguments():
-                        nominate(e.gov, R.C(e))
+                        nominate(e.gov, predicate_rules.C(e))
                 else:
                     if not e.gov.hard_to_find_arguments():
-                        nominate(e.gov, R.C(e))
+                        nominate(e.gov, predicate_rules.C(e))
 
-        # Add all conjoined predicates using breadth-first search
+        # add all conjoined predicates using breadth-first search
         q = list(roots.values())
         while q:
             gov = q.pop()
             if gov.root.dependents:  # check if dependents exist
                 for e in gov.root.dependents:
                     if e.rel == self.ud.conj and self.qualified_conjoined_predicate(e.gov, e.dep):
-                        q.append(nominate(e.dep, R.F()))
+                        q.append(nominate(e.dep, predicate_rules.F()))
 
         return sort_by_position(list(roots.values()))
 
@@ -466,9 +497,6 @@ class PredPattEngine:
         list[Argument]
             List of argument objects for this predicate.
         """
-        from ..core.argument import Argument
-        from ..rules import argument_rules as R  # noqa: N812
-
         arguments = []
 
         # Apply argument identification rules in exact order
@@ -476,49 +504,57 @@ class PredPattEngine:
             for e in predicate.root.dependents:
                 # Core arguments (g1 rule)
                 if e.rel in {self.ud.nsubj, self.ud.nsubjpass, self.ud.dobj, self.ud.iobj}:
-                    arguments.append(Argument(e.dep, self.ud, [R.G1(e)]))
+                    arguments.append(Argument(e.dep, self.ud, [argument_rules.G1(e)]))
 
                 # Nominal modifiers (h1 rule) - exclude AMOD predicates
                 elif (e.rel is not None and
                       (e.rel.startswith(self.ud.nmod) or e.rel.startswith(self.ud.obl))
                       and predicate.type != PredicateType.AMOD):
-                    arguments.append(Argument(e.dep, self.ud, [R.H1()]))
+                    arguments.append(Argument(e.dep, self.ud, [argument_rules.H1()]))
 
                 # Clausal arguments (k rule)
                 elif (e.rel in {self.ud.ccomp, self.ud.csubj, self.ud.csubjpass}
                       or (self.options.cut and e.rel == self.ud.xcomp)):
-                    arguments.append(Argument(e.dep, self.ud, [R.K()]))
+                    arguments.append(Argument(e.dep, self.ud, [argument_rules.K()]))
 
-        # Indirect modifiers (h2 rule) - through advmod
+        # indirect modifiers (h2 rule) - through advmod
         if predicate.root.dependents is not None:
             for e in predicate.root.dependents:
-                if e.rel == self.ud.advmod:
-                    if e.dep.dependents is not None:
-                        for tr in e.dep.dependents:
-                            if (tr.rel is not None and
-                                (tr.rel.startswith(self.ud.nmod) or tr.rel in {self.ud.obl})):
-                                arguments.append(Argument(tr.dep, self.ud, [R.H2()]))
+                if e.rel == self.ud.advmod and e.dep.dependents is not None:
+                    for tr in e.dep.dependents:
+                        if (tr.rel is not None and
+                            (tr.rel.startswith(self.ud.nmod) or tr.rel in {self.ud.obl})):
+                            arguments.append(Argument(tr.dep, self.ud, [argument_rules.H2()]))
 
-        # Special predicate type arguments
+        # special predicate type arguments
         if predicate.type == PredicateType.AMOD:
             # i rule: AMOD predicates get their governor
             if predicate.root.gov is None:
-                raise ValueError(f"AMOD predicate {predicate.root} must have a governor but gov is None")
-            arguments.append(Argument(predicate.root.gov, self.ud, [R.I()]))
+                raise ValueError(
+                    f"AMOD predicate {predicate.root} must have a governor "
+                    "but gov is None"
+                )
+            arguments.append(Argument(predicate.root.gov, self.ud, [argument_rules.I()]))
 
         elif predicate.type == PredicateType.APPOS:
             # j rule: APPOS predicates get their governor
             if predicate.root.gov is None:
-                raise ValueError(f"APPOS predicate {predicate.root} must have a governor but gov is None")
-            arguments.append(Argument(predicate.root.gov, self.ud, [R.J()]))
+                raise ValueError(
+                    f"APPOS predicate {predicate.root} must have a governor "
+                    "but gov is None"
+                )
+            arguments.append(Argument(predicate.root.gov, self.ud, [argument_rules.J()]))
 
         elif predicate.type == PredicateType.POSS:
             # w1 rule: POSS predicates get their governor
             if predicate.root.gov is None:
-                raise ValueError(f"POSS predicate {predicate.root} must have a governor but gov is None")
-            arguments.append(Argument(predicate.root.gov, self.ud, [R.W1()]))
+                raise ValueError(
+                    f"POSS predicate {predicate.root} must have a governor "
+                    "but gov is None"
+                )
+            arguments.append(Argument(predicate.root.gov, self.ud, [argument_rules.W1()]))
             # w2 rule: POSS predicates also get themselves as argument
-            arguments.append(Argument(predicate.root, self.ud, [R.W2()]))
+            arguments.append(Argument(predicate.root, self.ud, [argument_rules.W2()]))
 
         return arguments
 
@@ -542,10 +578,7 @@ class PredPattEngine:
         list[Predicate]
             List of predicates with resolved arguments.
         """
-        from ..core.argument import Argument
-        from ..rules import argument_rules as R  # noqa: N812
-
-        # Lexicalized exceptions for object control verbs
+        # lexicalized exceptions for object control verbs
 
         # 1. XComp merging (if not cut mode)
         for p in list(events):
@@ -556,11 +589,11 @@ class PredPattEngine:
                 if g is not None:
                     # Extend the arguments of event's governor
                     args = [arg for arg in p.arguments]
-                    g.rules.append(R.L())
+                    g.rules.append(argument_rules.L())
                     g.arguments.extend(args)
                     # copy arg rules of `event` to its gov's rule tracker.
                     for arg in args:
-                        arg.rules.append(R.L())
+                        arg.rules.append(argument_rules.L())
                     # remove p in favor of it's xcomp governor g.
                     events = [e for e in events if e.position != p.position]
 
@@ -573,12 +606,15 @@ class PredPattEngine:
                     and p.root.gov_rel is not None
                     and p.root.gov_rel.startswith(self.ud.acl)):
                 if p.root.gov is None:
-                    raise ValueError(f"Expected governor for token {p.root.text} with acl relation but found None")
-                new = Argument(p.root.gov, self.ud, [R.ArgResolveRelcl()])
-                p.rules.append(R.PredResolveRelcl())
+                    raise ValueError(
+                        f"Expected governor for token {p.root.text} with acl relation "
+                        "but found None"
+                    )
+                new = Argument(p.root.gov, self.ud, [argument_rules.ArgResolveRelcl()])
+                p.rules.append(argument_rules.PredResolveRelcl())
                 p.arguments.append(new)
 
-        # 3. Conjunction argument borrowing
+        # 3. conjunction argument borrowing
         for p in sort_by_position(events):
             if p.root.gov_rel == self.ud.conj:
                 assert self.event_dict is not None, "event_dict should be initialized by phase 2"
@@ -586,14 +622,17 @@ class PredPattEngine:
                 if g is not None:
                     if not p.has_subj():
                         if g.has_subj():
-                            # If an event governed by a conjunction is missing a
+                            # if an event governed by a conjunction is missing a
                             # subject, try borrowing the subject from the other
                             # event.
                             subj = g.subj()
                             if subj is None:
-                                raise ValueError(f"Expected subject for predicate {g.root.text} but found None")
+                                raise ValueError(
+                        f"Expected subject for predicate {g.root.text} "
+                        "but found None"
+                    )
                             new_arg = subj.reference()
-                            new_arg.rules.append(R.BorrowSubj(new_arg, g))
+                            new_arg.rules.append(argument_rules.BorrowSubj(new_arg, g))
                             p.arguments.append(new_arg)
                         else:
                             # Try borrowing the subject from g's xcomp (if any)
@@ -601,26 +640,32 @@ class PredPattEngine:
                             if g_ is not None and g_.has_subj():
                                 subj = g_.subj()
                                 if subj is None:
-                                    raise ValueError(f"Expected subject for predicate {g_.root.text} but found None")
+                                    raise ValueError(
+                        f"Expected subject for predicate {g_.root.text} "
+                        "but found None"
+                    )
                                 new_arg = subj.reference()
-                                new_arg.rules.append(R.BorrowSubj(new_arg, g_))
+                                new_arg.rules.append(argument_rules.BorrowSubj(new_arg, g_))
                                 p.arguments.append(new_arg)
                     if len(p.arguments) == 0 and g.has_obj():
-                            # If an event governed by a conjunction is missing an
+                            # if an event governed by a conjunction is missing an
                             # argument, try borrowing the object from the other
                             # event.
                             obj = g.obj()
                             if obj is None:
-                                raise ValueError(f"Expected object for predicate {g.root.text} but found None")
+                                raise ValueError(
+                        f"Expected object for predicate {g.root.text} "
+                        "but found None"
+                    )
                             new_arg = obj.reference()
-                            new_arg.rules.append(R.BorrowObj(new_arg, g))
+                            new_arg.rules.append(argument_rules.BorrowObj(new_arg, g))
                             p.arguments.append(new_arg)
 
-        # 4. Adverbial clause subject borrowing
+        # 4. adverbial clause subject borrowing
         for p in sort_by_position(events):
-            # Lexicalized exceptions: from/for marked clauses
+            # lexicalized exceptions: from/for marked clauses
             from_for = (p.root.dependents is not None and
-                       any([e.dep.text in ['from', 'for'] and e.rel == 'mark'
+                       any([e.dep.text in ["from", "for"] and e.rel == "mark"
                            for e in p.root.dependents]))
 
             if p.root.gov_rel == self.ud.advcl and not p.has_subj() and not from_for:
@@ -629,12 +674,15 @@ class PredPattEngine:
                 if g is not None and g.has_subj():
                     subj = g.subj()
                     if subj is None:
-                        raise ValueError(f"Expected subject for predicate {g.root.text} but found None")
+                        raise ValueError(
+                        f"Expected subject for predicate {g.root.text} "
+                        "but found None"
+                    )
                     new_arg = subj.reference()
-                    new_arg.rules.append(R.BorrowSubj(new_arg, g))
+                    new_arg.rules.append(argument_rules.BorrowSubj(new_arg, g))
                     p.arguments.append(new_arg)
 
-        # 5. Cut mode processing (if cut enabled)
+        # 5. cut mode processing (if cut enabled)
         for p in sort_by_position(events):
             if p.root.gov_rel == self.ud.xcomp and self.options.cut:
                 for g in self.parents(p):
@@ -646,9 +694,12 @@ class PredPattEngine:
                         #      g  g.obj    p
                         obj = g.obj()
                         if obj is None:
-                            raise ValueError(f"Expected object for predicate {g.root.text} but found None")
+                            raise ValueError(
+                        f"Expected object for predicate {g.root.text} "
+                        "but found None"
+                    )
                         new_arg = obj.reference()
-                        new_arg.rules.append(R.CutBorrowObj(new_arg, g))
+                        new_arg.rules.append(argument_rules.CutBorrowObj(new_arg, g))
                         p.arguments.append(new_arg)
                         break
                     elif g.has_subj():
@@ -657,30 +708,35 @@ class PredPattEngine:
                         #  g.subj    g       p
                         subj = g.subj()
                         if subj is None:
-                            raise ValueError(f"Expected subject for predicate {g.root.text} but found None")
+                            raise ValueError(
+                        f"Expected subject for predicate {g.root.text} "
+                        "but found None"
+                    )
                         new_arg = subj.reference()
-                        new_arg.rules.append(R.CutBorrowSubj(new_arg, g))
+                        new_arg.rules.append(argument_rules.CutBorrowSubj(new_arg, g))
                         p.arguments.append(new_arg)
                         break
                     elif g.root.gov_rel in self.ud.ADJ_LIKE_MODS:
                         # PredPatt recognizes structures which are shown to be accurate .
                         #                         ^                  ^      ^
                         #                       g.subj               g      p
-                        from ..core.argument import Argument
                         if g.root.gov is None:
-                            raise ValueError(f"Expected governor for token {g.root.text} with ADJ_LIKE_MODS relation but found None")
+                            raise ValueError(
+                        f"Expected governor for token {g.root.text} with ADJ_LIKE_MODS relation "
+                        "but found None"
+                    )
                         new_arg = Argument(g.root.gov, self.ud, [])
-                        new_arg.rules.append(R.CutBorrowOther(new_arg, g))
+                        new_arg.rules.append(argument_rules.CutBorrowOther(new_arg, g))
                         p.arguments.append(new_arg)
                         break
 
-        # 6. Special advcl borrowing (from/for marked clauses)
+        # 6. special advcl borrowing (from/for marked clauses)
         for p in sort_by_position(events):
             if (p.root.gov_rel == self.ud.advcl
                     and not p.has_subj()
                     and p.root.dependents is not None
-                    and any([e.dep.text in ['from', 'for']
-                                    and e.rel == 'mark'
+                    and any([e.dep.text in ["from", "for"]
+                                    and e.rel == "mark"
                                     for e in p.root.dependents])
                 ):
                 assert self.event_dict is not None, "event_dict should be initialized by phase 2"
@@ -689,12 +745,15 @@ class PredPattEngine:
                 if g is not None and g.has_obj():
                     obj = g.obj()
                     if obj is None:
-                        raise ValueError(f"Expected object for predicate {g.root.text} but found None")
+                        raise ValueError(
+                        f"Expected object for predicate {g.root.text} "
+                        "but found None"
+                    )
                     new_arg = obj.reference()
-                    new_arg.rules.append(R.BorrowSubj(new_arg, g))
+                    new_arg.rules.append(argument_rules.BorrowSubj(new_arg, g))
                     p.arguments.append(new_arg)
 
-        # 7. General subject borrowing for missing subjects
+        # 7. general subject borrowing for missing subjects
         # Note: The following rule improves coverage a lot in Spanish and
         # Portuguese. Without it, miss a lot of arguments.
         for p in sort_by_position(events):
@@ -711,9 +770,12 @@ class PredPattEngine:
                     if g.has_subj():
                         subj = g.subj()
                         if subj is None:
-                            raise ValueError(f"Expected subject for predicate {g.root.text} but found None")
+                            raise ValueError(
+                        f"Expected subject for predicate {g.root.text} "
+                        "but found None"
+                    )
                         new_arg = subj.reference()
-                        new_arg.rules.append(R.BorrowSubj(new_arg, g))
+                        new_arg.rules.append(argument_rules.BorrowSubj(new_arg, g))
                         p.arguments.append(new_arg)
                     else:
                         # Still no subject. Try looking at xcomp of conjunction root.
@@ -721,9 +783,12 @@ class PredPattEngine:
                         if g is not None and g.has_subj():
                             subj = g.subj()
                             if subj is None:
-                                raise ValueError(f"Expected subject for predicate {g.root.text} but found None")
+                                raise ValueError(
+                        f"Expected subject for predicate {g.root.text} "
+                        "but found None"
+                    )
                             new_arg = subj.reference()
-                            new_arg.rules.append(R.BorrowSubj(new_arg, g))
+                            new_arg.rules.append(argument_rules.BorrowSubj(new_arg, g))
                             p.arguments.append(new_arg)
 
         return events
@@ -746,7 +811,9 @@ class PredPattEngine:
             The top-most xcomp predicate or None if not found.
         """
         c = predicate.root.gov
-        assert self.event_dict is not None, "event_dict should be initialized before calling _get_top_xcomp"
+        assert self.event_dict is not None, (
+            "event_dict should be initialized before calling _get_top_xcomp"
+        )
         while c is not None and c.gov_rel == self.ud.xcomp and c.position in self.event_dict:
             c = c.gov
         return self.event_dict.get(c.position) if c else None
@@ -768,7 +835,9 @@ class PredPattEngine:
             Each governing predicate in the chain.
         """
         c = predicate.root.gov
-        assert self.event_dict is not None, "event_dict should be initialized before calling parents"
+        assert self.event_dict is not None, (
+            "event_dict should be initialized before calling parents"
+        )
         while c is not None:
             if c.position in self.event_dict:
                 yield self.event_dict[c.position]
@@ -791,16 +860,14 @@ class PredPattEngine:
         list[Predicate]
             List of predicate instances with expanded argument combinations.
         """
-        import itertools
-
-        # Don't expand amod unless resolve_conj is enabled
+        # don't expand amod unless resolve_conj is enabled
         if not self.options.resolve_conj or predicate.type == PredicateType.AMOD:
             predicate.arguments = [arg for arg in predicate.arguments if arg.tokens]
             if not predicate.arguments:
                 return []
             return [predicate]
 
-        # Cleanup (strip before we take conjunctions)
+        # cleanup (strip before we take conjunctions)
         self._strip(predicate)
         for arg in predicate.arguments:
             if not arg.is_reference():
@@ -840,10 +907,10 @@ class PredPattEngine:
         p : Predicate
             The conjoined predicate to process.
         """
-        from ..rules import predicate_rules as R  # noqa: N812
-
-        # pull aux and neg from governing predicate.
-        assert self.event_dict is not None, "event_dict should be initialized before _conjunction_resolution"
+        # pull aux and neg from governing predicate
+        assert self.event_dict is not None, (
+            "event_dict should be initialized before _conjunction_resolution"
+        )
         g = self.event_dict.get(p.root.gov.position) if p.root.gov else None
         if g is not None and p.share_subj(g):
             # Only applied when p and g share subj. For example,
@@ -852,11 +919,14 @@ class PredPattEngine:
             #         -----------conj--------------
             # No need to add "did" to "okay" in this case.
             if g.root.dependents is None:
-                raise TypeError(f"Cannot borrow aux/neg from predicate {g.root.text}: root token has no dependency information")
+                raise TypeError(
+                    f"Cannot borrow aux/neg from predicate {g.root.text}: "
+                    "root token has no dependency information"
+                )
             for d in g.root.dependents:
                 if d.rel in {self.ud.neg}: # {ud.aux, ud.neg}:
                     p.tokens.append(d.dep)
-                    p.rules.append(R.PredConjBorrowAuxNeg(g, d.dep))
+                    p.rules.append(predicate_rules.PredConjBorrowAuxNeg(g, d.dep))
 
         # Post-processing of predicate name for predicate conjunctions
         # involving xcomp.
@@ -881,7 +951,7 @@ class PredPattEngine:
                             and (y.gov != p.root.gov or y.gov_rel != self.ud.advmod)
                             and y.gov_rel != self.ud.case):
                             p.tokens.append(y)
-                            p.rules.append(R.PredConjBorrowTokensXcomp(g, y))
+                            p.rules.append(predicate_rules.PredConjBorrowTokensXcomp(g, y))
 
     def _strip(self, thing: Predicate | Argument) -> None:
         """Simplify expression by removing punct, cc, and mark from beginning and end of tokens.
@@ -898,10 +968,6 @@ class PredPattEngine:
         thing : Predicate | Argument
             The object to strip punctuation from.
         """
-        from ..core.argument import Argument
-        from ..rules import predicate_rules as R  # noqa: N812
-        from ..utils.ud_schema import postag
-
         if self.options.big_args:
             return
 
@@ -933,7 +999,7 @@ class PredPattEngine:
                        (i+1 < len(tokens) and tokens[i+1].gov_rel != self.ud.punct))
                       or tk.position in protected)]
         if orig_len != len(tokens):
-            thing.rules.append(R.U())
+            thing.rules.append(predicate_rules.U())
         thing.tokens = tokens
 
     def _remove_broken_predicates(self) -> None:
@@ -971,7 +1037,10 @@ class PredPattEngine:
             s = q.pop()
             yield s
             if s.dependents is None:
-                raise ValueError(f"Expected dependents list for token {s.text} but found None")
+                raise ValueError(
+                        f"Expected dependents list for token {s.text} "
+                        "but found None"
+                    )
             q.extend(e.dep for e in s.dependents if follow(e))
 
     def _pred_phrase_extract(self, predicate: Predicate) -> None:
@@ -986,9 +1055,6 @@ class PredPattEngine:
         predicate : Predicate
             The predicate to extract phrase tokens for.
         """
-        from ..rules import argument_rules as AR  # noqa: N812
-        from ..rules import predicate_rules as R  # noqa: N812
-
         assert predicate.tokens == []
         if predicate.type == PredicateType.POSS:
             predicate.tokens = [predicate.root]
@@ -1010,12 +1076,15 @@ class PredPattEngine:
                 if (predicate.root.gov_rel not in self.ud.ADJ_LIKE_MODS
                     or predicate.root.gov != arg.root):
                     if arg.root.dependents is None:
-                        raise ValueError(f"Expected dependents list for token {arg.root.text} but found None")
+                        raise ValueError(
+                            f"Expected dependents list for token {arg.root.text} "
+                            "but found None"
+                        )
                     for e in arg.root.dependents:
                         if e.rel == self.ud.case:
-                            arg.rules.append(AR.MoveCaseTokenToPred(e.dep))
+                            arg.rules.append(argument_rules.MoveCaseTokenToPred(e.dep))
                             predicate.tokens.extend(self.subtree(e.dep))
-                            predicate.rules.append(R.N6(e.dep))
+                            predicate.rules.append(predicate_rules.N6(e.dep))
 
     def _pred_phrase_helper(self, pred: Predicate, e: DepTriple) -> bool:
         """Determine which tokens to extract for the predicate phrase.
@@ -1036,38 +1105,36 @@ class PredPattEngine:
         bool
             True if we should include this edge in the predicate phrase.
         """
-        from ..rules import predicate_rules as R  # noqa: N812
-
         if e.dep in {a.root for a in pred.arguments}:
             # pred token shouldn't be argument root token.
-            pred.rules.append(R.N2(e.dep))
+            pred.rules.append(predicate_rules.N2(e.dep))
             return False
         if self.events is None:
             raise ValueError("Expected events list to be initialized but found None")
         if e.dep in {p.root for p in self.events} and e.rel != self.ud.amod:
             # pred token shouldn't be other pred root token.
-            pred.rules.append(R.N3(e.dep))
+            pred.rules.append(predicate_rules.N3(e.dep))
             return False
         if e.rel in self.ud.PRED_DEPS_TO_DROP:
             # pred token shouldn't be a dependent of any rels above.
-            pred.rules.append(R.N4(e.dep))
+            pred.rules.append(predicate_rules.N4(e.dep))
             return False
         if ((e.gov == pred.root or e.gov.gov_rel == self.ud.xcomp)
             and e.rel in {self.ud.cc, self.ud.conj}):
             # pred token shouldn't take conjuncts of pred
             # root token or xcomp's dependent.
-            pred.rules.append(R.N5(e.dep))
+            pred.rules.append(predicate_rules.N5(e.dep))
             return False
         if self.options.simple:
             # Simple predicates don't have nodes governed by advmod or aux.
             if e.rel == self.ud.advmod:
-                pred.rules.append(R.Q())
+                pred.rules.append(predicate_rules.Q())
                 return False
             elif e.rel == self.ud.aux:
-                pred.rules.append(R.R())
+                pred.rules.append(predicate_rules.R())
                 return False
 
-        pred.rules.append(R.N1(e.dep))
+        pred.rules.append(predicate_rules.N1(e.dep))
         return True
 
     def _arg_phrase_extract(self, predicate: Predicate, argument: Argument) -> None:
@@ -1112,13 +1179,11 @@ class PredPattEngine:
         bool
             True if we should include this edge in the argument phrase.
         """
-        from ..rules import argument_rules as R  # noqa: N812
-
         if self.options.big_args:
             return True
 
         if pred.has_token(e.dep):
-            arg.rules.append(R.PredicateHas(e.dep))
+            arg.rules.append(argument_rules.PredicateHas(e.dep))
             return False
 
         # Case tokens are added to predicate, not argument.
@@ -1126,11 +1191,11 @@ class PredPattEngine:
             return False
 
         if self.options.resolve_appos and e.rel in {self.ud.appos}:
-            arg.rules.append(R.DropAppos(e.dep))
+            arg.rules.append(argument_rules.DropAppos(e.dep))
             return False
 
         if e.rel in {self.ud.dep}:
-            arg.rules.append(R.DropUnknown(e.dep))
+            arg.rules.append(argument_rules.DropUnknown(e.dep))
             return False
 
         # Direct dependents of the predicate root of the follow types shouldn't
@@ -1139,23 +1204,23 @@ class PredPattEngine:
         # the following direct dependent of the argument root.
         if (arg.root == pred.root.gov and e.gov == arg.root
                 and e.rel in self.ud.SPECIAL_ARG_DEPS_TO_DROP):
-            arg.rules.append(R.SpecialArgDropDirectDep(e.dep))
+            arg.rules.append(argument_rules.SpecialArgDropDirectDep(e.dep))
             return False
 
         if self.options.resolve_conj:
 
             # Remove top-level conjunction tokens if work expanding conjunctions.
             if e.gov == arg.root and e.rel in {self.ud.cc, self.ud.cc_preconj}:
-                arg.rules.append(R.DropCc(e.dep))
+                arg.rules.append(argument_rules.DropCc(e.dep))
                 return False
 
             # Argument shouldn't include anything from conjunct subtree.
             if e.gov == arg.root and e.rel == self.ud.conj:
-                arg.rules.append(R.DropConj(e.dep))
+                arg.rules.append(argument_rules.DropConj(e.dep))
                 return False
 
         # If none of the filters fired, then we accept the token.
-        arg.rules.append(R.CleanArgToken(e.dep))
+        arg.rules.append(argument_rules.CleanArgToken(e.dep))
         return True
 
     def _simple_arg(self, pred: Predicate, arg: Argument) -> bool:
@@ -1177,8 +1242,6 @@ class PredPattEngine:
         bool
             True if the argument should be kept, False if it should be filtered out.
         """
-        from ..rules import predicate_rules as R  # noqa: N812
-
         if pred.type == PredicateType.POSS:
             return True
         if (pred.root.gov_rel in self.ud.ADJ_LIKE_MODS
@@ -1193,7 +1256,7 @@ class PredPattEngine:
         if arg.root.gov_rel in self.ud.NMODS:
             # remove the argument which is a nominal modifier.
             # this condition check must be in front of the following one.
-            pred.rules.append(R.P1())
+            pred.rules.append(predicate_rules.P1())
             return False
         # keep argument directly depending on pred root token,
         # except argument is the dependent of 'xcomp' rel.
@@ -1229,5 +1292,4 @@ class PredPattEngine:
         str
             Pretty-printed string representation of predicates and arguments.
         """
-        from ..utils.visualization import pprint as pprint_predpatt
         return pprint_predpatt(self, color=color, track_rule=track_rule)
