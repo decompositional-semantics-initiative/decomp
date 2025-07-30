@@ -100,16 +100,16 @@ class Corpus[InGraph, OutGraph](metaclass=ABCMeta):
 
     @property
     def graphids(self) -> list[Hashable]:
-        """The graph ids in corpus"""
+        """The graph ids in corpus."""
         return list(self._graphs)
 
     @property
     def ngraphs(self) -> int:
-        """Number of graphs in corpus"""
+        """Number of graphs in corpus."""
         return len(self._graphs)
 
     def sample(self, k: int) -> dict[Hashable, OutGraph]:
-        """Sample k graphs without replacement
+        """Sample k graphs without replacement.
 
         Parameters
         ----------

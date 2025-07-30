@@ -512,7 +512,7 @@ class UDSSentenceGraph(UDSGraph):
     def semantics_edges(self,
                         nodeid: str | None = None,
                         edgetype: str | None = None) -> dict[EdgeKey, EdgeAttributes]:
-        """The edges between semantics nodes.
+        """Return edges between semantics nodes.
 
         Parameters
         ----------
@@ -541,7 +541,7 @@ class UDSSentenceGraph(UDSGraph):
     @lru_cache(maxsize=128)  # noqa: B019
     def argument_edges(self,
                        nodeid: str | None = None) -> dict[EdgeKey, EdgeAttributes]:
-        """The edges between predicates and their arguments.
+        """Return edges between predicates and their arguments.
 
         Parameters
         ----------
@@ -553,7 +553,7 @@ class UDSSentenceGraph(UDSGraph):
     @lru_cache(maxsize=128)  # noqa: B019
     def argument_head_edges(self,
                             nodeid: str | None = None) -> dict[EdgeKey, EdgeAttributes]:
-        """The edges between nodes and their semantic heads.
+        """Return edges between nodes and their semantic heads.
 
         Parameters
         ----------
@@ -565,7 +565,7 @@ class UDSSentenceGraph(UDSGraph):
     @lru_cache(maxsize=128)  # noqa: B019
     def syntax_edges(self,
                      nodeid: str | None = None) -> dict[EdgeKey, EdgeAttributes]:
-        """The edges between syntax nodes.
+        """Return edges between syntax nodes.
 
         Parameters
         ----------
@@ -587,7 +587,7 @@ class UDSSentenceGraph(UDSGraph):
     @lru_cache(maxsize=128)  # noqa: B019
     def instance_edges(self,
                        nodeid: str | None = None) -> dict[EdgeKey, EdgeAttributes]:
-        """The edges between syntax nodes and semantics nodes.
+        """Return edges between syntax nodes and semantics nodes.
 
         Parameters
         ----------
@@ -610,7 +610,7 @@ class UDSSentenceGraph(UDSGraph):
         nodeid: str,
         attrs: list[str] | None = None
     ) -> dict[int, list[AttributeValue]]:
-        """The span corresponding to a semantics node.
+        """Get the span corresponding to a semantics node.
 
         Parameters
         ----------
@@ -648,7 +648,7 @@ class UDSSentenceGraph(UDSGraph):
         nodeid: str,
         attrs: list[str] | None = None
     ) -> tuple[int, list[AttributeValue]]:
-        """The head corresponding to a semantics node.
+        """Get the head corresponding to a semantics node.
 
         Parameters
         ----------
