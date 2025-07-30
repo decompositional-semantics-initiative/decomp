@@ -198,9 +198,6 @@ class TestUDSCorpus:
         print()
         #print(uds_cached.metadata.to_dict())
 
-        raise Exception
-
-
         _assert_correct_corpus_initialization(uds_cached, raw)
         #_assert_document_annotation(uds_cached, raw)
 

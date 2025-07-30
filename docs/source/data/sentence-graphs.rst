@@ -4,7 +4,9 @@
 .. _PredPatt: https://github.com/hltcoe/PredPatt
 
 The semantic graphs that form the second layer of annotation in the
-dataset are produced by the PredPatt_ system. PredPatt takes as input
+dataset are produced by the PredPatt_ system. Since v0.3.0, the Decomp 
+toolkit has had its own reimplemenation of PredPatt, which is available in the 
+:py:mod:`decomp.semantics.predpatt` module. PredPatt takes as input
 a UD parse for a single sentence and produces a set of predicates and
 set of arguments of each predicate in that sentence. Both predicates
 and arguments are associated with a single head token in the sentence
@@ -15,7 +17,7 @@ the head token.
 For example, given the dependency parse for the sentence *Chris gave
 the book to Pat .*, PredPatt produces the following.
 
-::
+.. code-block:: text
    
   ?a gave ?b to ?c
       ?a: Chris
@@ -74,7 +76,7 @@ that points to a predicate node: clausal subordination.
 For example, given the dependency parse for the sentence *Gene thought
 that Chris gave the book to Pat .*, PredPatt produces the following.
 
-::
+.. code-block:: text
 
   ?a thinks ?b
       ?a: Gene

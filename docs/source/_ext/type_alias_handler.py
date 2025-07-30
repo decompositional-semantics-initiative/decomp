@@ -22,15 +22,9 @@ class TypeAliasDirective(SphinxDirective):
     
     def run(self):
         name = self.arguments[0]
-        module = self.options.get('module', '')
         type_def = self.options.get('type', '')
         
         # Create the signature
-        if module:
-            full_name = f"{module}.{name}"
-        else:
-            full_name = name
-            
         sig_node = nodes.paragraph()
         sig_node += nodes.strong(text='type ')
         sig_node += nodes.literal(text=f"{name} = {type_def}")

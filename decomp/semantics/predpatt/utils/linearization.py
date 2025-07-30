@@ -260,21 +260,28 @@ def linearize(
 
     Here we define the way to represent the predpatt output in a linearized
     form:
-        1. Add a label to each token to indicate that it is a predicate
-           or argument token:
-                (1) argument_token:a
-                (2) predicate_token:p
-        2. Build the dependency tree among the heads of predicates.
-        3. Print the predpatt output in a depth-first manner. At each layer,
-           items are sorted by position. There are following items:
-                (1) argument_token
-                (2) predicate_token
-                (3) predicate that depends on token in this layer.
-        4. The output of each layer is enclosed by a pair of parentheses:
-                (1) Special parentheses "(:a predpatt_output ):a" are used
-                    for predicates that are dependents of clausal predicate.
-                (2) Normal parentheses "( predpatt_output )" are used for
-                    for predicates that are noun dependents.
+
+    1. Add a label to each token to indicate that it is a predicate
+       or argument token:
+
+       - argument_token:a
+       - predicate_token:p
+
+    2. Build the dependency tree among the heads of predicates.
+
+    3. Print the predpatt output in a depth-first manner. At each layer,
+       items are sorted by position. There are following items:
+
+       - argument_token
+       - predicate_token
+       - predicate that depends on token in this layer
+
+    4. The output of each layer is enclosed by a pair of parentheses:
+
+       - Special parentheses "(:a predpatt_output ):a" are used
+         for predicates that are dependents of clausal predicate.
+       - Normal parentheses "( predpatt_output )" are used for
+         for predicates that are noun dependents.
 
     Parameters
     ----------

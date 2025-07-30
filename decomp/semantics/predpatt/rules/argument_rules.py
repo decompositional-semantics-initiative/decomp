@@ -262,7 +262,7 @@ class ArgResolveRelcl(ArgumentResolution):
     """Resolve argument of a predicate inside a relative clause.
 
     The missing argument that we take is rooted at the governor of the `acl`
-    dependency relation (type acl:*) pointing at the embedded predicate.
+    dependency relation (type ``acl:*``) pointing at the embedded predicate.
     """
 
     pass

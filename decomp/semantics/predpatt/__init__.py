@@ -1,7 +1,4 @@
-# pylint: disable=W0221
-# pylint: disable=R0903
-# pylint: disable=R1704
-"""PredPatt semantic role labeling module.
+"""PredPatt predicate-argument structure extraction module.
 
 This module provides functionality for extracting predicate-argument structures
 from Universal Dependencies parses using the PredPatt framework. It identifies

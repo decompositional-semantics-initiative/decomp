@@ -1,7 +1,7 @@
 decomp.semantics.predpatt
 =========================
 
-PredPatt semantic role labeling module for extracting predicate-argument structures from Universal Dependencies parses.
+PredPatt module for extracting predicate-argument structures from Universal Dependencies parses.
 
 This module provides functionality for identifying verbal predicates and their arguments through linguistic rules applied to dependency parse trees. The extracted semantic structures can be integrated with the Universal Decompositional Semantics (UDS) framework for further annotation.
 
@@ -79,17 +79,9 @@ Usage Example
                 for pred in predpatt.predicates:
                     print(f"{pred.root.text}: {[arg.phrase() for arg in pred.arguments]}")
 
-.. note::
-
-   The code examples above include **copy buttons** for easy copying. The modern documentation
-   also features:
-   
-   - Enhanced type hint rendering with :py:class:`~typing.Union` and modern Python 3.12+ syntax
-   - Cross-references to Python standard library (e.g., :py:class:`list`, :py:class:`dict`)
-   - Links to dependency projects via intersphinx (e.g., :py:class:`networkx.DiGraph`)
-
 .. automodule:: decomp.semantics.predpatt
     :members:
+    :exclude-members: Argument, Predicate, Token, PredPattOpts
     :undoc-members:
     :show-inheritance:
 

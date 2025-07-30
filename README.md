@@ -102,31 +102,33 @@ To start a Python interactive prompt instead:
 docker run -it decomp python
 ```
 
-If you prefer to install directly to your local environment, simply
-use `pip`.
+If you prefer to install directly to your local environment, you can
+use `pip` to install from GitHub:
 
 ```bash
-pip install --user git+git://github.com/decompositional-semantics-initiative/decomp.git
+pip install git+https://github.com/decompositional-semantics-initiative/decomp.git
 ```
 
-You can also clone and use the included `setup.py`.
+**Requirements**: Python 3.12 or higher is required.
+
+You can also clone the repository and install from source:
 
 ```bash
-git clone git://github.com/decompositional-semantics-initiative/decomp.git
+git clone https://github.com/decompositional-semantics-initiative/decomp.git
 cd decomp
-pip install --user --no-cache-dir -r ./requirements.txt
-python setup.py install
+pip install .
 ```
 
-If you would like to install the package for the purposes of
-development, use:
+For development, install the package in editable mode with development dependencies:
 
 ```bash
-git clone git://github.com/decompositional-semantics-initiative/decomp.git
+git clone https://github.com/decompositional-semantics-initiative/decomp.git
 cd decomp
-pip install --user --no-cache-dir -r ./requirements.txt
-python setup.py develop
+pip install -e ".[dev]"
 ```
+
+This installs the package in editable mode along with development tools
+including `pytest`, `ruff`, `mypy`, and `ipython`.
 
 # Quick Start
 

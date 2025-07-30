@@ -31,37 +31,45 @@ Installation
 
     .. tab-item:: pip
 
-        Decomp can also be installed to a local environment using ``pip``.
+        Decomp can be installed from GitHub using ``pip``:
 
         .. code-block:: bash
 
-            pip install git+git://github.com/decompositional-semantics-initiative/decomp.git
+            pip install git+https://github.com/decompositional-semantics-initiative/decomp.git
 
-    .. tab-item:: setup.py
+        **Requirements**: Python 3.12 or higher is required.
 
-        As an alternative to ``pip`` you can clone the decomp repository and use the included ``setup.py`` with the ``install`` flag.
+    .. tab-item:: From Source
+
+        To install from source, clone the repository and use ``pip``:
 
         .. code-block:: bash
 
             git clone https://github.com/decompositional-semantics-initiative/decomp.git
             cd decomp
-            pip install --user --no-cache-dir -r ./requirements.txt
-            python setup.py install
+            pip install .
+
+        This will automatically install all dependencies specified in ``pyproject.toml``.
 
     .. tab-item:: Development
 
-        If you would like to install the package for the purposes of development, you can use the included ``setup.py`` with the ``develop`` flag.
+        For development, install the package in editable mode with development dependencies:
 
         .. code-block:: bash
 
             git clone https://github.com/decompositional-semantics-initiative/decomp.git
             cd decomp
-            pip install --user --no-cache-dir -r ./requirements.txt
-            python setup.py develop
+            pip install -e ".[dev]"
 
+        This installs:
+        
+        - The package in editable mode (changes to source code take effect immediately)
+        - Development tools: ``pytest``, ``ruff``, ``mypy``, and ``ipython``
+        - All runtime dependencies
 
-If you have trouble installing via setup.py or pip on OS X Mojave, adding the following environment variables may help.
+        To run tests:
 
-.. code-block:: bash 
+        .. code-block:: bash
 
-    CXXFLAGS=-stdlib=libc++ CFLAGS=-stdlib=libc++ python setup.py install
+            pytest              # Run fast tests only
+            pytest --runslow    # Run all tests including slow tests

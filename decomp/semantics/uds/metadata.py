@@ -52,9 +52,13 @@ type UDSDataTypeDict = dict[
 
 type PropertyMetadataDict = dict[
     str,
-    set[str] | dict[str, UDSDataTypeDict]
+    list[str] | dict[str, UDSDataTypeDict]
 ]
-"""Dictionary representation of property metadata including value/confidence types."""
+"""Dictionary representation of property metadata including value/confidence types.
+
+Note: While annotators are stored internally as sets, they are serialized as lists
+for JSON compatibility.
+"""
 
 type AnnotationMetadataDict = dict[
     str,
@@ -643,21 +647,8 @@ class UDSPropertyMetadata:
             return UDSPropertyMetadata(value, confidence)
 
         else:
-            annotators_data = metadata['annotators']
-
-            # handle various types - annotators can be set or list
-            if isinstance(annotators_data, set):
-                return UDSPropertyMetadata(value, confidence, annotators_data)
-
-            # check if it's a list and convert to set
-            # mypy has trouble with type narrowing here
-            try:
-                return UDSPropertyMetadata(
-                value, confidence, set(annotators_data)
-            )
-
-            except TypeError:
-                raise TypeError('annotators must be a set or list') from None
+            annotators = set(metadata['annotators'])
+            return UDSPropertyMetadata(value, confidence, annotators)
 
     def to_dict(self) -> PropertyMetadataDict:
         """Convert to dictionary representation.
@@ -674,7 +665,8 @@ class UDSPropertyMetadata:
 
         if self._annotators is not None:
             # return type needs to match PropertyMetadataDict
-            result: PropertyMetadataDict = {'annotators': self._annotators}
+            # Convert set to list for JSON serialization
+            result: PropertyMetadataDict = {'annotators': list(self._annotators)}
 
             # cast datatypes to the appropriate type for PropertyMetadataDict
             result.update(

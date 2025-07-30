@@ -3,11 +3,7 @@ Release Notes
 
 This page documents all releases of the Decomp toolkit, including major features, bug fixes, and breaking changes.
 
-.. contents::
-   :local:
-   :depth: 2
-
-Version 0.3.0 (2025-01-30)
+Version 0.3.0 (2025-07-30)
 ---------------------------
 
 **PredPatt Integration and Python 3.12+ Modernization**
@@ -109,14 +105,13 @@ Major Features
    - Improved debugging and analysis capabilities
 
 **Visualization Module**
-   - New ``decomp.vis`` module for graph visualization
+   - New :py:mod:`decomp.vis` module for graph visualization
    - Interactive graph exploration and analysis tools
    - Enhanced debugging capabilities for semantic structures
 
 **Advanced Metadata**
-   - Sophisticated metadata handling and processing
+   - Annotation metadata handling and processing
    - Annotation confidence and provenance tracking
-   - Enhanced quality assurance features
 
 Technical Changes
 ~~~~~~~~~~~~~~~~~
@@ -255,4 +250,3 @@ Support and Resources
 - **Documentation**: https://decomp.readthedocs.io/
 - **Source Code**: https://github.com/decompositional-semantics-initiative/decomp
 - **Issue Tracker**: https://github.com/decompositional-semantics-initiative/decomp/issues
-- **Dataset**: https://decomp.io/
