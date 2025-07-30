@@ -19,11 +19,8 @@ from predpatt.patt import Token as OriginalToken
 from predpatt.patt import argument_names as orig_argument_names
 
 from decomp.semantics.predpatt import rules
-from decomp.semantics.predpatt.core.predicate import AMOD as MOD_AMOD
-from decomp.semantics.predpatt.core.predicate import APPOS as MOD_APPOS
-from decomp.semantics.predpatt.core.predicate import NORMAL as MOD_NORMAL
-from decomp.semantics.predpatt.core.predicate import POSS as MOD_POSS
-from decomp.semantics.predpatt.core.predicate import Predicate as ModernPredicate
+from decomp.semantics.predpatt.core.predicate import PredicateType
+from decomp.semantics.predpatt.core.predicate import Predicate as ModernPredicate, PredicateType
 from decomp.semantics.predpatt.core.predicate import argument_names as mod_argument_names
 from decomp.semantics.predpatt.parsing.udparse import DepTriple
 from decomp.semantics.predpatt.rules import *
@@ -38,10 +35,10 @@ class TestPredicateComparison:
 
     def test_constants_identical(self):
         """Test predicate type constants are identical."""
-        assert ORIG_NORMAL == MOD_NORMAL == "normal"
-        assert ORIG_POSS == MOD_POSS == "poss"
-        assert ORIG_APPOS == MOD_APPOS == "appos"
-        assert ORIG_AMOD == MOD_AMOD == "amod"
+        assert ORIG_NORMAL == PredicateType.NORMAL.value == "normal"
+        assert ORIG_POSS == PredicateType.POSS.value == "poss"
+        assert ORIG_APPOS == PredicateType.APPOS.value == "appos"
+        assert ORIG_AMOD == PredicateType.AMOD.value == "amod"
 
     def test_argument_names_identical(self):
         """Test argument_names function produces identical output."""
@@ -84,7 +81,7 @@ class TestPredicateComparison:
         root = OriginalToken(position=5, text="eat", tag="VB")
 
         orig = OriginalPredicate(root, type_=ORIG_POSS)
-        modern = ModernPredicate(root, type_=MOD_POSS)
+        modern = ModernPredicate(root, type_=PredicateType.POSS)
 
         # add arguments
         arg1 = OriginalArgument(OriginalToken(position=2, text="cat", tag="NN"))
@@ -180,7 +177,7 @@ class TestPredicateComparison:
         root = OriginalToken(position=2, text="'s", tag="POS")
 
         orig = OriginalPredicate(root, type_=ORIG_POSS)
-        modern = ModernPredicate(root, type_=MOD_POSS)
+        modern = ModernPredicate(root, type_=PredicateType.POSS)
 
         # empty tokens
         assert orig.is_broken() == modern.is_broken() == True
@@ -254,7 +251,7 @@ class TestPredicateComparison:
         root = OriginalToken(position=2, text="'s", tag="POS")
 
         orig = OriginalPredicate(root, type_=ORIG_POSS)
-        modern = ModernPredicate(root, type_=MOD_POSS)
+        modern = ModernPredicate(root, type_=PredicateType.POSS)
 
         arg1 = OriginalArgument(OriginalToken(position=1, text="John", tag="NNP"))
         arg2 = OriginalArgument(OriginalToken(position=3, text="book", tag="NN"))

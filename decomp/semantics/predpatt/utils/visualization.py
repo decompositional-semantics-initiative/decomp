@@ -96,15 +96,15 @@ def format_predicate(
     str
         Formatted predicate string with argument placeholders
     """
-    from decomp.semantics.predpatt.core.predicate import AMOD, APPOS, POSS
+    from decomp.semantics.predpatt.core.predicate import PredicateType
 
     ret = []
     args = predicate.arguments
 
-    if predicate.type == POSS:
-        return ' '.join([name[args[0]], c(POSS, 'yellow'), name[args[1]]])
+    if predicate.type == PredicateType.POSS:
+        return ' '.join([name[args[0]], c(PredicateType.POSS.value, 'yellow'), name[args[1]]])
 
-    if predicate.type in {AMOD, APPOS}:
+    if predicate.type in {PredicateType.AMOD, PredicateType.APPOS}:
         # Special handling for `amod` and `appos` because the target
         # relation `is/are` deviates from the original word order.
         arg0 = None
@@ -173,7 +173,7 @@ def format_predicate_instance(
     str
         Formatted predicate instance with arguments listed below
     """
-    from decomp.semantics.predpatt.core.predicate import NORMAL
+    from decomp.semantics.predpatt.core.predicate import PredicateType
 
     lines = []
     name = argument_names(predicate.arguments)
@@ -190,7 +190,7 @@ def format_predicate_instance(
     # Format arguments
     for arg in predicate.arguments:
         if (arg.isclausal() and arg.root.gov in predicate.tokens and
-                predicate.type == NORMAL):
+                predicate.type == PredicateType.NORMAL):
             s = c('SOMETHING', 'yellow') + ' := ' + arg.phrase()
         else:
             s = c(arg.phrase(), 'green')

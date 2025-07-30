@@ -16,13 +16,14 @@ from ..utils.ud_schema import dep_v1, dep_v2, postag
 
 if TYPE_CHECKING:
     from ..core.argument import Argument
-    from ..core.predicate import Predicate
+    from ..core.predicate import Predicate, PredicateType
     from ..core.token import Token
     from ..parsing.udparse import DepTriple, UDParse
     from ..rules.base import Rule
+else:
+    # import at runtime to avoid circular imports
+    from ..core.predicate import PredicateType
 
-# predicate type constants
-NORMAL, POSS, APPOS, AMOD = ("normal", "poss", "appos", "amod")
 
 
 _PARSER = None
@@ -329,7 +330,7 @@ class PredPattEngine:
 
         roots = {}
 
-        def nominate(root: Token, rule: Rule, type_: str = NORMAL) -> Predicate:
+        def nominate(root: Token, rule: Rule, type_: PredicateType = PredicateType.NORMAL) -> Predicate:
             """Create or update a predicate instance with rules.
 
             Parameters
@@ -338,8 +339,8 @@ class PredPattEngine:
                 The root token of the predicate.
             rule : Rule
                 The rule that identified this predicate.
-            type_ : str, optional
-                The predicate type (NORMAL, POSS, APPOS, AMOD).
+            type_ : PredicateType, optional
+                The predicate type (PredicateType.NORMAL, POSS, APPOS, AMOD).
 
             Returns
             -------
@@ -360,17 +361,17 @@ class PredPattEngine:
 
             # Special predicate types (conditional on options)
             if self.options.resolve_appos and e.rel == self.ud.appos:
-                nominate(e.dep, R.D(), APPOS)
+                nominate(e.dep, R.D(), PredicateType.APPOS)
 
             if self.options.resolve_poss and e.rel == self.ud.nmod_poss:
-                nominate(e.dep, R.V(), POSS)
+                nominate(e.dep, R.V(), PredicateType.POSS)
 
             # If resolve amod flag is enabled, then the dependent of an amod
             # arc is a predicate (but only if the dependent is an
             # adjective). We also filter cases where ADJ modifies ADJ.
             if (self.options.resolve_amod and e.rel == self.ud.amod
                 and e.dep.tag == postag.ADJ and e.gov.tag != postag.ADJ):
-                nominate(e.dep, R.E(), AMOD)
+                nominate(e.dep, R.E(), PredicateType.AMOD)
 
             # Avoid 'dep' arcs, they are normally parse errors.
             # Note: we allow amod, poss, and appos predicates, even with a dep arc.
@@ -480,7 +481,7 @@ class PredPattEngine:
                 # Nominal modifiers (h1 rule) - exclude AMOD predicates
                 elif (e.rel is not None and
                       (e.rel.startswith(self.ud.nmod) or e.rel.startswith(self.ud.obl))
-                      and predicate.type != AMOD):
+                      and predicate.type != PredicateType.AMOD):
                     arguments.append(Argument(e.dep, self.ud, [R.H1()]))
 
                 # Clausal arguments (k rule)
@@ -499,19 +500,19 @@ class PredPattEngine:
                                 arguments.append(Argument(tr.dep, self.ud, [R.H2()]))
 
         # Special predicate type arguments
-        if predicate.type == AMOD:
+        if predicate.type == PredicateType.AMOD:
             # i rule: AMOD predicates get their governor
             if predicate.root.gov is None:
                 raise ValueError(f"AMOD predicate {predicate.root} must have a governor but gov is None")
             arguments.append(Argument(predicate.root.gov, self.ud, [R.I()]))
 
-        elif predicate.type == APPOS:
+        elif predicate.type == PredicateType.APPOS:
             # j rule: APPOS predicates get their governor
             if predicate.root.gov is None:
                 raise ValueError(f"APPOS predicate {predicate.root} must have a governor but gov is None")
             arguments.append(Argument(predicate.root.gov, self.ud, [R.J()]))
 
-        elif predicate.type == POSS:
+        elif predicate.type == PredicateType.POSS:
             # w1 rule: POSS predicates get their governor
             if predicate.root.gov is None:
                 raise ValueError(f"POSS predicate {predicate.root} must have a governor but gov is None")
@@ -698,7 +699,7 @@ class PredPattEngine:
         # Portuguese. Without it, miss a lot of arguments.
         for p in sort_by_position(events):
             if (not p.has_subj()
-                and p.type == NORMAL
+                and p.type == PredicateType.NORMAL
                 and p.root.gov_rel not in {self.ud.csubj, self.ud.csubjpass}
                 and (p.root.gov_rel is None or not p.root.gov_rel.startswith(self.ud.acl))
                 and not p.has_borrowed_arg()
@@ -793,7 +794,7 @@ class PredPattEngine:
         import itertools
 
         # Don't expand amod unless resolve_conj is enabled
-        if not self.options.resolve_conj or predicate.type == AMOD:
+        if not self.options.resolve_conj or predicate.type == PredicateType.AMOD:
             predicate.arguments = [arg for arg in predicate.arguments if arg.tokens]
             if not predicate.arguments:
                 return []
@@ -989,7 +990,7 @@ class PredPattEngine:
         from ..rules import predicate_rules as R  # noqa: N812
 
         assert predicate.tokens == []
-        if predicate.type == POSS:
+        if predicate.type == PredicateType.POSS:
             predicate.tokens = [predicate.root]
             return
         predicate.tokens.extend(self.subtree(predicate.root,
@@ -1178,7 +1179,7 @@ class PredPattEngine:
         """
         from ..rules import predicate_rules as R  # noqa: N812
 
-        if pred.type == POSS:
+        if pred.type == PredicateType.POSS:
             return True
         if (pred.root.gov_rel in self.ud.ADJ_LIKE_MODS
             and pred.root.gov == arg.root):

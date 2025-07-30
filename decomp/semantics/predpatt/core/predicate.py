@@ -1,12 +1,41 @@
-"""Predicate class for representing extracted predicates.
+"""Predicate representation for semantic role labeling in PredPatt.
 
-This module contains the Predicate class which represents predicates
-extracted from dependency parses, including their arguments and
-various predicate types (normal, possessive, appositive, adjectival).
+This module defines the core predicate structures used in the PredPatt system
+for extracting and representing predicates from dependency parses. It handles
+various predicate types including verbal, possessive, appositional, and
+adjectival predicates.
+
+Key Components
+--------------
+:class:`Predicate`
+    Main class representing a predicate with its root token, arguments, and
+    predicate type. Supports different predicate types (normal, possessive,
+    appositive, adjectival).
+
+:class:`PredicateType`
+    Enumeration defining the four types of predicates that PredPatt can extract:
+    NORMAL, POSS, APPOS, and AMOD.
+
+:func:`argument_names`
+    Utility function to generate alphabetic names for arguments (?a, ?b, etc.)
+    for display and debugging purposes.
+
+:func:`sort_by_position`
+    Helper function to sort items by their position attribute, used for
+    ordering tokens and arguments.
+
+Predicate Types
+---------------
+The module defines a :class:`PredicateType` enum with four values:
+- ``PredicateType.NORMAL``: Standard verbal predicates
+- ``PredicateType.POSS``: Possessive predicates
+- ``PredicateType.APPOS``: Appositional predicates
+- ``PredicateType.AMOD``: Adjectival modifier predicates
 """
 
 from __future__ import annotations
 
+import enum
 from typing import TYPE_CHECKING
 
 from ..typing import T
@@ -23,11 +52,18 @@ if TYPE_CHECKING:
 
     ColorFunc = Callable[[str, str], str]
 
-# Predicate type constants
-NORMAL = "normal"
-POSS = "poss"
-APPOS = "appos"
-AMOD = "amod"
+
+class PredicateType(str, enum.Enum):
+    """Enumeration of predicate types in PredPatt.
+    
+    Inherits from str to maintain backward compatibility with string comparisons.
+    """
+    NORMAL = "normal"  # Standard verbal predicates
+    POSS = "poss"      # Possessive predicates
+    APPOS = "appos"    # Appositional predicates
+    AMOD = "amod"      # Adjectival modifier predicates
+
+
 
 
 def argument_names(args: list[T]) -> dict[T, str]:
@@ -84,8 +120,8 @@ class Predicate:
         The Universal Dependencies module to use (default: dep_v1).
     rules : list, optional
         List of rules that led to this predicate's extraction.
-    type_ : str, optional
-        Type of predicate (NORMAL, POSS, APPOS, or AMOD).
+    type_ : PredicateType, optional
+        Type of predicate (PredicateType.NORMAL, POSS, APPOS, or AMOD).
 
     Attributes
     ----------
@@ -99,7 +135,7 @@ class Predicate:
         The UD version module being used.
     arguments : list[Argument]
         List of arguments for this predicate.
-    type : str
+    type : PredicateType
         Type of predicate.
     tokens : list[Token]
         List of tokens forming the predicate phrase.
@@ -110,7 +146,7 @@ class Predicate:
         root: Token,
         ud: UDSchema = dep_v1,
         rules: list[Rule] | None = None,
-        type_: str = NORMAL
+        type_: PredicateType = PredicateType.NORMAL
     ) -> None:
         """Initialize a Predicate."""
         self.root = root
@@ -149,7 +185,7 @@ class Predicate:
             Identifier in format 'pred.{type}.{position}.{arg_positions}'.
         """
         arg_positions = '.'.join(str(a.position) for a in self.arguments)
-        return f'pred.{self.type}.{self.position}.{arg_positions}'
+        return f'pred.{self.type.value}.{self.position}.{arg_positions}'
 
 
     def has_token(self, token: Token) -> bool:
@@ -229,7 +265,7 @@ class Predicate:
         """
         subj = self.subj()
         other_subj = other.subj()
-        # use the exact same pattern as original to ensure identical behavior
+        # check both subjects exist before comparing positions
         if subj is None or other_subj is None:
             return None
         return subj.position == other_subj.position
@@ -266,7 +302,7 @@ class Predicate:
             return True
         if any(not a.tokens for a in self.arguments):
             return True
-        if self.type == POSS and len(self.arguments) != 2:
+        if self.type == PredicateType.POSS and len(self.arguments) != 2:
             return True
         return None
 
@@ -288,12 +324,12 @@ class Predicate:
         # collect tokens and arguments
         x = sort_by_position(self.tokens + self.arguments)
 
-        if self.type == POSS:
+        if self.type == PredicateType.POSS:
             # possessive format: "?a 's ?b"
             assert len(self.arguments) == 2
-            return f'{name[self.arguments[0]]} {self.type} {name[self.arguments[1]]}'
+            return f'{name[self.arguments[0]]} {self.type.value} {name[self.arguments[1]]}'
 
-        elif self.type in {APPOS, AMOD}:
+        elif self.type in {PredicateType.APPOS, PredicateType.AMOD}:
             # appositive/adjectival format: "?a is/are [rest]"
             # find governor argument
             gov_arg = None
@@ -381,7 +417,7 @@ class Predicate:
         name = argument_names(self.arguments)
         for arg in self.arguments:
             if (arg.isclausal() and arg.root.gov in self.tokens and
-                    self.type == NORMAL):
+                    self.type == PredicateType.NORMAL):
                 s = c('SOMETHING', 'yellow') + ' := ' + arg.phrase()
             else:
                 s = c(arg.phrase(), 'green')

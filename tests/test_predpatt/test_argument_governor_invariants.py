@@ -8,7 +8,7 @@ dependency relations (amod, appos, nmod:poss) which by definition have governors
 
 import pytest
 
-from decomp.semantics.predpatt.core.predicate import AMOD, APPOS, POSS, Predicate
+from decomp.semantics.predpatt.core.predicate import Predicate, PredicateType
 from decomp.semantics.predpatt.core.token import Token
 from decomp.semantics.predpatt.extraction.engine import PredPattEngine
 from decomp.semantics.predpatt.utils.ud_schema import dep_v1
@@ -25,7 +25,7 @@ class TestPredicateGovernorInvariants:
         root_token.gov = None
 
         # Create AMOD predicate
-        predicate = Predicate(root_token, type_=AMOD)
+        predicate = Predicate(root_token, type_=PredicateType.AMOD)
 
         # Create a minimal engine to test argument extraction
         engine = PredPattEngine.__new__(PredPattEngine)  # Create without __init__
@@ -43,7 +43,7 @@ class TestPredicateGovernorInvariants:
         root_token.gov = None
 
         # Create APPOS predicate
-        predicate = Predicate(root_token, type_=APPOS)
+        predicate = Predicate(root_token, type_=PredicateType.APPOS)
 
         # Create a minimal engine to test argument extraction
         engine = PredPattEngine.__new__(PredPattEngine)
@@ -61,7 +61,7 @@ class TestPredicateGovernorInvariants:
         root_token.gov = None
 
         # Create POSS predicate
-        predicate = Predicate(root_token, type_=POSS)
+        predicate = Predicate(root_token, type_=PredicateType.POSS)
 
         # Create a minimal engine to test argument extraction
         engine = PredPattEngine.__new__(PredPattEngine)
@@ -102,7 +102,7 @@ class TestPredicateGovernorInvariants:
         root_token.dependents = []
 
         # Create AMOD predicate
-        predicate = Predicate(root_token, type_=AMOD)
+        predicate = Predicate(root_token, type_=PredicateType.AMOD)
 
         # Create a minimal engine to test argument extraction
         engine = PredPattEngine.__new__(PredPattEngine)
@@ -125,7 +125,7 @@ class TestPredicateGovernorInvariants:
         root_token.dependents = []
 
         # Create APPOS predicate
-        predicate = Predicate(root_token, type_=APPOS)
+        predicate = Predicate(root_token, type_=PredicateType.APPOS)
 
         # Create a minimal engine to test argument extraction
         engine = PredPattEngine.__new__(PredPattEngine)
@@ -148,7 +148,7 @@ class TestPredicateGovernorInvariants:
         root_token.dependents = []
 
         # Create POSS predicate
-        predicate = Predicate(root_token, type_=POSS)
+        predicate = Predicate(root_token, type_=PredicateType.POSS)
 
         # Create a minimal engine to test argument extraction
         engine = PredPattEngine.__new__(PredPattEngine)

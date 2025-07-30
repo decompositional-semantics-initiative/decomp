@@ -18,13 +18,16 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from ..core.argument import Argument
-    from ..core.predicate import Predicate
+    from ..core.predicate import Predicate, PredicateType
     from ..core.token import Token
     from ..extraction.engine import PredPattEngine
     from ..utils.ud_schema import DependencyRelationsV1, DependencyRelationsV2
 
     UDSchema = type[DependencyRelationsV1] | type[DependencyRelationsV2]
     TokenIterator = Iterator[tuple[int, str]]
+else:
+    # import at runtime to avoid circular imports
+    from ..core.predicate import PredicateType
 
 
 class HasPosition(Protocol):
@@ -41,11 +44,6 @@ class HasChildren(Protocol):
 
 T = TypeVar('T', bound=HasPosition)
 
-# Import constants directly to avoid circular imports
-NORMAL = "normal"
-POSS = "poss"
-AMOD = "amod"
-APPOS = "appos"
 
 # Regex patterns for parsing linearized forms
 RE_ARG_ENC = re.compile(r"\^\(\( | \)\)\$")
@@ -348,7 +346,7 @@ def flatten_pred(pred: Predicate, opt: LinearizedPPOpts, ud: UDSchema) -> tuple[
     args = pred.arguments
     child_preds = pred.children if hasattr(pred, 'children') else []
 
-    if pred.type == POSS:
+    if pred.type == PredicateType.POSS:
         arg_i = 0
         # Only take the first two arguments into account.
         for y in sort_by_position(args[:2] + child_preds):
@@ -358,7 +356,7 @@ def flatten_pred(pred: Predicate, opt: LinearizedPPOpts, ud: UDSchema) -> tuple[
                 arg_i += 1
                 if arg_i == 1:
                     # Generate the special ``poss'' predicate with label.
-                    poss = POSS + (PRED_HEADER if opt.distinguish_header
+                    poss = PredicateType.POSS.value + (PRED_HEADER if opt.distinguish_header
                                      else PRED_SUF)
                     ret += [phrase_and_enclose_arg(arg_y, opt), poss]
                 else:
@@ -371,7 +369,7 @@ def flatten_pred(pred: Predicate, opt: LinearizedPPOpts, ud: UDSchema) -> tuple[
                     ret.append(repr_y)
         return ' '.join(ret), False
 
-    if pred.type in {AMOD, APPOS}:
+    if pred.type in {PredicateType.AMOD, PredicateType.APPOS}:
         # Special handling for `amod` and `appos` because the target
         # relation `is/are` deviates from the original word order.
         arg0 = None

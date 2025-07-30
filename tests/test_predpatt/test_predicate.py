@@ -74,11 +74,8 @@ Special Cases:
 from decomp.semantics.predpatt import rules
 from decomp.semantics.predpatt.core.argument import Argument
 from decomp.semantics.predpatt.core.predicate import (
-    AMOD,
-    APPOS,
-    NORMAL,
-    POSS,
     Predicate,
+    PredicateType,
     argument_names,
     no_color,
 )
@@ -104,7 +101,7 @@ class TestPredicateInitialization:
         assert pred.position == 5
         assert pred.ud == dep_v1
         assert pred.arguments == []
-        assert pred.type == NORMAL
+        assert pred.type == PredicateType.NORMAL
         assert pred.tokens == []
 
     def test_initialization_with_params(self):
@@ -112,13 +109,13 @@ class TestPredicateInitialization:
         root_token = Token(position=3, text="have", tag="VB")
         rules = [R.a1(), R.b()]
 
-        pred = Predicate(root_token, ud=dep_v2, rules=rules, type_=POSS)
+        pred = Predicate(root_token, ud=dep_v2, rules=rules, type_=PredicateType.POSS)
 
         assert pred.root == root_token
         assert pred.rules == rules
         assert pred.position == 3
         assert pred.ud == dep_v2
-        assert pred.type == POSS
+        assert pred.type == PredicateType.POSS
         assert pred.arguments == []
         assert pred.tokens == []
 
@@ -126,16 +123,16 @@ class TestPredicateInitialization:
         """Test initialization with each predicate type."""
         root = Token(position=0, text="test", tag="NN")
 
-        normal_pred = Predicate(root, type_=NORMAL)
+        normal_pred = Predicate(root, type_=PredicateType.NORMAL)
         assert normal_pred.type == "normal"
 
-        poss_pred = Predicate(root, type_=POSS)
+        poss_pred = Predicate(root, type_=PredicateType.POSS)
         assert poss_pred.type == "poss"
 
-        appos_pred = Predicate(root, type_=APPOS)
+        appos_pred = Predicate(root, type_=PredicateType.APPOS)
         assert appos_pred.type == "appos"
 
-        amod_pred = Predicate(root, type_=AMOD)
+        amod_pred = Predicate(root, type_=PredicateType.AMOD)
         assert amod_pred.type == "amod"
 
 
@@ -166,7 +163,7 @@ class TestPredicateCopy:
     def test_copy_basic(self):
         """Test copying a basic predicate."""
         root = Token(position=1, text="eat", tag="VB")
-        pred = Predicate(root, rules=[R.a1()], type_=NORMAL)
+        pred = Predicate(root, rules=[R.a1()], type_=PredicateType.NORMAL)
         pred.tokens = [root]
 
         copy = pred.copy()
@@ -204,7 +201,7 @@ class TestPredicateIdentifier:
     def test_identifier_format(self):
         """Test identifier format: pred.{type}.{position}.{arg_positions}."""
         root = Token(position=5, text="eat", tag="VB")
-        pred = Predicate(root, type_=NORMAL)
+        pred = Predicate(root, type_=PredicateType.NORMAL)
 
         # no arguments
         assert pred.identifier() == "pred.normal.5."
@@ -220,10 +217,10 @@ class TestPredicateIdentifier:
         """Test identifier with different predicate types."""
         root = Token(position=3, text="'s", tag="POS")
 
-        poss_pred = Predicate(root, type_=POSS)
+        poss_pred = Predicate(root, type_=PredicateType.POSS)
         assert poss_pred.identifier() == "pred.poss.3."
 
-        appos_pred = Predicate(root, type_=APPOS)
+        appos_pred = Predicate(root, type_=PredicateType.APPOS)
         assert appos_pred.identifier() == "pred.appos.3."
 
 
@@ -414,7 +411,7 @@ class TestPredicateIsBroken:
     def test_poss_wrong_arg_count(self):
         """Test POSS predicate must have exactly 2 arguments."""
         root = Token(position=2, text="'s", tag="POS")
-        pred = Predicate(root, type_=POSS)
+        pred = Predicate(root, type_=PredicateType.POSS)
         pred.tokens = [root]
 
         # 0 arguments
@@ -446,7 +443,7 @@ class TestPredicateFormatPredicate:
         """Test formatting NORMAL predicates."""
         root = Token(position=2, text="eat", tag="VB")
         aux = Token(position=1, text="will", tag="MD")
-        pred = Predicate(root, type_=NORMAL)
+        pred = Predicate(root, type_=PredicateType.NORMAL)
         pred.tokens = [aux, root]  # "will eat"
 
         # add arguments
@@ -465,7 +462,7 @@ class TestPredicateFormatPredicate:
     def test_format_poss_predicate(self):
         """Test formatting POSS predicates."""
         root = Token(position=2, text="'s", tag="POS")
-        pred = Predicate(root, type_=POSS)
+        pred = Predicate(root, type_=PredicateType.POSS)
         pred.tokens = [root]
 
         # POSS needs exactly 2 arguments
@@ -487,7 +484,7 @@ class TestPredicateFormatPredicate:
         root = Token(position=3, text="leader", tag="NN")
         root.gov = gov_token
 
-        pred = Predicate(root, type_=APPOS)
+        pred = Predicate(root, type_=PredicateType.APPOS)
         pred.tokens = [root]
 
         # for APPOS, one arg should be the governor
@@ -508,7 +505,7 @@ class TestPredicateFormatPredicate:
         root = Token(position=2, text="tall", tag="JJ")
         root.gov = gov_token
 
-        pred = Predicate(root, type_=AMOD)
+        pred = Predicate(root, type_=PredicateType.AMOD)
         pred.tokens = [root]
 
         # for AMOD, typically the modified noun is an argument
@@ -526,7 +523,7 @@ class TestPredicateFormatPredicate:
         root = Token(position=2, text="president", tag="NN")
         root.gov_rel = dep_v1.xcomp
 
-        pred = Predicate(root, type_=NORMAL)
+        pred = Predicate(root, type_=PredicateType.NORMAL)
         pred.tokens = [root]
 
         # first argument should get is/are after it
@@ -547,7 +544,7 @@ class TestPredicateFormat:
     def test_format_basic(self):
         """Test basic formatting without tracking rules."""
         root = Token(position=2, text="eat", tag="VB")
-        pred = Predicate(root, type_=NORMAL)
+        pred = Predicate(root, type_=PredicateType.NORMAL)
         pred.tokens = [root]
 
         # add arguments
@@ -575,7 +572,7 @@ class TestPredicateFormat:
         """Test formatting with rule tracking."""
         root = Token(position=2, text="eat", tag="VB")
         root.gov_rel = "root"
-        pred = Predicate(root, type_=NORMAL, rules=[R.a1()])
+        pred = Predicate(root, type_=PredicateType.NORMAL, rules=[R.a1()])
         pred.tokens = [root]
 
         arg_root = Token(position=1, text="I", tag="PRP")
@@ -595,7 +592,7 @@ class TestPredicateFormat:
     def test_format_clausal_argument(self):
         """Test formatting with clausal argument."""
         root = Token(position=1, text="know", tag="VB")
-        pred = Predicate(root, type_=NORMAL)
+        pred = Predicate(root, type_=PredicateType.NORMAL)
         pred.tokens = [root]
 
         # clausal argument

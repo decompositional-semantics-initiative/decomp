@@ -7,18 +7,20 @@ representing tokens, predicates, and arguments in dependency parses.
 
 from .argument import Argument, sort_by_position
 from .options import PredPattOpts
-from .predicate import AMOD, APPOS, NORMAL, POSS, Predicate, argument_names, no_color
+from .predicate import (
+    Predicate,
+    PredicateType,
+    argument_names,
+    no_color,
+)
 from .token import Token
 
 
 __all__ = [
-    "AMOD",
-    "APPOS",
-    "NORMAL",
-    "POSS",
     "Argument",
     "PredPattOpts",
     "Predicate",
+    "PredicateType",
     "Token",
     "argument_names",
     "no_color",

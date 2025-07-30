@@ -106,7 +106,7 @@ from decomp.semantics.predpatt.rules import *
 
 R = rules  # Compatibility alias for existing tests
 from decomp.semantics.predpatt.core.options import PredPattOpts
-from decomp.semantics.predpatt.core.predicate import AMOD, APPOS, POSS
+from decomp.semantics.predpatt.core.predicate import PredicateType
 from decomp.semantics.predpatt.extraction.engine import PredPattEngine as PredPatt
 from decomp.semantics.predpatt.parsing.udparse import DepTriple, UDParse
 
@@ -269,7 +269,7 @@ class TestPredicateExtractionRules:
         # Check that d rule was applied and type is APPOS
         ceo_pred = [p for p in pp.events if p.root.text == "CEO"][0]
         assert any(isinstance(r, R.d) for r in ceo_pred.rules)
-        assert ceo_pred.type == APPOS
+        assert ceo_pred.type == PredicateType.APPOS
 
     def test_rule_e_amod(self):
         """Test e: Extract predicate from adjectival modifier."""
@@ -292,7 +292,7 @@ class TestPredicateExtractionRules:
 
         # Check that e rule was applied and type is AMOD
         assert any(isinstance(r, R.e) for r in pp.events[0].rules)
-        assert pp.events[0].type == AMOD
+        assert pp.events[0].type == PredicateType.AMOD
 
     def test_rule_v_poss(self):
         """Test v: Extract predicate from nmod:poss dependent."""
@@ -314,7 +314,7 @@ class TestPredicateExtractionRules:
 
         # Check that v rule was applied and type is POSS
         assert any(isinstance(r, R.v) for r in pp.events[0].rules)
-        assert pp.events[0].type == POSS
+        assert pp.events[0].type == PredicateType.POSS
 
     def test_rule_f_conj(self):
         """Test f: Extract conjunct token of predicate."""

@@ -2,7 +2,7 @@
 """Tests for visualization and output formatting functions."""
 
 from decomp.semantics.predpatt.core.argument import Argument
-from decomp.semantics.predpatt.core.predicate import AMOD, NORMAL, POSS, Predicate
+from decomp.semantics.predpatt.core.predicate import Predicate, PredicateType
 from decomp.semantics.predpatt.core.token import Token
 from decomp.semantics.predpatt.utils.ud_schema import dep_v1
 from decomp.semantics.predpatt.utils.visualization import (
@@ -68,7 +68,7 @@ class TestFormatPredicate:
     def test_normal_predicate(self):
         """Test formatting of normal predicate."""
         pred = Predicate(self.token1, ud=dep_v1)
-        pred.type = NORMAL
+        pred.type = PredicateType.NORMAL
         pred.tokens = [self.token1]
         pred.arguments = [self.arg1, self.arg2]
 
@@ -80,7 +80,7 @@ class TestFormatPredicate:
     def test_poss_predicate(self):
         """Test formatting of possessive predicate."""
         pred = Predicate(self.token1, ud=dep_v1)
-        pred.type = POSS
+        pred.type = PredicateType.POSS
         pred.arguments = [self.arg1, self.arg2]
 
         names = {self.arg1: '?a', self.arg2: '?b'}
@@ -91,7 +91,7 @@ class TestFormatPredicate:
     def test_amod_predicate(self):
         """Test formatting of adjectival modifier predicate."""
         pred = Predicate(self.token1, ud=dep_v1)
-        pred.type = AMOD
+        pred.type = PredicateType.AMOD
         pred.tokens = [self.token1]
         pred.arguments = [self.arg1]
         pred.root.gov = None  # No governor for this test
@@ -124,7 +124,7 @@ class TestFormatPredicateInstance:
         self.arg2.rules = []
 
         self.pred = Predicate(self.token, ud=dep_v1)
-        self.pred.type = NORMAL
+        self.pred.type = PredicateType.NORMAL
         self.pred.tokens = [self.token]
         self.pred.arguments = [self.arg1, self.arg2]
         self.pred.rules = []
