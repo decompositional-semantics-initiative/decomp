@@ -1,7 +1,23 @@
-"""Common type definitions for PredPatt modules.
+"""Type definitions and protocols for the PredPatt semantic extraction system.
 
-This module contains shared protocols and type variables used across
-the PredPatt system to avoid circular imports and ensure consistency.
+This module provides shared type definitions to support static type checking
+across the PredPatt framework. It defines protocols and type variables that
+are used throughout the system to avoid circular imports while maintaining
+type safety.
+
+Key Components
+--------------
+:class:`HasPosition`
+    Protocol defining objects with a position attribute, used for tokens,
+    predicates, and arguments that have positions in text
+
+:data:`T`
+    Type variable bounded by HasPosition protocol for generic functions
+    that operate on positioned objects
+
+:data:`UDSchema`
+    Type alias for Universal Dependencies schema classes, supporting both
+    v1 and v2 dependency relation definitions
 """
 
 from typing import TYPE_CHECKING, Protocol, TypeVar
@@ -21,4 +37,4 @@ class HasPosition(Protocol):
 T = TypeVar('T', bound=HasPosition)
 
 # type alias for UD schema modules
-UDSchema = type['DependencyRelationsV1'] | type['DependencyRelationsV2']
+type UDSchema = type['DependencyRelationsV1'] | type['DependencyRelationsV2']
