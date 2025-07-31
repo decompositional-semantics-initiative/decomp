@@ -88,6 +88,11 @@ autodoc_type_aliases = {
 add_module_names = False
 python_use_unqualified_type_names = True
 
+# Suppress specific warnings
+suppress_warnings = [
+    'autodoc.import_object',  # Suppress import warnings for optional dependencies
+]
+
 # -- Napoleon settings -------------------------------------------------------
 
 napoleon_google_docstring = True

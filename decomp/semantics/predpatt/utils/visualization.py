@@ -55,7 +55,7 @@ try:
         attrs: list[str] | None = None,
     ) -> str:
         """Wrap termcolor.colored with consistent signature."""
-        return _termcolor_colored(text, color, on_color, attrs)
+        return str(_termcolor_colored(text, color, on_color, attrs))
 except ImportError:
     # fallback if termcolor is not available
     def colored(
@@ -302,4 +302,4 @@ def pprint_ud_parse(
     for col in cols:
         col.extend("" for _ in range(len(cols[0]) - len(col)))
 
-    return tabulate(zip(*cols, strict=False), tablefmt="plain")
+    return str(tabulate(zip(*cols, strict=False), tablefmt="plain"))

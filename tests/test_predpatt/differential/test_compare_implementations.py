@@ -1,25 +1,12 @@
 #!/usr/bin/env python3
-"""Compare outputs between external PredPatt and modernized implementations.
+"""Compare outputs between external PredPatt with this package's PredPatt."""
 
-This test requires the external predpatt package to be installed.
-"""
-
-import pytest
-
-
-# Skip these tests if external predpatt is not installed
-predpatt = pytest.importorskip("predpatt")
 
 # Import both implementations for comparison
-try:
-    import predpatt as original_predpatt
-    from predpatt import PredPatt as OriginalPredPatt
-    from predpatt import PredPattOpts as OriginalPredPattOpts
-    from predpatt.util.load import load_conllu as original_load_conllu
-    ORIGINAL_AVAILABLE = True
-except ImportError:
-    ORIGINAL_AVAILABLE = False
-    pytest.skip("Original PredPatt not available for differential testing", allow_module_level=True)
+import predpatt as original_predpatt
+from predpatt import PredPatt as OriginalPredPatt
+from predpatt import PredPattOpts as OriginalPredPattOpts
+from predpatt.util.load import load_conllu as original_load_conllu
 
 # Modernized imports
 from decomp.semantics.predpatt.core.options import PredPattOpts as ModernPredPattOpts

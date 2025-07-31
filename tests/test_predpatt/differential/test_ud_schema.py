@@ -1,11 +1,9 @@
-#!/usr/bin/env python
-"""Tests for UD schema definitions to ensure exact compatibility."""
+"""Compare standalone PredPatt UD schema with this package's UD schema."""
 
 import pytest
 
 
-# Skip these tests if external predpatt is not installed
-predpatt = pytest.importorskip("predpatt")
+# Import external predpatt for comparison
 from predpatt.util.ud import dep_v1 as orig_dep_v1
 from predpatt.util.ud import dep_v2 as orig_dep_v2
 from predpatt.util.ud import postag as orig_postag

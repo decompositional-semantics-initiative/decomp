@@ -1,14 +1,9 @@
-"""
-Compare the original Token class with the modernized Token class.
-
-This test ensures that both implementations have identical behavior.
-"""
+"""Compare the standalone PredPatt Token class with this package's Token class."""
 
 import pytest
 
 
-# Skip these tests if external predpatt is not installed
-predpatt = pytest.importorskip("predpatt")
+# Import external predpatt for comparison
 from predpatt.patt import Token as OriginalToken
 
 from decomp.semantics.predpatt.core.token import Token as ModernToken

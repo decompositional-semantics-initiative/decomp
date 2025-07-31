@@ -1,14 +1,9 @@
-"""
-Comparison tests between original and modernized UDParse implementations.
-
-These tests ensure that the modernized version behaves identically to the original.
-"""
+"""Compare standalone PredPatt UDParse and this package's UDParse."""
 
 import pytest
 
 
-# Skip these tests if external predpatt is not installed
-predpatt = pytest.importorskip("predpatt")
+# Import external predpatt for comparison
 from collections import defaultdict
 
 from predpatt.UDParse import DepTriple as OriginalDepTriple

@@ -1,16 +1,9 @@
-"""
-Compare the original Argument class with the modernized Argument class.
-
-This test ensures that both implementations have identical behavior.
-"""
+"""Compare the standalone PredPatt Argument class with this package's Argument class."""
 
 import pytest
 
 
-# Skip these tests if external predpatt is not installed
-predpatt = pytest.importorskip("predpatt")
-
-# Import after skip to ensure module is available
+# Import external predpatt for comparison
 from predpatt.patt import Argument as OriginalArgument
 from predpatt.patt import Token as OriginalToken
 from predpatt.patt import sort_by_position as orig_sort_by_position

@@ -8,6 +8,12 @@ dependency parse trees.
 The extracted semantic structures can be integrated with the Universal
 Decompositional Semantics (UDS) framework for further annotation.
 
+.. note::
+   Automatic parsing functionality (from_sentence, from_constituency) is a planned
+   future feature. Currently, you must provide pre-parsed Universal Dependencies
+   data using load_conllu() or similar methods. To prepare for future parsing
+   features, install with: ``pip install decomp[parsing]``
+
 Classes
 -------
 Argument

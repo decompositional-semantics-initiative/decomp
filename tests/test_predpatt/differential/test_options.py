@@ -1,37 +1,10 @@
-"""
-Tests for PredPattOpts class to verify defaults and behavior.
-
-PredPattOpts Class Documentation
-================================
-
-Configuration options for PredPatt extraction behavior.
-
-Default Values
---------------
-simple = False              # Extract simple predicates (exclude aux/advmod)
-cut = False                 # Treat xcomp as independent predicate  
-resolve_relcl = False       # Resolve relative clause modifiers
-resolve_appos = False       # Resolve appositives
-resolve_amod = False        # Resolve adjectival modifiers
-resolve_conj = False        # Resolve conjunctions
-resolve_poss = False        # Resolve possessives
-borrow_arg_for_relcl = True # Borrow arguments for relative clauses
-big_args = False            # Include all subtree tokens in arguments
-strip = True                # Strip leading/trailing punctuation
-ud = "1.0"                  # Universal Dependencies version
-
-Validation
-----------
-- ud must be exactly "1.0" or "2.0" (string comparison)
-- AssertionError raised if ud is invalid
-"""
+"""Tests for PredPattOpts class to verify defaults and behavior."""
 
 
 import pytest
 
 
-# Skip these tests if external predpatt is not installed
-predpatt = pytest.importorskip("predpatt")
+# Import external predpatt for comparison
 from predpatt.patt import PredPattOpts as OriginalOpts
 
 from decomp.semantics.predpatt.core.options import PredPattOpts as ModernOpts

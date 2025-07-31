@@ -18,15 +18,20 @@ UDParse
 
 from __future__ import annotations
 
+import os
 from collections import defaultdict, namedtuple
+from hashlib import md5
 from typing import TYPE_CHECKING
+
+from tabulate import tabulate
+from termcolor import colored
 
 
 if TYPE_CHECKING:
     from ..core.token import Token
     from ..typing import UDSchema
 
-# Import at runtime to avoid circular dependency
+# import at runtime to avoid circular dependency
 def _get_dep_v1() -> UDSchema:
     """Get the dep_v1 module dynamically.
 
@@ -135,6 +140,7 @@ class UDParse:
 
         # build dependents mapping: governor -> [DepTriple]
         self.dependents: defaultdict[int | Token, list[DepTriple]] = defaultdict(list)
+        
         for e in self.triples:
             self.dependents[e.gov].append(e)
 
@@ -153,21 +159,20 @@ class UDParse:
         str
             Formatted string representation of dependencies.
         """
-        # import here to avoid circular dependency
-        from tabulate import tabulate
-        from termcolor import colored
-
         tokens1 = [*self.tokens, "ROOT"]
         c = colored("/%s", "magenta") if color else "/%s"
         e = [f"{e.rel}({tokens1[e.dep]}{c % e.dep}, {tokens1[e.gov]}{c % e.gov})"
              for e in sorted(self.triples, key=lambda x: x.dep)]
         cols: list[list[str]] = [[] for _ in range(k)]
+        
         for i, x in enumerate(e):
             cols[i % k].append(x)
+        
         # add padding to columns because zip stops at shortest iterator.
         for col in cols:
             col.extend("" for _ in range(len(cols[0]) - len(col)))
-        return tabulate(zip(*cols, strict=False), tablefmt="plain")
+        
+        return str(tabulate(zip(*cols, strict=False), tablefmt="plain"))
 
     def latex(self) -> bytes:
         """Generate LaTeX code for dependency diagram.
@@ -202,6 +207,7 @@ class UDParse:
 {dep}
 \end{{dependency}}
 \end{{document}}"""
+        
         return boilerplate.replace("$", "\\$").encode("utf-8")
 
     def view(self, do_open: bool = True) -> str | None:
@@ -220,9 +226,6 @@ class UDParse:
         str | None
             Path to the generated PDF file, or None if generation fails.
         """
-        import os
-        from hashlib import md5
-
         latex = self.latex()
         was = os.getcwd()
         try:
@@ -251,13 +254,15 @@ class UDParse:
         str | None
             Path to the generated PNG file, or None if generation fails.
         """
-        import os
-
         img = self.view(do_open=False)
+        
         if img is not None:
             out = img[:-4] + ".png"
+        
             if not os.path.exists(out):
                 cmd = f"gs -dBATCH -dNOPAUSE -sDEVICE=pngalpha -o {out} {img}"
                 os.system(cmd)
+        
             return out
+        
         return None

@@ -1,19 +1,10 @@
-"""
-Differential testing harness for PredPatt modernization.
-
-This test suite compares the output of the original PredPatt implementation
-with our modernized version to ensure byte-for-byte identical output.
-
-Per MODERNIZATION_PLAN.md: "If ANY test produces even ONE CHARACTER of different
-output compared to original PredPatt, the implementation is WRONG and must be fixed."
-"""
+"""Differential testing harness for PredPatt modernization."""
 
 
 import pytest
 
 
-# Skip these tests if external predpatt is not installed
-predpatt = pytest.importorskip("predpatt")
+# Import external predpatt for comparison
 import os
 
 

@@ -1,14 +1,9 @@
-"""
-Compare the original Predicate class with the modernized Predicate class.
-
-This test ensures that both implementations have identical behavior.
-"""
+"""Compare the standalone PredPatt Predicate class with this package's Predicate class."""
 
 import pytest
 
 
-# Skip these tests if external predpatt is not installed
-predpatt = pytest.importorskip("predpatt")
+# Import external predpatt for comparison
 from predpatt.patt import AMOD as ORIG_AMOD
 from predpatt.patt import APPOS as ORIG_APPOS
 from predpatt.patt import NORMAL as ORIG_NORMAL

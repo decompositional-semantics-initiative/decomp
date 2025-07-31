@@ -4,7 +4,15 @@ This directory contains the source files for building the Decomp documentation u
 
 ## Prerequisites
 
-Install the required dependencies using the provided requirements file:
+First, install the decomp package in development mode from the parent directory:
+
+```bash
+cd ..
+pip install -e ".[dev]"
+cd docs
+```
+
+Then install the documentation-specific dependencies:
 
 ```bash
 pip install -r requirements.txt

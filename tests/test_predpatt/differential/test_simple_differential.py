@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Simple test of differential imports."""
 
 import pytest
@@ -6,8 +5,8 @@ import pytest
 
 print("Starting test file...")
 
-# Skip these tests if external predpatt is not installed
-predpatt = pytest.importorskip("predpatt")
+# Import external predpatt for comparison
+import predpatt
 print(f"predpatt imported: {predpatt}")
 
 # Import from predpatt.patt

@@ -48,11 +48,14 @@ if TYPE_CHECKING:
     from decomp.semantics.predpatt.typing import T, UDSchema
 
 # Optional imports for sentence parsing functionality
+# NOTE: UDParser integration is a planned future feature.
+# The decomp.semantics.predpatt.parsing.parser module does not exist yet.
+# When implemented, it will provide state-of-the-art UD parsing capabilities.
 try:
-    from decomp.semantics.predpatt.util.UDParser import Parser
+    from decomp.semantics.predpatt.parsing.parser import UDParser
     _UDPARSER_AVAILABLE = True
 except ImportError:
-    Parser = None
+    UDParser = None
     _UDPARSER_AVAILABLE = False
 
 
@@ -203,6 +206,11 @@ class PredPattEngine:
     ) -> PredPattEngine:
         """Create PredPattEngine from a constituency parse string.
 
+        .. warning::
+           This method is not yet implemented. Automatic parsing is a planned
+           future feature. Currently, you must use pre-parsed UD data with
+           the standard constructor or load_conllu().
+
         Converts constituency parse to Universal Dependencies automatically.
         [English only]
 
@@ -219,12 +227,21 @@ class PredPattEngine:
         -------
         PredPattEngine
             Engine instance with extraction results from converted parse.
+        
+        Raises
+        ------
+        NotImplementedError
+            Always raised as this feature is not yet implemented.
         """
         if not _UDPARSER_AVAILABLE:
-            raise ImportError("UDParser not available. Install required dependencies.")
+            raise NotImplementedError(
+                "Automatic UD parsing is not yet implemented. This is a planned future feature.\n"
+                "Currently, you must provide pre-parsed Universal Dependencies data.\n"
+                "To use PredPatt, load your data using load_conllu() with existing UD parses."
+            )
         global _PARSER
         if _PARSER is None:
-            _PARSER = Parser.get_instance(cacheable)
+            _PARSER = UDParser.get_instance(cacheable)
         parse = _PARSER.to_ud(parse_string)
         return cls(parse, opts=opts)
 
@@ -236,6 +253,11 @@ class PredPattEngine:
         opts: PredPattOpts | None = None,
     ) -> PredPattEngine:
         """Create PredPattEngine from a sentence string.
+
+        .. warning::
+           This method is not yet implemented. Automatic parsing is a planned
+           future feature. Currently, you must use pre-parsed UD data with
+           the standard constructor or load_conllu().
 
         Parses sentence and converts to Universal Dependencies automatically.
         [English only]
@@ -253,12 +275,21 @@ class PredPattEngine:
         -------
         PredPattEngine
             Engine instance with extraction results from parsed sentence.
+        
+        Raises
+        ------
+        NotImplementedError
+            Always raised as this feature is not yet implemented.
         """
         if not _UDPARSER_AVAILABLE:
-            raise ImportError("UDParser not available. Install required dependencies.")
+            raise NotImplementedError(
+                "Automatic UD parsing is not yet implemented. This is a planned future feature.\n"
+                "Currently, you must provide pre-parsed Universal Dependencies data.\n"
+                "To use PredPatt, load your data using load_conllu() with existing UD parses."
+            )
         global _PARSER
         if _PARSER is None:
-            _PARSER = Parser.get_instance(cacheable)
+            _PARSER = UDParser.get_instance(cacheable)
         parse = _PARSER(sentence)
         return cls(parse, opts=opts)
 

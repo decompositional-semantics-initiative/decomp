@@ -1,5 +1,4 @@
-"""
-Load different sources of data.
+"""Load different sources of data.
 
 This module provides functions to load dependency parses from various formats,
 particularly focusing on CoNLL-U format files.
@@ -24,6 +23,11 @@ def load_comm(
     tool: str = 'ud converted ptb trees using pyStanfordDependencies'
 ) -> Iterator[tuple[str, UDParse]]:
     """Load a concrete communication file with required pyStanfordDependencies output.
+    
+    .. warning::
+       This function is part of a planned parsing feature that is not yet fully supported.
+       It requires the ``concrete`` package (available via ``pip install decomp[parsing]``).
+       Full parsing functionality with modern UD parsers will be added in a future release.
 
     Parameters
     ----------
@@ -36,9 +40,21 @@ def load_comm(
     ------
     tuple[str, UDParse]
         Tuples of (section_label, parse) for each sentence.
+    
+    Raises
+    ------
+    ImportError
+        If the concrete package is not installed.
     """
-    # import here to avoid requiring concrete
-    from concrete.util.file_io import read_communication_from_file
+    try:
+        # import here to avoid requiring concrete
+        from concrete.util.file_io import read_communication_from_file
+    except ImportError as e:
+        raise ImportError(
+            "The 'concrete' package is required to use load_comm(). "
+            "Install it with: pip install concrete"
+        ) from e
+    
     comm = read_communication_from_file(filename)
     if comm.sectionList:
         for sec in comm.sectionList:
@@ -114,8 +130,11 @@ def load_conllu(filename_or_content: str) -> Iterator[tuple[str, UDParse]]:
         sent_num += 1
 
 
-def get_tags(tokenization: Tokenization, tagging_type: str = 'POS') -> list[str]:
+def get_tags(tokenization: 'Tokenization', tagging_type: str = 'POS') -> list[str]:
     """Extract tags of a specific type from a tokenization.
+    
+    .. note::
+       This function requires the ``concrete`` package to be installed.
 
     Parameters
     ----------
@@ -138,8 +157,11 @@ def get_tags(tokenization: Tokenization, tagging_type: str = 'POS') -> list[str]
     return []
 
 
-def get_udparse(sent: Sentence, tool: str) -> UDParse:
+def get_udparse(sent: 'Sentence', tool: str) -> UDParse:
     """Create a ``UDParse`` from a sentence extracted from a Communication.
+    
+    .. note::
+       This function requires the ``concrete`` package to be installed.
 
     Parameters
     ----------

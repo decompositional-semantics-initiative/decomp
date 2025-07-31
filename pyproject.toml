@@ -28,6 +28,7 @@ dependencies = [
     "numpy>=1.24.0",
     "pyparsing>=3.0.0",
     "requests>=2.31.0",
+    "termcolor>=2.0.0",
 ]
 
 [project.urls]
@@ -41,12 +42,26 @@ dev = [
     "ruff>=0.12.0",
     "mypy>=1.17.0",
     "types-requests>=2.31.0",
-]
-viz = [
-    "dash[testing]>=1.9.1",
+    "types-tabulate>=0.9.0",
+    "tabulate>=0.9.0",
+    # include viz dependencies for tests
+    "dash>=2.15.0",
     "selenium>=4.6.1",
     "jsonpickle>=1.4.1",
     "matplotlib>=3.2.1",
+    # include parsing dependencies for tests
+    "concrete>=4.12.0",
+    # for differential testing against original implementation
+    "predpatt @ git+https://github.com/hltcoe/PredPatt.git",
+]
+viz = [
+    "dash>=2.15.0",  # Version 2.15+ doesn't use pkg_resources
+    "selenium>=4.6.1",
+    "jsonpickle>=1.4.1",
+    "matplotlib>=3.2.1",
+]
+parsing = [
+    "concrete>=4.12.0",  # for loading Concrete communication files (future feature)
 ]
 
 [tool.setuptools]
@@ -65,8 +80,7 @@ python_functions = "test_*"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-indent-style = "space"
-line-ending = "lf"
+fix = false  # configure to check but NOT auto-fix
 
 [tool.ruff.format]
 # Use hanging indents consistently
@@ -76,17 +90,90 @@ docstring-code-format = true
 docstring-code-line-length = "dynamic"
 
 [tool.ruff.lint]
-# Enable rules for consistent formatting
-select = ["E", "F", "B", "C90", "I", "N", "D", "UP", "W", "RUF", "SIM"]
-ignore = ["D203", "D213"]  # ignore conflicting docstring formatting rules
+# Enable specific rule sets
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "UP",    # pyupgrade
+    "B",     # flake8-bugbear
+    "SIM",   # flake8-simplify
+    "I",     # isort
+    "N",     # pep8-naming
+    "D",     # pydocstyle
+    "C90",   # mccabe complexity
+    "RUF",   # Ruff-specific rules
+]
+
+# Ignore specific rules
+ignore = [
+    "D100",  # missing docstring in public module
+    "D104",  # missing docstring in public package
+    "D105",  # missing docstring in magic method
+    "D107",  # missing docstring in __init__
+    "D203",  # 1 blank line required before class docstring (conflicts with D211)
+    "D213",  # multi-line docstring summary should start at the second line (conflicts with D212)
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # allow unused imports in __init__.py files
+"tests/*" = ["D"]         # ignore all docstring rules in tests
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
 
 [tool.ruff.lint.isort]
-# use hanging indents for imports
+known-first-party = ["decomp"]
 force-single-line = false
-force-wrap-aliases = true
-combine-as-imports = false
+lines-after-imports = 2
 
 [tool.mypy]
 python_version = "3.12"
+strict = true
+
+# additional strict options (already included in strict, but explicit for clarity)
 warn_return_any = true
 warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+# disable specific strict checks that might be too restrictive initially
+disallow_any_generics = false
+disallow_subclassing_any = false
+disallow_untyped_calls = false
+
+# import discovery
+namespace_packages = true
+explicit_package_bases = true
+
+# error handling
+show_error_codes = true
+show_column_numbers = true
+pretty = true
+
+# ignore missing imports
+ignore_missing_imports = true
+
+# per-module options for gradual adoption
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "docs.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "setup"
+ignore_errors = true

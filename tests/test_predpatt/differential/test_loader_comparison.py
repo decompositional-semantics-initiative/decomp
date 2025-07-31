@@ -1,15 +1,10 @@
-"""
-Comparison tests between original and modernized loader implementations.
-
-These tests ensure that the modernized version behaves identically to the original.
-"""
+"""Comparison tests between standalone PredPatt and this package's loader."""
 
 
 import pytest
 
 
-# Skip these tests if external predpatt is not installed
-predpatt = pytest.importorskip("predpatt")
+# Import external predpatt for comparison
 import os
 
 from predpatt.util.load import DepTriple as OriginalDepTriple
