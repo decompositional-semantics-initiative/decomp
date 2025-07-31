@@ -67,6 +67,15 @@ Installation
         - Development tools: ``pytest``, ``ruff``, ``mypy``, and ``ipython``
         - All runtime dependencies
 
+        .. note::
+           
+           For running the full test suite including differential tests, you'll also need to
+           install ``predpatt`` separately (due to PyPI restrictions on git dependencies):
+           
+           .. code-block:: bash
+           
+               pip install git+https://github.com/hltcoe/PredPatt.git
+
         To run tests:
 
         .. code-block:: bash

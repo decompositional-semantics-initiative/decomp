@@ -51,8 +51,8 @@ dev = [
     "matplotlib>=3.2.1",
     # include parsing dependencies for tests
     "concrete>=4.12.0",
-    # for differential testing against original implementation
-    "predpatt @ git+https://github.com/hltcoe/PredPatt.git",
+    # Note: predpatt is required for differential testing but must be
+    # installed separately: pip install git+https://github.com/hltcoe/PredPatt.git
 ]
 viz = [
     "dash>=2.15.0",  # Version 2.15+ doesn't use pkg_resources

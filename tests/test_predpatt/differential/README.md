@@ -4,11 +4,13 @@ This directory contains differential tests that compare the modernized PredPatt 
 
 ## Requirements
 
-These tests require the external `predpatt` package to be installed. The tests will be automatically skipped if the package is not available.
+These tests require the external `predpatt` package to be installed. Due to PyPI restrictions on git dependencies, this package must be installed separately:
 
 ```bash
-pip install predpatt
+pip install git+https://github.com/hltcoe/PredPatt.git
 ```
+
+Note: The tests will fail if the package is not available, as it's required for differential testing.
 
 ## Running the Tests
 

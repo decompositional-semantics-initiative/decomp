@@ -130,6 +130,14 @@ pip install -e ".[dev]"
 This installs the package in editable mode along with development tools
 including `pytest`, `ruff`, `mypy`, and `ipython`.
 
+**Note for developers**: The development dependencies include most testing requirements,
+but `predpatt` (used for differential testing) must be installed separately due to
+PyPI restrictions on git dependencies:
+
+```bash
+pip install git+https://github.com/hltcoe/PredPatt.git
+```
+
 # Quick Start
 
 The UDS corpus can be read by directly importing it.
