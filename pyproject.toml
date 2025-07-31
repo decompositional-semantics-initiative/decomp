@@ -1,0 +1,179 @@
+[build-system]
+requires = ["setuptools>=64.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "decomp"
+version = "0.3.0"
+description = "Toolkit for working with Universal Decompositional Semantics graphs"
+authors = [
+    {name = "Aaron Steven White", email = "aaron.white@rochester.edu"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic"
+]
+dependencies = [
+    "networkx>=2.7.1",
+    "overrides>=7.0.0",
+    "rdflib>=7.0.0",
+    "numpy>=1.24.0",
+    "pyparsing>=3.0.0",
+    "requests>=2.31.0",
+    "termcolor>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://decomp.io/"
+Repository = "https://github.com/decompositional-semantics-initiative/decomp"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.12.0",
+    "mypy>=1.17.0",
+    "types-requests>=2.31.0",
+    "types-tabulate>=0.9.0",
+    "tabulate>=0.9.0",
+    # include viz dependencies for tests
+    "dash>=2.15.0",
+    "selenium>=4.6.1",
+    "jsonpickle>=1.4.1",
+    "matplotlib>=3.2.1",
+    # include parsing dependencies for tests
+    "concrete>=4.12.0",
+    # for differential testing against original implementation
+    "predpatt @ git+https://github.com/hltcoe/PredPatt.git",
+]
+viz = [
+    "dash>=2.15.0",  # Version 2.15+ doesn't use pkg_resources
+    "selenium>=4.6.1",
+    "jsonpickle>=1.4.1",
+    "matplotlib>=3.2.1",
+]
+parsing = [
+    "concrete>=4.12.0",  # for loading Concrete communication files (future feature)
+]
+
+[tool.setuptools]
+packages = ["decomp"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+decomp = ["data/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+fix = false  # configure to check but NOT auto-fix
+
+[tool.ruff.format]
+# Use hanging indents consistently
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[tool.ruff.lint]
+# Enable specific rule sets
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "UP",    # pyupgrade
+    "B",     # flake8-bugbear
+    "SIM",   # flake8-simplify
+    "I",     # isort
+    "N",     # pep8-naming
+    "D",     # pydocstyle
+    "C90",   # mccabe complexity
+    "RUF",   # Ruff-specific rules
+]
+
+# Ignore specific rules
+ignore = [
+    "D100",  # missing docstring in public module
+    "D104",  # missing docstring in public package
+    "D105",  # missing docstring in magic method
+    "D107",  # missing docstring in __init__
+    "D203",  # 1 blank line required before class docstring (conflicts with D211)
+    "D213",  # multi-line docstring summary should start at the second line (conflicts with D212)
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # allow unused imports in __init__.py files
+"tests/*" = ["D"]         # ignore all docstring rules in tests
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.isort]
+known-first-party = ["decomp"]
+force-single-line = false
+lines-after-imports = 2
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+
+# additional strict options (already included in strict, but explicit for clarity)
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+# disable specific strict checks that might be too restrictive initially
+disallow_any_generics = false
+disallow_subclassing_any = false
+disallow_untyped_calls = false
+
+# import discovery
+namespace_packages = true
+explicit_package_bases = true
+
+# error handling
+show_error_codes = true
+show_column_numbers = true
+pretty = true
+
+# ignore missing imports
+ignore_missing_imports = true
+
+# per-module options for gradual adoption
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "docs.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "setup"
+ignore_errors = true

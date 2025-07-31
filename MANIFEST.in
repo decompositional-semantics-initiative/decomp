@@ -1,7 +1,0 @@
-recursive-include decomp/ *
-recursive-include docs/ *
-recursive-include tests/ *
-include requirements.txt
-include README.md
-include LICENSE
-include Dockerfile

@@ -75,6 +75,7 @@ If you use either UDS or Decomp in your research, we ask that you cite the follo
    tutorial/index
    data/index
    package/index
+   releases
 
 
 Indices and tables

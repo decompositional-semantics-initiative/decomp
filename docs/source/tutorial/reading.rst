@@ -10,16 +10,14 @@ Semantics (UDS) dataset is to import it.
 
    uds = UDSCorpus()
 
-This loads a `UDSCorpus`_ object ``uds``, which contains all
+This loads a :py:class:`~decomp.semantics.uds.UDSCorpus` object ``uds``, which contains all
 graphs across all splits in the data.
-
-.. _UDSCorpus: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSCorpus
 
 As noted in :doc:`quick-start`, the first time you do read UDS, it
 will take several minutes to complete while the dataset is built from
 the `Universal Dependencies English Web Treebank`_ (UD-EWT), which is not
-shipped with the package (but is downloaded automatically on import in
-the background), and the `UDS annotations`_, which are shipped with
+shipped with the package (but is downloaded automatically when first
+creating a corpus instance), and the `UDS annotations`_, which are shipped with
 the package as package data. Normalized annotations are loaded by default.
 To load raw annotations, specify ``"raw"`` as the argument to the UDSCorpus
 ``annotation_format`` keyword arugment as follows:
@@ -55,31 +53,24 @@ Adding annotations
 ------------------
    
 Additional annotations beyond the standard UDS annotations can be
-added using this method by passing a list of `UDSAnnotation`_
+added using this method by passing a list of :py:class:`~decomp.semantics.uds.UDSAnnotation`
 objects. These annotations can be added at two levels: the sentence level
 and the document level. Sentence-level annotations contain attributes of
-`UDSSentenceGraph`_ nodes or edges. Document-level annotations contain
-attributes for `UDSDocumentGraph`_ nodes or edges. Document-level
+:py:class:`~decomp.semantics.uds.UDSSentenceGraph` nodes or edges. Document-level annotations contain
+attributes for :py:class:`~decomp.semantics.uds.UDSDocumentGraph` nodes or edges. Document-level
 edge annotations may relate nodes associated with different sentences 
 in a document, although they are added as annotations only to the
-the appropriate `UDSDocumentGraph`_.
-
-.. _UDSSentenceGraph: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSSentenceGraph
-.. _UDSDocumentGraph: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSDocumentGraph
-.. _UDSAnnotation: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSAnnotation
+the appropriate :py:class:`~decomp.semantics.uds.UDSDocumentGraph`.
 
 Sentence-level and document-level annotations share the same two in-memory
 representations: ``RawUDSDataset`` and ``NormalizedUDSDataset``. The former 
 may have multiple annotations for the same node or edge attribute, while the
 latter must have only a single annotation. Both are loaded from 
 JSON-formatted files, but differ in the expected format (see the 
-`from_json`_ methods of each class for formatting guidelines). For example,
+:py:meth:`~decomp.semantics.uds.NormalizedUDSDataset.from_json` methods of each class for formatting guidelines). For example,
 if you have some additional *normalized* sentence-level annotations in a file
 ``new_annotations.json``, those can be added to the existing UDS annotations 
 using:
-
-.. _NormalizedUDSDataset: ../package/decomp.semantics.uds.html#decomp.semantics.uds.NormalizedUDSDataset
-.. _from_json: ../package/decomp.semantics.uds.html#decomp.semantics.uds.NormalizedUDSDataset.from_json
 
 .. code-block:: python
 
@@ -121,14 +112,12 @@ Reading from an alternative location
 
 If you would like to read the dataset from an alternative
 location—e.g. if you have serialized the dataset to JSON, using the
-`to_json`_ instance method—this can be accomplished using
+:py:meth:`~decomp.semantics.uds.UDSCorpus.to_json` instance method—this can be accomplished using
 ``UDSCorpus`` class methods (see :doc:`serializing` for more
 information on serialization). For example, if you serialize
 ``uds_train`` to the files ``uds-ewt-sentences-train.json`` (for
 sentences) and ``uds-ewt-documents-train.json`` (for the documents),
 you can read it back into memory using:
-
-.. _to_json: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSCorpus.to_json
 
 .. code-block:: python
 
@@ -143,14 +132,12 @@ Rebuilding the corpus
    
 If you would like to rebuild the corpus from the UD-EWT CoNLL files
 and some set of JSON-formatted annotation files, you can use the
-analogous `from_conll`_ class method. Importantly, unlike the
+analogous :py:meth:`~decomp.semantics.uds.UDSCorpus.from_conll` class method. Importantly, unlike the
 standard instance initialization described above, the UDS annotations
 are *not* automatically added. For example, if ``en-ud-train.conllu``
 is in the current working directory and you have already loaded
 ``new_annotations`` as above, a corpus containing only those
 annotations (without the UDS annotations) can be loaded using:
-
-.. _from_conll: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSCorpus.from_conll
 
 .. code-block:: python
 

@@ -1,5 +1,10 @@
 # Overview
 
+[![GitHub](https://img.shields.io/badge/github-decomp-blue?logo=github)](https://github.com/decompositional-semantics-initiative/decomp)
+[![CI](https://github.com/decompositional-semantics-initiative/decomp/actions/workflows/ci.yml/badge.svg)](https://github.com/decompositional-semantics-initiative/decomp/actions/workflows/ci.yml)
+[![Documentation](https://readthedocs.org/projects/decomp/badge/?version=latest)](https://decomp.readthedocs.io/en/latest/?badge=latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 [Decomp](https://github.com/decompositional-semantics-initiative/decomp)
 is a toolkit for working with the [Universal Decompositional Semantics
 (UDS) dataset](http://decomp.io), which is a collection of directed
@@ -80,41 +85,50 @@ contained in that directory.
 # Installation
 
 The most painless way to get started quickly is to use the included
-barebones Python 3.6-based Dockerfile. To build the image and start a
-python interactive prompt, use:
+Dockerfile based on jupyter/datascience-notebook with Python 3.12. 
+To build the image and start a Jupyter Lab server:
 
 ```bash
 git clone git://github.com/decompositional-semantics-initiative/decomp.git
 cd decomp
 docker build -t decomp .
+docker run -it -p 8888:8888 decomp
+```
+
+This will start a Jupyter Lab server accessible at http://localhost:8888.
+To start a Python interactive prompt instead:
+
+```bash
 docker run -it decomp python
 ```
 
-If you prefer to install directly to your local environment, simply
-use `pip`.
+If you prefer to install directly to your local environment, you can
+use `pip` to install from GitHub:
 
 ```bash
-pip install --user git+git://github.com/decompositional-semantics-initiative/decomp.git
+pip install git+https://github.com/decompositional-semantics-initiative/decomp.git
 ```
 
-You can also clone and use the included `setup.py`.
+**Requirements**: Python 3.12 or higher is required.
+
+You can also clone the repository and install from source:
 
 ```bash
-git clone git://github.com/decompositional-semantics-initiative/decomp.git
+git clone https://github.com/decompositional-semantics-initiative/decomp.git
 cd decomp
-pip install --user --no-cache-dir -r ./requirements.txt
-python setup.py install
+pip install .
 ```
 
-If you would like to install the package for the purposes of
-development, use:
+For development, install the package in editable mode with development dependencies:
 
 ```bash
-git clone git://github.com/decompositional-semantics-initiative/decomp.git
+git clone https://github.com/decompositional-semantics-initiative/decomp.git
 cd decomp
-pip install --user --no-cache-dir -r ./requirements.txt
-python setup.py develop
+pip install -e ".[dev]"
 ```
+
+This installs the package in editable mode along with development tools
+including `pytest`, `ruff`, `mypy`, and `ipython`.
 
 # Quick Start
 
@@ -137,7 +151,7 @@ The first time you read UDS, it will take several minutes to complete
 while the dataset is built from the [Universal Dependencies English Web
 Treebank](https://github.com/UniversalDependencies/UD_English-EWT),
 which is not shipped with the package (but is downloaded automatically
-on import in the background), and the [UDS
+when first creating a corpus instance), and the [UDS
 annotations](http://decomp.io/data/), which are shipped with the
 package. Subsequent uses will be faster, since the dataset is cached on
 build.

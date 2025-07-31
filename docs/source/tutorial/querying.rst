@@ -3,22 +3,15 @@ Querying UDS Graphs
 
 Decomp provides a rich array of methods for querying UDS graphs: both
 pre-compiled and user-specified. Arbitrary user-specified graph
-queries can be performed using the `UDSSentenceGraph.query`_ instance
+queries can be performed using the :py:meth:`~decomp.semantics.uds.UDSSentenceGraph.query` instance
 method. This method accepts arbitrary SPARQL 1.1 queries, either as
-strings or as precompiled `Query`_ objects built using RDFlib's
-`prepareQuery`_.
-
-.. _UDSSentenceGraph.query: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSSentenceGraph.query
-.. _Query: https://rdflib.readthedocs.io/en/stable/apidocs/rdflib.plugins.sparql.html#rdflib.plugins.sparql.sparql.Query
-.. _prepareQuery: https://rdflib.readthedocs.io/en/stable/apidocs/rdflib.plugins.sparql.html?highlight=preparequery#rdflib.plugins.sparql.processor.prepareQuery
+strings or as precompiled :py:class:`~rdflib.plugins.sparql.sparql.Query` objects built using RDFlib's
+:py:func:`~rdflib.plugins.sparql.processor.prepareQuery`.
 
 
 **NOTE:** Querying is not currently supported for document-level graphs
-(`UDSDocumentGraph`_ objects) or for sentence-level graphs that contain
-raw annotations (`RawUDSDataset`_).
-
-.. _UDSDocumentGraph: ../package/decomp.semantics.uds.html#decomp.semantics.uds.UDSDocumentGraph
-.. _RawUDSDataset: ../package/decomp.semantics.uds.html#decomp.semantics.uds.RawUDSDataset
+(:py:class:`~decomp.semantics.uds.UDSDocumentGraph` objects) or for sentence-level graphs that contain
+raw annotations (:py:class:`~decomp.semantics.uds.RawUDSDataset`).
 
 Pre-compiled queries
 --------------------
@@ -131,7 +124,7 @@ Or more tersely (but equivalently):
 Note that the ``query_type`` parameter is set to ``'node'``. This
 setting means that a dictionary mapping node identifiers to node
 attribute values will be returned. If no such query type is passed, an
-RDFLib `Result`_ object will be returned, which you will need to
+RDFLib :py:class:`~rdflib.query.Result` object will be returned, which you will need to
 postprocess yourself. This is necessary if, for instance, you are
 making a ``CONSTRUCT``, ``ASK``, or ``DESCRIBE`` query.
 
@@ -140,8 +133,6 @@ memory-saving measure, as ``UDSSentenceGraph.query`` implicitly builds an RDF
 graph on the backend, and these graphs can be quite large. Leaving
 ``cache_rdf`` at its defaults of ``True`` will substantially speed up
 later queries at the expense of sometimes substantial memory costs.
-
-.. _Result: https://rdflib.readthedocs.io/en/stable/apidocs/rdflib.html#rdflib.query.Result
    
 Constraints can also make reference to node and edge attributes of
 other nodes. For instance, if you were interested in extracting all

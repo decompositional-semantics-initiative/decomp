@@ -1,11 +1,11 @@
-"""Module for converting from networkx to RDF"""
+"""Module for converting from networkx to RDF."""
 
-from networkx import DiGraph, to_dict_of_dicts
-from rdflib import Graph, URIRef, Literal
+from networkx import DiGraph
+from rdflib import Graph
 
 
 class NXConverter:
-    """A converter between RDFLib graphs and NetworkX digraphs
+    """A converter between RDFLib graphs and NetworkX digraphs.
 
     Parameters
     ----------
@@ -19,15 +19,14 @@ class NXConverter:
 
     @classmethod
     def rdf_to_networkx(cls, rdfgraph: Graph) -> DiGraph:
-        """Convert an RDFLib graph to a NetworkX digraph
+        """Convert an RDFLib graph to a NetworkX digraph.
 
         Parameters
         ----------
         rdfgraph
             the RDFLib graph to convert
         """
-
-        converter = cls(rdfgraph)
+        _ = cls(rdfgraph)  # instantiate to validate parameters
 
         raise NotImplementedError
 
