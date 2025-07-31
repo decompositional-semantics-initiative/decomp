@@ -8,8 +8,7 @@ WORKDIR "${HOME}/decomp"
 COPY --chown=${NB_UID}:${NB_GID} . .
 
 # install the package and its dependencies
-RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir -e . && \
+RUN pip install --no-cache-dir -e ".[viz]" && \
     # pre-build the UDS corpus to cache it in the image
     python -c "from decomp import UDSCorpus; UDSCorpus()"
 
