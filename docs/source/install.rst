@@ -31,7 +31,20 @@ Installation
 
     .. tab-item:: pip
 
-        Decomp can be installed from GitHub using ``pip``:
+        Decomp can be installed from PyPI using ``pip``:
+
+        .. code-block:: bash
+
+            pip install decomp
+
+        To install optional features:
+
+        .. code-block:: bash
+
+            pip install decomp[viz]      # For visualization features
+            pip install decomp[parsing]  # For parsing features (future)
+
+        Or install the latest development version from GitHub:
 
         .. code-block:: bash
 

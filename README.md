@@ -1,5 +1,6 @@
 # Overview
 
+[![PyPI version](https://badge.fury.io/py/decomp.svg)](https://badge.fury.io/py/decomp)
 [![GitHub](https://img.shields.io/badge/github-decomp-blue?logo=github)](https://github.com/decompositional-semantics-initiative/decomp)
 [![CI](https://github.com/decompositional-semantics-initiative/decomp/actions/workflows/ci.yml/badge.svg)](https://github.com/decompositional-semantics-initiative/decomp/actions/workflows/ci.yml)
 [![Documentation](https://readthedocs.org/projects/decomp/badge/?version=latest)](https://decomp.readthedocs.io/en/latest/?badge=latest)
@@ -103,7 +104,13 @@ docker run -it decomp python
 ```
 
 If you prefer to install directly to your local environment, you can
-use `pip` to install from GitHub:
+use `pip` to install from PyPI:
+
+```bash
+pip install decomp
+```
+
+Or install the latest development version from GitHub:
 
 ```bash
 pip install git+https://github.com/decompositional-semantics-initiative/decomp.git
