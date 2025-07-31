@@ -4,51 +4,72 @@
 Installation
 ============
 
-The most painless way to get started quickly is to use the included
-barebones Python 3.6-based Dockerfile. To build the image and start a
-python interactive prompt, use:
+.. tab-set::
 
-.. code-block:: bash
+    .. tab-item:: Docker
 
-  git clone git://gitlab.hltcoe.jhu.edu/aswhite/decomp.git
-  cd decomp
-  docker build -t decomp .
-  docker run -it decomp python
-   
-A jupyter notebook can then be opened in the standard way.
+        The most painless way to get started quickly is to use the included
+        Dockerfile based on jupyter/datascience-notebook with Python 3.12.
+        
+        To build the image and start a Jupyter Lab server:
 
-Decomp can also be installed to a local environment using ``pip``.
+        .. code-block:: bash
 
-.. code-block:: bash
+            git clone git://github.com/decompositional-semantics-initiative/decomp.git
+            cd decomp
+            docker build -t decomp .
+            docker run -it -p 8888:8888 decomp
+           
+        This will start a Jupyter Lab server accessible at http://localhost:8888
+        (with authentication disabled for convenience).
+        
+        To start a Python interactive prompt instead:
+        
+        .. code-block:: bash
+        
+            docker run -it decomp python
 
-   pip install git+git://github.com/decompositional-semantics-initiative/decomp.git
+    .. tab-item:: pip
 
+        Decomp can be installed from GitHub using ``pip``:
 
-As an alternative to ``pip`` you can clone the decomp repository and use the included ``setup.py`` with the ``install`` flag.
+        .. code-block:: bash
 
-.. code-block:: bash
+            pip install git+https://github.com/decompositional-semantics-initiative/decomp.git
 
-   git clone https://github.com/decompositional-semantics-initiative/decomp.git
-   cd decomp
-   pip install --user --no-cache-dir -r ./requirements.txt
-   python setup.py install
+        **Requirements**: Python 3.12 or higher is required.
 
+    .. tab-item:: From Source
 
-If you would like to install the package for the purposes of development, you can use the included ``setup.py`` with the ``develop`` flag.
+        To install from source, clone the repository and use ``pip``:
 
-.. code-block:: bash
+        .. code-block:: bash
 
-   git clone https://github.com/decompositional-semantics-initiative/decomp.git
-   cd decomp
-   pip install --user --no-cache-dir -r ./requirements.txt
-   python setup.py develop
+            git clone https://github.com/decompositional-semantics-initiative/decomp.git
+            cd decomp
+            pip install .
 
+        This will automatically install all dependencies specified in ``pyproject.toml``.
 
-If you have trouble installing via setup.py or pip on OS X Mojave, adding the following environment variables may help.
+    .. tab-item:: Development
 
-.. code-block:: bash 
+        For development, install the package in editable mode with development dependencies:
 
-    CXXFLAGS=-stdlib=libc++ CFLAGS=-stdlib=libc++ python setup.py install
+        .. code-block:: bash
 
+            git clone https://github.com/decompositional-semantics-initiative/decomp.git
+            cd decomp
+            pip install -e ".[dev]"
 
+        This installs:
+        
+        - The package in editable mode (changes to source code take effect immediately)
+        - Development tools: ``pytest``, ``ruff``, ``mypy``, and ``ipython``
+        - All runtime dependencies
 
+        To run tests:
+
+        .. code-block:: bash
+
+            pytest              # Run fast tests only
+            pytest --runslow    # Run all tests including slow tests

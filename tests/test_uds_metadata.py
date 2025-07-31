@@ -1,12 +1,14 @@
+from copy import deepcopy
+
 import pytest
 
-from copy import deepcopy
-from typing import List
+from decomp.semantics.uds.metadata import (
+    UDSAnnotationMetadata,
+    UDSDataType,
+    UDSPropertyMetadata,
+    _dtype,
+)
 
-from decomp.semantics.uds.metadata import _dtype
-from decomp.semantics.uds.metadata import UDSDataType
-from decomp.semantics.uds.metadata import UDSPropertyMetadata
-from decomp.semantics.uds.metadata import UDSAnnotationMetadata
 
 def test_dtype():
     assert _dtype('int') is int
@@ -53,7 +55,7 @@ class TestUDSDataType:
                             ordered=o)
 
     def test_from_dict_simple(self):
-        UDSDataType.from_dict({'datatype': 'str'})        
+        UDSDataType.from_dict({'datatype': 'str'})
         UDSDataType.from_dict({'datatype': 'int'})
         UDSDataType.from_dict({'datatype': 'bool'})
         UDSDataType.from_dict({'datatype': 'float'})

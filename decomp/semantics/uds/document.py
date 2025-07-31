@@ -1,17 +1,37 @@
-"""Module for representing UDS documents."""
+"""Module for representing UDS documents with sentence-level and document-level graphs.
+
+This module provides the UDSDocument class for managing Universal Decompositional Semantics
+(UDS) documents. Each document contains:
+
+- A collection of sentence-level graphs (UDSSentenceGraph)
+- A document-level graph (UDSDocumentGraph) connecting nodes across sentences
+- Metadata including document name, genre, and timestamp
+- Methods for adding sentences and annotations to the document
+
+The document structure preserves the hierarchical relationship between documents
+and their constituent sentences while enabling document-level semantic annotations.
+"""
 
 import re
+from functools import cached_property
+from typing import cast
 
-from typing import Optional, Any
-from typing import Dict
-
-from memoized_property import memoized_property
 from networkx import DiGraph
-from .graph import UDSSentenceGraph, UDSDocumentGraph
+
+from .graph import EdgeAttributes, EdgeKey, NodeAttributes, UDSDocumentGraph, UDSSentenceGraph
+from .types import BasicNodeAttrs, NetworkXGraphData
+
+
+# type aliases
+type SentenceGraphDict = dict[str, UDSSentenceGraph]
+"""Mapping from graph names to their UDSSentenceGraph objects."""
+
+type SentenceIDDict = dict[str, str]
+"""Mapping from graph names to their UD sentence identifiers."""
 
 
 class UDSDocument:
-    """A Universal Decompositional Semantics document
+    """A Universal Decompositional Semantics document.
 
     Parameters
     ----------
@@ -29,11 +49,18 @@ class UDSDocument:
         the NetworkX DiGraph for the document. If not provided, this will be
         initialized without edges from sentence_graphs
     """
-    def __init__(self, sentence_graphs: Dict[str, UDSSentenceGraph],
-                 sentence_ids: Dict[str, str], name: str, genre: str,
-                 timestamp: Optional[str] = None, doc_graph: Optional[UDSDocumentGraph] = None):
-        self.sentence_graphs = {}
-        self.sentence_ids = {}
+
+    def __init__(
+        self,
+        sentence_graphs: SentenceGraphDict,
+        sentence_ids: SentenceIDDict,
+        name: str,
+        genre: str,
+        timestamp: str | None = None,
+        doc_graph: UDSDocumentGraph | None = None
+    ):
+        self.sentence_graphs: SentenceGraphDict = {}
+        self.sentence_ids: SentenceIDDict = {}
         self.name = name
         self.genre = genre
         self.timestamp = timestamp
@@ -47,14 +74,25 @@ class UDSDocument:
         # Initialize the sentence-level graphs
         self.add_sentence_graphs(sentence_graphs, sentence_ids)
 
-    def to_dict(self) -> Dict:
-        """Convert the graph to a dictionary"""
+    def to_dict(self) -> NetworkXGraphData:
+        """Convert the document graph to a dictionary.
+
+        Returns
+        -------
+        NetworkXGraphData
+            NetworkX adjacency data format for the document graph
+        """
         return self.document_graph.to_dict()
 
     @classmethod
-    def from_dict(cls, document: Dict[str, Dict], sentence_graphs: Dict[str, UDSSentenceGraph], 
-                       sentence_ids: Dict[str, str], name: str = 'UDS') -> 'UDSDocument':
-        """Construct a UDSDocument from a dictionary
+    def from_dict(
+        cls,
+        document: dict[str, dict],
+        sentence_graphs: dict[str, UDSSentenceGraph],
+        sentence_ids: dict[str, str],
+        name: str = 'UDS'
+    ) -> 'UDSDocument':
+        """Construct a UDSDocument from a dictionary.
 
         Since only the document graphs are serialized, the sentence
         graphs must also be provided to this method call in order
@@ -74,7 +112,7 @@ class UDSDocument:
         name
             identifier to append to the beginning of node ids
         """
-        document_graph = UDSDocumentGraph.from_dict(document, name)
+        document_graph = cast(UDSDocumentGraph, UDSDocumentGraph.from_dict(document, name))
         sent_graph_names = set(map(lambda node: node['semantics']['graph'], document['nodes']))
         sent_graphs = {}
         sent_ids = {}
@@ -88,63 +126,125 @@ class UDSDocument:
         return cls(sent_graphs, sent_ids, name, genre, timestamp, document_graph)
 
     @staticmethod
-    def _get_timestamp_from_document_name(document_name):
-        timestamp = re.search('\d{8}_?\d{6}', document_name)
-        return timestamp[0] if timestamp else None
+    def _get_timestamp_from_document_name(document_name: str) -> str | None:
+        """Extract timestamp from document name.
 
-    def add_sentence_graphs(self, sentence_graphs: Dict[str, UDSSentenceGraph], 
-                                  sentence_ids: Dict[str, str]) -> None:
-        """Add additional sentences to a document
+        Looks for patterns like 'YYYYMMDD_HHMMSS' or 'YYYYMMDDHHMMSS'
+        in the document name.
 
         Parameters
         ----------
-        sentence_graphs
-            a dictionary containing the sentence-level graphs
-            for the sentences in the document
-        sentence_ids
-            a dictionary containing the UD sentence IDs for each graph
-        name
-            identifier to append to the beginning of node ids
+        document_name : str
+            The document name to parse
+
+        Returns
+        -------
+        str | None
+            The timestamp string if found, None otherwise
+        """
+        timestamp = re.search(r'\d{8}_?\d{6}', document_name)
+
+        return timestamp[0] if timestamp else None
+
+    def add_sentence_graphs(
+        self,
+        sentence_graphs: SentenceGraphDict,
+        sentence_ids: SentenceIDDict
+    ) -> None:
+        """Add sentence graphs to the document.
+
+        Creates document-level nodes for each semantics node in the sentence
+        graphs and updates the sentence graph metadata with document information.
+
+        Parameters
+        ----------
+        sentence_graphs : SentenceGraphDict
+            Dictionary mapping graph names to UDSSentenceGraph objects
+        sentence_ids : SentenceIDDict
+            Dictionary mapping graph names to UD sentence identifiers
         """
         for gname, graph in sentence_graphs.items():
             sentence_graphs[gname].sentence_id = sentence_ids[gname]
             sentence_graphs[gname].document_id = self.name
+
             self.sentence_graphs[gname] = graph
             self.sentence_ids[gname] = sentence_ids[gname]
+
             for node_name, node in graph.semantics_nodes.items():
                 semantics = {'graph': gname, 'node': node_name}
                 document_node_name = node_name.replace('semantics', 'document')
-                self.document_graph.graph.add_node(document_node_name,
-                            domain='document', type=node['type'],
-                            frompredpatt=False, semantics=semantics)
+                self.document_graph.graph.add_node(
+                    document_node_name,
+                    domain='document', type=node['type'],
+                    frompredpatt=False, semantics=semantics
+                )
 
-    def add_annotation(self, node_attrs: Dict[str, Dict[str, Any]],
-                             edge_attrs: Dict[str, Dict[str, Any]]) -> None:
-        """Add node or edge annotations to the document-level graph
+    def add_annotation(
+        self,
+        node_attrs: dict[str, NodeAttributes],
+        edge_attrs: dict[EdgeKey, EdgeAttributes]
+    ) -> None:
+        """Add annotations to the document-level graph.
+
+        Delegates to the document graph's add_annotation method, passing
+        along the sentence IDs for validation.
 
         Parameters
         ----------
-        node_attrs
-            the node annotations to be added
-        edge_attrs
-            the edge annotations to be added
+        node_attrs : dict[str, NodeAttributes]
+            Node annotations keyed by node ID
+        edge_attrs : dict[EdgeKey, EdgeAttributes]
+            Edge annotations keyed by (source, target) tuples
         """
         self.document_graph.add_annotation(node_attrs, edge_attrs, self.sentence_ids)
 
-    def semantics_node(self, document_node: str) -> Dict[str, Dict]:
-        """The semantics node for a given document node
+    def semantics_node(self, document_node: str) -> dict[str, BasicNodeAttrs]:
+        """Get the semantics node corresponding to a document node.
+
+        Document nodes maintain references to their corresponding semantics
+        nodes through the 'semantics' attribute, which contains the graph
+        name and node ID.
 
         Parameters
         ----------
-        document_node
-            the document domain node whose semantics node is to be
-            retrieved
+        document_node : str
+            The document domain node ID
+
+        Returns
+        -------
+        dict[str, BasicNodeAttrs]
+            Single-item dict mapping node ID to its attributes
+
+        Raises
+        ------
+        TypeError
+            If the semantics attribute is not a dictionary
+        KeyError
+            If required keys are missing from semantics dict
         """
         semantics = self.document_graph.nodes[document_node]['semantics']
-        semantics_node = self.sentence_graphs[semantics['graph']].semantics_nodes[semantics['node']]
-        return {semantics['node']: semantics_node}
+        if not isinstance(semantics, dict):
+            raise TypeError(f"Expected 'semantics' to be a dict but got {type(semantics)}")
+        if 'graph' not in semantics or 'node' not in semantics:
+            raise KeyError("Expected 'semantics' dict to have 'graph' and 'node' keys")
+        graph_id = cast(str, semantics['graph'])
+        node_id = cast(str, semantics['node'])
+        semantics_node = self.sentence_graphs[graph_id].semantics_nodes[node_id]
+        return {node_id: cast(BasicNodeAttrs, semantics_node)}
 
-    @memoized_property
+    @cached_property
     def text(self) -> str:
-        """The document text"""
-        return ' '.join([sent_graph.sentence for gname, sent_graph in sorted(self.sentence_graphs.items())])
+        """The full document text reconstructed from sentences.
+
+        Concatenates the text from all sentence graphs in sorted order
+        with space separation.
+
+        Returns
+        -------
+        str
+            The complete document text
+        """
+        return ' '.join([
+            sent_graph.sentence
+            for gname, sent_graph in sorted(self.sentence_graphs.items())
+        ])

@@ -1,8 +1,16 @@
 from io import StringIO
+
 from networkx import DiGraph
-from predpatt import load_conllu, PredPatt, PredPattOpts
+
+from decomp.semantics.predpatt import (
+    PredPatt,
+    PredPattCorpus,
+    PredPattGraphBuilder,
+    PredPattOpts,
+    load_conllu,
+)
 from decomp.syntax.dependency import DependencyGraphBuilder
-from decomp.semantics.predpatt import PredPattCorpus, PredPattGraphBuilder
+
 
 rawtree = '''1	The	the	DET	DT	Definite=Def|PronType=Art	3	det	_	_
 2	police	police	NOUN	NN	Number=Sing	3	compound	_	_

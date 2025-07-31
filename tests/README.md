@@ -4,12 +4,13 @@ tests use the [`pytest` framework](https://docs.pytest.org/).
 
 # Installation
 
-To run the tests in this directory, ensure that both the toolkit and
-`pytest` are installed.
+To run the tests in this directory, install the toolkit with development dependencies:
 
 ```bash
-pip install --user pytest==6.0.* git+git://github.com/decompositional-semantics-initiative/decomp.git
+pip install -e ".[dev]"
 ```
+
+This will install the toolkit in editable mode along with all testing dependencies including pytest.
 
 # Running the test suite
 

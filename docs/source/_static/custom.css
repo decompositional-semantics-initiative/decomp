@@ -1,0 +1,79 @@
+/* Custom CSS for Decomp documentation */
+
+/* Better spacing for API documentation */
+dl.py {
+    margin-bottom: 1.5rem;
+}
+
+dl.py dt {
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+}
+
+/* Improve type hint display */
+.sig-param .n {
+    font-weight: 600;
+}
+
+.sig-param .p {
+    color: var(--color-api-keyword);
+}
+
+/* Better code block appearance */
+div.highlight pre {
+    padding: 1rem;
+    border-radius: 0.5rem;
+}
+
+/* Enhance admonition boxes */
+.admonition {
+    border-radius: 0.5rem;
+    border-left-width: 4px;
+}
+
+/* Better table appearance */
+table.docutils {
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+/* Improve navigation */
+.sidebar-scroll {
+    padding: 0 1rem;
+}
+
+/* Type annotations styling */
+.annotation {
+    font-style: italic;
+    opacity: 0.8;
+}
+
+/* Better parameter lists */
+.field-list dt {
+    font-weight: 600;
+}
+
+/* Enhance search results */
+.search-results {
+    padding: 1rem;
+}
+
+/* Copy button improvements */
+.copybtn {
+    transition: opacity 0.2s;
+}
+
+/* Better module index */
+.modindextable td {
+    padding: 0.5rem;
+}
+
+/* Improve cross-reference links */
+a.reference.internal {
+    text-decoration: none;
+    border-bottom: 1px dotted var(--color-link);
+}
+
+a.reference.internal:hover {
+    border-bottom-style: solid;
+}

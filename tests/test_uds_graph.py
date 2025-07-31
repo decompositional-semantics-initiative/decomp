@@ -1,11 +1,4 @@
-import os
 import pytest
-
-from predpatt import PredPatt, PredPattOpts, load_conllu
-
-from decomp.syntax.dependency import DependencyGraphBuilder
-from decomp.semantics.predpatt import PredPattGraphBuilder
-from decomp.semantics.uds import UDSSentenceGraph
 
 
 @pytest.fixture
@@ -13,65 +6,7 @@ def graph_sentence():
     return 'The police commander of Ninevah Province announced that bombings had declined 80 percent in Mosul , whereas there had been a big jump in the number of kidnappings .'
 
 
-@pytest.fixture
-def normalized_sentence_graph(rawtree,
-                              listtree,
-                              normalized_sentence_annotations):
-
-    node_ann, edge_ann = normalized_sentence_annotations
-
-    ud = DependencyGraphBuilder.from_conll(listtree, 'tree1')
-
-    pp = PredPatt(next(load_conllu(rawtree))[1],
-                  opts=PredPattOpts(resolve_relcl=True,
-                                    borrow_arg_for_relcl=True,
-                                    resolve_conj=False,
-                                    cut=True))
-
-    pp_graph = PredPattGraphBuilder.from_predpatt(pp, ud, 'tree1')
-
-    graph = UDSSentenceGraph(pp_graph, 'tree1')
-    graph.add_annotation(*node_ann['tree1'])
-    graph.add_annotation(*edge_ann['tree1'])
-
-    return graph
-
-
-@pytest.fixture
-def raw_sentence_graph(rawtree,
-                       listtree,
-                       raw_sentence_annotations):
-
-    node_ann, edge_ann = raw_sentence_annotations
-
-    ud = DependencyGraphBuilder.from_conll(listtree, 'tree1')
-
-    pp = PredPatt(next(load_conllu(rawtree))[1],
-                  opts=PredPattOpts(resolve_relcl=True,
-                                    borrow_arg_for_relcl=True,
-                                    resolve_conj=False,
-                                    cut=True))
-
-    pp_graph = PredPattGraphBuilder.from_predpatt(pp, ud, 'tree1')
-
-    graph = UDSSentenceGraph(pp_graph, 'tree1')
-    graph.add_annotation(*node_ann['tree1'])
-    graph.add_annotation(*edge_ann['tree1'])
-    
-    return graph
-
-
-@pytest.fixture
-def rawtree(test_data_dir):
-    fpath = os.path.join(test_data_dir, 'rawtree.conllu')
-
-    with open(fpath) as f:
-        return f.read()
-
-
-@pytest.fixture
-def listtree(rawtree):
-    return [l.split() for l in rawtree.split('\n')]
+# fixtures moved to conftest.py
 
 
 @pytest.fixture
@@ -961,14 +896,14 @@ class TestUDSSentenceGraph:
                graph_normalized_semantics_nodes
 
     def test_raw_semantics_nodes(self, raw_sentence_graph,
-                                 graph_raw_semantics_nodes):        
+                                 graph_raw_semantics_nodes):
         assert raw_sentence_graph.semantics_nodes ==\
                graph_raw_semantics_nodes
 
     def test_syntax_edges(self, normalized_sentence_graph,
                           raw_sentence_graph, graph_syntax_edges):
         assert normalized_sentence_graph.syntax_edges() == graph_syntax_edges
-        assert raw_sentence_graph.syntax_edges() == graph_syntax_edges        
+        assert raw_sentence_graph.syntax_edges() == graph_syntax_edges
 
     def test_normalized_semantics_edges(self, normalized_sentence_graph,
                                         graph_normalized_semantics_edges):
@@ -981,10 +916,10 @@ class TestUDSSentenceGraph:
 
     def test_maxima(self, normalized_sentence_graph, raw_sentence_graph):
         normalized_sentence_graph.maxima() == ['tree1-semantics-pred-root']
-        raw_sentence_graph.maxima() == ['tree1-semantics-pred-root']        
+        raw_sentence_graph.maxima() == ['tree1-semantics-pred-root']
 
         noroot_normalized = [nid for nid in normalized_sentence_graph.nodes
-                             if nid != 'tree1-semantics-pred-root']        
+                             if nid != 'tree1-semantics-pred-root']
         noroot_raw = [nid for nid in raw_sentence_graph.nodes
                       if nid != 'tree1-semantics-pred-root']
         assert normalized_sentence_graph.maxima(noroot_normalized) == ['tree1-semantics-arg-0',
@@ -998,7 +933,7 @@ class TestUDSSentenceGraph:
                                      if nid not in ['tree1-semantics-pred-root',
                                                     'tree1-semantics-arg-0',
                                                     'tree1-semantics-arg-author',
-                                                    'tree1-semantics-arg-addressee']]        
+                                                    'tree1-semantics-arg-addressee']]
         noperformative_raw = [nid for nid in raw_sentence_graph.nodes
                               if nid not in ['tree1-semantics-pred-root',
                                              'tree1-semantics-arg-0',
@@ -1087,8 +1022,8 @@ class TestUDSSentenceGraph:
 
 def test_constructing_rdf_for_graph_with_raw_annotations_fails(raw_sentence_graph):
     graph = raw_sentence_graph
-    assert hasattr(graph, '_rdf') == False # RDF not yet built
+    assert graph._rdf is None  # RDF not yet built
 
     # attempt to build RDF
     with pytest.raises(TypeError):
-        graph.rdf    
+        graph.rdf
