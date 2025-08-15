@@ -35,9 +35,16 @@ For more information, visit: http://decomp.io
 """
 
 # standard library imports
+import importlib.metadata
 import importlib.resources
 import os
 from logging import DEBUG, basicConfig
+
+# Package version
+try:
+    __version__ = importlib.metadata.version("decomp")
+except importlib.metadata.PackageNotFoundError:
+    __version__ = "unknown"
 
 # local imports
 from .semantics.uds import (
@@ -56,6 +63,7 @@ basicConfig(
 )
 
 __all__ = [
+    '__version__',
     'NormalizedUDSAnnotation',
     'RawUDSAnnotation',
     'UDSCorpus',

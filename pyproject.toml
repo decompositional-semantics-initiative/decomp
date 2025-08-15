@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "decomp"
-version = "0.3.0"
+version = "0.3.1"
 description = "Toolkit for working with Universal Decompositional Semantics graphs"
 authors = [
     {name = "Aaron Steven White", email = "aaron.white@rochester.edu"}
@@ -65,11 +65,11 @@ parsing = [
 ]
 
 [tool.setuptools]
-packages = ["decomp"]
+packages = {find = {}}
 include-package-data = true
 
 [tool.setuptools.package-data]
-decomp = ["data/*"]
+decomp = ["data/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
