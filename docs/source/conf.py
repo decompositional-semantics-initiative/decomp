@@ -24,8 +24,8 @@ copyright = '2020-2025, Aaron Steven White'
 author = 'Aaron Steven White'
 
 # The full version, including alpha/beta/rc tags
-release = '0.3.1'
-version = '0.3.1'
+release = '0.3.2'
+version = '0.3.2'
 
 # -- General configuration ---------------------------------------------------
 
